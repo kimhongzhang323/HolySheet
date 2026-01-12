@@ -1,0 +1,185 @@
+{
+    "info": {
+        "_postman_id": "minds-activity-hub-collection",
+        "name": "MINDS Activity Hub",
+        "description": "Collection for testing MINDS Activity Hub API endpoints.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Signup (Create Account)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"phoneNumber\": \"+6591234567\",\n    \"address\": {\n        \"street\": \"123 Serangoon Road\",\n        \"unit\": \"#10-01\",\n        \"postalCode\": \"123456\",\n        \"city\": \"Singapore\",\n        \"country\": \"Singapore\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/signup",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "signup"
+                            ]
+                        },
+                        "description": "Register a new user account with Email/Password/Phone and Address. Returns an OTP in the server console (Mock)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Verify OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"test@example.com\",\n    \"otp\": \"REPLACE_WITH_OTP_FROM_CONSOLE\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/verify",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "verify"
+                            ]
+                        },
+                        "description": "Verify the OTP sent to email to activate the account."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "User Profile",
+            "item": [
+                {
+                    "name": "Update Profile",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"phoneNumber\": \"+6598765432\",\n    \"address\": {\n        \"street\": \"456 Orchard Road\",\n        \"unit\": \"#05-12\",\n        \"postalCode\": \"654321\",\n        \"city\": \"Singapore\",\n        \"country\": \"Singapore\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/user/profile",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "user",
+                                "profile"
+                            ]
+                        },
+                        "description": "Update user profile details (only works if logged in via session cookie from Browser or if cookies are manually managed)"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Booking",
+            "item": [
+                {
+                    "name": "Register API (Book Activity)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"userId\": \"REPLACE_WITH_VALID_EMBEDDED_USER_ID\",\n    \"activityId\": \"REPLACE_WITH_VALID_ACTIVITY_ID\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "register"
+                            ]
+                        },
+                        "description": "Book an activity. Requires valid MongoDB ObjectIds for userId and activityId."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "AI",
+            "item": [
+                {
+                    "name": "Chat with AI",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"messages\": [\n        {\n            \"role\": \"user\",\n            \"content\": \"Show me upcoming art activities\"\n        }\n    ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/chat",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "chat"
+                            ]
+                        },
+                        "description": "Send a meesage to the AI agent."
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000",
+            "type": "string"
+        }
+    ]
+}
