@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db';
 import Activity from '@/models/Activity';
 import Booking from '@/models/Booking';
 import mongoose from 'mongoose';
+import { generateGoogleCalendarLink, generateICSContent } from '@/lib/calendar';
 
 // Conflict detection logic
 async function checkConflict(userId: string, newStartTime: Date, newEndTime: Date): Promise<boolean> {
@@ -79,7 +80,29 @@ export async function POST(req: Request) {
             timestamp: new Date(),
         });
 
-        return NextResponse.json({ success: true, booking: newBooking }, { status: 201 });
+        // 5. Generate Calendar Links
+        const start = new Date(activity.start_time);
+        const end = new Date(activity.end_time);
+
+        const eventDetails = {
+            title: activity.title,
+            description: activity.description || 'No description provided.',
+            location: activity.location || 'Online',
+            start_time: start,
+            end_time: end
+        };
+
+        const googleCalendarLink = generateGoogleCalendarLink(eventDetails);
+        const icsContent = generateICSContent(eventDetails);
+
+        return NextResponse.json({
+            success: true,
+            booking: newBooking,
+            links: {
+                googleCalendar: googleCalendarLink,
+                ics: icsContent
+            }
+        }, { status: 201 });
 
     } catch (error: any) {
         console.error('Registration Error:', error);

@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "minds-activity-hub-collection",
         "name": "MINDS Activity Hub",
-        "description": "Collection for testing MINDS Activity Hub API endpoints.",
+        "description": "Collection for testing MINDS Activity Hub API endpoints, including Smart Feed and Conflict-Proof Booking.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -35,7 +35,7 @@
                                 "signup"
                             ]
                         },
-                        "description": "Register a new user account with Email/Password/Phone and Address. Returns an OTP in the server console (Mock)."
+                        "description": "Register a new user account around Credential Provider."
                     },
                     "response": []
                 },
@@ -65,7 +65,115 @@
                                 "verify"
                             ]
                         },
-                        "description": "Verify the OTP sent to email to activate the account."
+                        "description": "Verify the OTP sent to email."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Sign In (Browser)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/signin",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "signin"
+                            ]
+                        },
+                        "description": "Open in browser to establish session cookie."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Activities (Smart Feed)",
+            "item": [
+                {
+                    "name": "Get Smart Feed",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/activities/feed",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "activities",
+                                "feed"
+                            ]
+                        },
+                        "description": "Returns personalized feed based on logged-in user (Volunteer vs Participant)."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Booking",
+            "item": [
+                {
+                    "name": "Create Booking (Conflict-Proof)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"activity_id\": \"6964c69eec139bc11c1fa3e1\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/bookings",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "bookings"
+                            ]
+                        },
+                        "description": "Book an activity. Checks for time conflicts. Returns 409 if busy. Returns Calendar Links on success."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Legacy Register API",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"userId\": \"REPLACE_WITH_VALID_EMBEDDED_USER_ID\",\n    \"activityId\": \"6964c69eec139bc11c1fa3e1\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "register"
+                            ]
+                        },
+                        "description": "Old endpoint. Use /api/bookings for new system."
                     },
                     "response": []
                 }
@@ -100,41 +208,7 @@
                                 "profile"
                             ]
                         },
-                        "description": "Update user profile details (only works if logged in via session cookie from Browser or if cookies are manually managed)"
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "Booking",
-            "item": [
-                {
-                    "name": "Register API (Book Activity)",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json",
-                                "type": "text"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"userId\": \"REPLACE_WITH_VALID_EMBEDDED_USER_ID\",\n    \"activityId\": \"REPLACE_WITH_VALID_ACTIVITY_ID\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/register",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "register"
-                            ]
-                        },
-                        "description": "Book an activity. Requires valid MongoDB ObjectIds for userId and activityId."
+                        "description": "Update user profile details."
                     },
                     "response": []
                 }
@@ -168,7 +242,7 @@
                                 "chat"
                             ]
                         },
-                        "description": "Send a meesage to the AI agent."
+                        "description": "Send a message to the AI agent."
                     },
                     "response": []
                 }

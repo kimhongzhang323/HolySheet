@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth';
+import NextAuth, { DefaultSession } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import { MongoDBAdapter } from '@auth/mongodb-adapter';
@@ -7,6 +7,22 @@ import { authConfig } from './auth.config';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
+
+declare module "next-auth" {
+    interface User {
+        role?: "user" | "volunteer" | "staff" | "admin";
+        tier?: "ad-hoc" | "weekly";
+        profileDeadline?: Date;
+    }
+
+    interface Session {
+        user: {
+            role?: "user" | "volunteer" | "staff" | "admin";
+            tier?: "ad-hoc" | "weekly";
+            profileDeadline?: Date;
+        } & DefaultSession["user"]
+    }
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     ...authConfig,
@@ -17,6 +33,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             allowDangerousEmailAccountLinking: true,
         }),
+
         Credentials({
             name: 'Credentials',
             credentials: {
