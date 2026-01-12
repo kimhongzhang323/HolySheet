@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import ActivityCard from '@/components/ActivityCard';
 import TicketCard from '@/components/TicketCard';
 import MiniCalendar from '@/components/MiniCalendar';
+import DatyAssistant from '@/components/DatyAssistant';
 import { MOCK_TICKETS, CALENDAR_DAYS } from '@/lib/mockData';
 import { Sparkles, ChevronLeft, ChevronRight, User } from 'lucide-react';
 
@@ -73,10 +74,16 @@ export default function PortalPage() {
                         </div>
 
                         <div className="h-32 bg-gray-100 rounded-xl mb-3 relative overflow-hidden">
-                            {/* Map Placeholder */}
-                            <div className="absolute inset-0 flex items-center justify-center text-gray-300 text-xs font-mono">
-                                MAP VIEW
-                            </div>
+                            <iframe
+                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15935.334099507856!2d101.69119295!3d3.139003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc362db7d05711%3A0xe5a363231317586a!2sKuala%20Lumpur%20City%20Centre%2C%20Kuala%20Lumpur%2C%20Federal%20Territory%20of%20Kuala%20Lumpur!5e0!3m2!1sen!2smy!4v1653846660000!5m2!1sen!2smy"
+                                width="100%"
+                                height="100%"
+                                style={{ border: 0 }}
+                                allowFullScreen
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                                className="absolute inset-0 opacity-80 hover:opacity-100 transition-opacity duration-500"
+                            ></iframe>
                         </div>
                     </div>
                 </section>
@@ -162,6 +169,8 @@ export default function PortalPage() {
 
                 </div>
             </div>
+            {/* Floating Assistant */}
+            <DatyAssistant />
         </div>
     );
 }
