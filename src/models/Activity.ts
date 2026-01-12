@@ -10,7 +10,7 @@ export interface IActivity extends Document {
     volunteers_needed: number;
     needs_help: boolean;
     metadata?: Map<string, string>;
-    allowed_tiers?: ('ad-hoc' | 'weekly')[];
+    allowed_tiers?: ('ad-hoc' | 'once-a-week' | 'twice-a-week' | 'three-plus-a-week')[];
 }
 
 const ActivitySchema: Schema = new Schema({
@@ -25,7 +25,7 @@ const ActivitySchema: Schema = new Schema({
     metadata: { type: Map, of: String },
     allowed_tiers: [{
         type: String,
-        enum: ['ad-hoc', 'weekly']
+        enum: ['ad-hoc', 'once-a-week', 'twice-a-week', 'three-plus-a-week']
     }],
 });
 

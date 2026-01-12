@@ -1,8 +1,8 @@
 {
     "info": {
         "_postman_id": "minds-activity-hub-collection",
-        "name": "MINDS Activity Hub",
-        "description": "Collection for testing MINDS Activity Hub API endpoints, including Smart Feed and Conflict-Proof Booking.",
+        "name": "MINDS Activity Hub (FastAPI)",
+        "description": "Collection for testing MINDS Activity Hub API endpoints on the new Python FastAPI backend.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -25,22 +25,111 @@
                             "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"phoneNumber\": \"+6591234567\",\n    \"address\": {\n        \"street\": \"123 Serangoon Road\",\n        \"unit\": \"#10-01\",\n        \"postalCode\": \"123456\",\n        \"city\": \"Singapore\",\n        \"country\": \"Singapore\"\n    }\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/api/auth/signup",
+                            "raw": "{{baseUrl}}/auth/signup",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "api",
                                 "auth",
                                 "signup"
                             ]
                         },
-                        "description": "Register a new user account around Credential Provider."
+                        "description": "Register a new user account. Returns user ID."
                     },
                     "response": []
                 },
                 {
                     "name": "Verify OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/verify?email=test@example.com&otp=REPLACE_WITH_OTP",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "verify"
+                            ],
+                            "query": [
+                                {
+                                    "key": "email",
+                                    "value": "test@example.com"
+                                },
+                                {
+                                    "key": "otp",
+                                    "value": "REPLACE_WITH_OTP"
+                                }
+                            ]
+                        },
+                        "description": "Verify the OTP sent to email console log."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login (Get Token)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.access_token) {",
+                                    "    pm.collectionVariables.set(\"token\", jsonData.access_token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "urlencoded",
+                            "urlencoded": [
+                                {
+                                    "key": "username",
+                                    "value": "test@example.com",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "password",
+                                    "value": "password123",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/token",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "token"
+                            ]
+                        },
+                        "description": "OAuth2 Password Flow. Automatically saves 'token' to collection variables."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Google Login (Backend Swap)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.access_token) {",
+                                    "    pm.collectionVariables.set(\"token\", jsonData.access_token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
                     "request": {
                         "method": "POST",
                         "header": [
@@ -52,60 +141,48 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"email\": \"test@example.com\",\n    \"otp\": \"REPLACE_WITH_OTP_FROM_CONSOLE\"\n}"
+                            "raw": "{\n    \"token\": \"PASTE_GOOGLE_ID_TOKEN_HERE\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/api/auth/verify",
+                            "raw": "{{baseUrl}}/auth/google",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "api",
                                 "auth",
-                                "verify"
+                                "google"
                             ]
                         },
-                        "description": "Verify the OTP sent to email."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Sign In (Browser)",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/auth/signin",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "auth",
-                                "signin"
-                            ]
-                        },
-                        "description": "Open in browser to establish session cookie."
+                        "description": "Exchange Google ID Token for Backend JWT."
                     },
                     "response": []
                 }
             ]
         },
         {
-            "name": "Activities (Smart Feed)",
+            "name": "Activities",
             "item": [
                 {
                     "name": "Get Smart Feed",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/api/activities/feed",
+                            "raw": "{{baseUrl}}/activities/feed",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "api",
                                 "activities",
                                 "feed"
                             ]
@@ -120,8 +197,18 @@
             "name": "Booking",
             "item": [
                 {
-                    "name": "Create Booking (Conflict-Proof)",
+                    "name": "Create Booking",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "POST",
                         "header": [
                             {
@@ -132,48 +219,18 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"activity_id\": \"6964c69eec139bc11c1fa3e1\"\n}"
+                            "raw": "{\n    \"activity_id\": \"REPLACE_WITH_VALID_ACTIVITY_ID\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/api/bookings",
+                            "raw": "{{baseUrl}}/bookings",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "api",
                                 "bookings"
                             ]
                         },
-                        "description": "Book an activity. Checks for time conflicts. Returns 409 if busy. Returns Calendar Links on success."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Legacy Register API",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json",
-                                "type": "text"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"userId\": \"REPLACE_WITH_VALID_EMBEDDED_USER_ID\",\n    \"activityId\": \"6964c69eec139bc11c1fa3e1\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/register",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "register"
-                            ]
-                        },
-                        "description": "Old endpoint. Use /api/bookings for new system."
+                        "description": "Book an activity. Checks for time conflicts and tier limits."
                     },
                     "response": []
                 }
@@ -185,6 +242,16 @@
                 {
                     "name": "Update Profile",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "POST",
                         "header": [
                             {
@@ -198,17 +265,105 @@
                             "raw": "{\n    \"phoneNumber\": \"+6598765432\",\n    \"address\": {\n        \"street\": \"456 Orchard Road\",\n        \"unit\": \"#05-12\",\n        \"postalCode\": \"654321\",\n        \"city\": \"Singapore\",\n        \"country\": \"Singapore\"\n    }\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/api/user/profile",
+                            "raw": "{{baseUrl}}/user/profile",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "api",
                                 "user",
                                 "profile"
                             ]
                         },
                         "description": "Update user profile details."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "User Admin",
+            "item": [
+                {
+                    "name": "Get User Tier",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/users/:id/tier",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                ":id",
+                                "tier"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "USER_ID_HERE"
+                                }
+                            ]
+                        },
+                        "description": "Get current tier for a user (Admin/Staff only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update User Tier",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"tier\": \"once-a-week\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/users/:id/tier",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                ":id",
+                                "tier"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "USER_ID_HERE"
+                                }
+                            ]
+                        },
+                        "description": "Update user tier. Options: ad-hoc, once-a-week, twice-a-week, three-plus-a-week"
                     },
                     "response": []
                 }
@@ -233,12 +388,11 @@
                             "raw": "{\n    \"messages\": [\n        {\n            \"role\": \"user\",\n            \"content\": \"Show me upcoming art activities\"\n        }\n    ]\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/api/chat",
+                            "raw": "{{baseUrl}}/chat",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "api",
                                 "chat"
                             ]
                         },
@@ -252,7 +406,12 @@
     "variable": [
         {
             "key": "baseUrl",
-            "value": "http://localhost:3000",
+            "value": "http://localhost:8000",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
             "type": "string"
         }
     ]

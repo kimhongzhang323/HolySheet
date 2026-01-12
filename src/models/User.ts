@@ -14,7 +14,8 @@ const UserSchema: Schema = new Schema({
     },
     tier: {
         type: String,
-        enum: ['ad-hoc', 'weekly']
+        enum: ['ad-hoc', 'once-a-week', 'twice-a-week', 'three-plus-a-week'],
+        default: 'ad-hoc'
     },
     skills: { type: [String] },
     password: { type: String, select: false }, // Password for Credentials auth
@@ -42,7 +43,7 @@ export interface IUser extends Document {
     email: string;
     image?: string;
     role: 'user' | 'volunteer' | 'staff' | 'admin';
-    tier?: 'ad-hoc' | 'weekly';
+    tier?: 'ad-hoc' | 'once-a-week' | 'twice-a-week' | 'three-plus-a-week';
     skills?: string[];
     password?: string;
     phoneNumber?: string;
