@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import ActivityCard from '@/components/ActivityCard';
 import TicketCard from '@/components/TicketCard';
+import MiniCalendar from '@/components/MiniCalendar';
 import { MOCK_TICKETS, CALENDAR_DAYS } from '@/lib/mockData';
 import { Sparkles, ChevronLeft, ChevronRight, User } from 'lucide-react';
 
@@ -156,53 +157,7 @@ export default function PortalPage() {
 
                     {/* Calendar Widget (Span 5) */}
                     <section className="xl:col-span-5">
-                        <div className="bg-white p-5 rounded-[24px] shadow-sm border border-gray-100">
-                            <div className="flex justify-between items-center mb-6">
-                                <button className="p-1 hover:bg-gray-100 rounded-full"><ChevronLeft size={16} /></button>
-                                <span className="font-bold text-gray-900">April 2026</span>
-                                <button className="p-1 hover:bg-gray-100 rounded-full"><ChevronRight size={16} /></button>
-                            </div>
-
-                            <div className="grid grid-cols-7 text-center gap-y-4 mb-4">
-                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-                                    <span key={d} className="text-xs text-gray-400 font-medium">{d}</span>
-                                ))}
-                                {CALENDAR_DAYS.map((d, i) => (
-                                    <button
-                                        key={i}
-                                        className={`text-xs w-8 h-8 rounded-full flex items-center justify-center mx-auto transition-colors
-                                        ${d.active ? 'bg-orange-500 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'}`}
-                                    >
-                                        {d.day}
-                                    </button>
-                                ))}
-                                {/* Fillers */}
-                                <span className="text-xs text-gray-300">10</span>
-                                <span className="text-xs text-gray-300">11</span>
-                            </div>
-
-                            {/* Mini Event List */}
-                            <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
-                                <div className="flex gap-3 items-start">
-                                    <div className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-1 rounded text-center min-w-[36px]">
-                                        14<br />Tue
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-gray-900 line-clamp-1">Urban Wellness Expo</p>
-                                        <p className="text-[10px] text-gray-400">Riverside Center, Bangkok</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3 items-start">
-                                    <div className="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-1 rounded text-center min-w-[36px]">
-                                        18<br />Sun
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-gray-900 line-clamp-1">Neon Nights Live</p>
-                                        <p className="text-[10px] text-gray-400">The Glass Hall, Tokyo</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <MiniCalendar />
                     </section>
 
                 </div>
