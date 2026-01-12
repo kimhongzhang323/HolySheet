@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import '../globals.css';
+import TopBar from '@/components/TopBar';
 
 export const metadata: Metadata = {
-    title: 'Community Portal - MINDS Activity Hub',
-    description: 'Book activities and volunteer.',
+    title: 'Dashboard - MINDS Activity Hub',
+    description: 'Manage your activities and bookings.',
 };
 
 export default function PortalLayout({
@@ -12,22 +13,14 @@ export default function PortalLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            <header className="bg-white shadow">
-                <div className="max-w-md mx-auto px-4 py-4 flex justify-between items-center">
-                    <h1 className="text-xl font-bold text-primary">Activity Hub</h1>
-                    {/* Mock Navigation for Portal */}
-                    <nav>
-                        <span className="text-sm font-medium">My Profile</span>
-                    </nav>
-                </div>
-            </header>
-            <main className="flex-1 max-w-md w-full mx-auto px-4 py-6">
+        <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+            {/* Top Navigation Bar */}
+            <TopBar />
+
+            {/* Main Content Area */}
+            <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 md:px-8 py-8">
                 {children}
             </main>
-            <footer className="bg-white border-t py-4 text-center text-xs text-gray-500">
-                <p>MINDS Activity Hub Mobile Portal</p>
-            </footer>
         </div>
     );
 }
