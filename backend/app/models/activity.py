@@ -13,6 +13,7 @@ class ActivityBase(BaseModel):
     end_time: datetime
     location: str
     capacity: int
+    organiser: Optional[str] = None  # Event organiser name
     volunteers_needed: int = 0
     needs_help: bool = False
     metadata: Optional[Dict[str, str]] = None
