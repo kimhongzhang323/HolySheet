@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .config import get_settings
 from .db import db
-from .routers import auth, users, activities, bookings, admin, chat
+from .routers import auth, users, activities, bookings, admin, chat, staff, calendar, forms
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,6 +36,9 @@ app.include_router(activities.router, tags=["Activities"])
 app.include_router(bookings.router, tags=["Bookings"])
 app.include_router(admin.router, tags=["Admin"])
 app.include_router(chat.router, tags=["Chat"])
+app.include_router(staff.router)  # Already has tags
+app.include_router(calendar.router)  # Already has tags
+app.include_router(forms.router)  # Already has tags
 
 @app.get("/")
 def read_root():

@@ -399,6 +399,646 @@
                         "description": "Send a message to the AI agent."
                     },
                     "response": []
+                },
+                {
+                    "name": "Chat - Analyze Activity Requirements",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"messages\": [\n        {\n            \"role\": \"user\",\n            \"content\": \"What forms do I need to fill for the wheelchair accessible yoga class?\"\n        }\n    ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/chat",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "AI analyzes activity and returns required form fields."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Chat - Book with Form Data",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"messages\": [\n        {\n            \"role\": \"user\",\n            \"content\": \"Book me for the yoga class. I need wheelchair access and my emergency contact is John Doe at 91234567.\"\n        }\n    ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/chat",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "AI books activity with registration form data."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Staff Management",
+            "item": [
+                {
+                    "name": "Assign Staff to Activity",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"staff_email\": \"staff@gmail.com\",\n    \"staff_name\": \"Staff Member\",\n    \"activity_id\": \"REPLACE_WITH_ACTIVITY_ID\",\n    \"role\": \"coordinator\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/staff/assign",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "staff",
+                                "assign"
+                            ]
+                        },
+                        "description": "Assign a staff member to an activity (Admin only). Roles: coordinator, assistant, volunteer"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Unassign Staff from Activity",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/staff/unassign?staff_email=staff@gmail.com&activity_id=REPLACE_WITH_ACTIVITY_ID",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "staff",
+                                "unassign"
+                            ],
+                            "query": [
+                                {
+                                    "key": "staff_email",
+                                    "value": "staff@gmail.com"
+                                },
+                                {
+                                    "key": "activity_id",
+                                    "value": "REPLACE_WITH_ACTIVITY_ID"
+                                }
+                            ]
+                        },
+                        "description": "Remove a staff assignment from an activity (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get My Assigned Events",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/staff/my-events",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "staff",
+                                "my-events"
+                            ]
+                        },
+                        "description": "Get all activities assigned to the current logged-in staff member"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Activity Staff",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/staff/activities/:activity_id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "staff",
+                                "activities",
+                                ":activity_id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "activity_id",
+                                    "value": "REPLACE_WITH_ACTIVITY_ID"
+                                }
+                            ]
+                        },
+                        "description": "Get all staff assigned to a specific activity"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Calendar",
+            "item": [
+                {
+                    "name": "Get Monthly Calendar",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/calendar/monthly?year=2026&month=1",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "calendar",
+                                "monthly"
+                            ],
+                            "query": [
+                                {
+                                    "key": "year",
+                                    "value": "2026"
+                                },
+                                {
+                                    "key": "month",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Get all activities and attendance counts for a month. Staff/Admin see all events."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Weekly Calendar",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/calendar/weekly?year=2026&week=2",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "calendar",
+                                "weekly"
+                            ],
+                            "query": [
+                                {
+                                    "key": "year",
+                                    "value": "2026"
+                                },
+                                {
+                                    "key": "week",
+                                    "value": "2"
+                                }
+                            ]
+                        },
+                        "description": "Get all activities for a specific ISO week with attendance counts."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Activity Attendance",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/calendar/attendance/:activity_id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "calendar",
+                                "attendance",
+                                ":activity_id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "activity_id",
+                                    "value": "REPLACE_WITH_ACTIVITY_ID"
+                                }
+                            ]
+                        },
+                        "description": "Get detailed attendance list with form responses (Staff/Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Attendance Status",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/calendar/attendance/:booking_id/status?status=attended",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "calendar",
+                                "attendance",
+                                ":booking_id",
+                                "status"
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "attended"
+                                }
+                            ],
+                            "variable": [
+                                {
+                                    "key": "booking_id",
+                                    "value": "REPLACE_WITH_BOOKING_ID"
+                                }
+                            ]
+                        },
+                        "description": "Mark a booking as attended/cancelled (Staff/Admin only). Values: confirmed, attended, cancelled"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "AI Forms",
+            "item": [
+                {
+                    "name": "Generate Form (AI)",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"activity_id\": \"REPLACE_WITH_ACTIVITY_ID\",\n    \"custom_context\": \"This activity requires wheelchair accessible venue\",\n    \"save_to_activity\": false\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/forms/generate",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms",
+                                "generate"
+                            ]
+                        },
+                        "description": "AI analyzes activity and generates registration form questions in JSON format."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Activity Form",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/forms/:activity_id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms",
+                                ":activity_id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "activity_id",
+                                    "value": "REPLACE_WITH_ACTIVITY_ID"
+                                }
+                            ]
+                        },
+                        "description": "Get registration form for an activity. Returns saved form or generates new one."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Validate Form Responses",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"activity_id\": \"REPLACE_WITH_ACTIVITY_ID\",\n    \"responses\": {\n        \"wheelchair_access\": true,\n        \"dietary_restrictions\": \"No peanuts\",\n        \"emergency_contact\": \"John Doe - 91234567\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/forms/validate",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms",
+                                "validate"
+                            ]
+                        },
+                        "description": "Validate form responses against activity's form questions."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Submit Form & Book",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"wheelchair_access\": true,\n    \"dietary_restrictions\": \"Vegetarian\",\n    \"emergency_contact\": \"Jane Doe - 98765432\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/forms/:activity_id/submit",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms",
+                                ":activity_id",
+                                "submit"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "activity_id",
+                                    "value": "REPLACE_WITH_ACTIVITY_ID"
+                                }
+                            ]
+                        },
+                        "description": "Submit form responses and create booking in one step."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Memory & Seeding",
+            "item": [
+                {
+                    "name": "Run Database Seeder",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "Run: python -m app.seed",
+                            "host": [
+                                "Run: python -m app.seed"
+                            ]
+                        },
+                        "description": "Run this command in terminal: cd backend && python -m app.seed"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Memory Stats",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/forms/memory/stats",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms",
+                                "memory",
+                                "stats"
+                            ]
+                        },
+                        "description": "Get statistics about event memory store for RAG"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Search Event Memories",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/forms/memory/search?query=wheelchair art painting&limit=3",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forms",
+                                "memory",
+                                "search"
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "wheelchair art painting"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "3"
+                                }
+                            ]
+                        },
+                        "description": "Search event memories for similar past events (RAG debug)"
+                    },
+                    "response": []
                 }
             ]
         }

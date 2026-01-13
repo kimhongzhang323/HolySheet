@@ -2,13 +2,80 @@
 MINDS Buddy AI Agent Service
 
 Implements function calling tools for the Gemini-powered chat agent.
-The agent can search activities, check tier limits, and book activities for users.
+The agent can search activities, check tier limits, book activities for users,
+and intelligently analyze registration requirements for activities.
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from bson import ObjectId
 from google.genai import types
+
+# Keywords that trigger specific form field suggestions
+FORM_FIELD_KEYWORDS = {
+    "wheelchair": {
+        "field_name": "wheelchair_access",
+        "field_type": "boolean",
+        "label": "Do you require wheelchair accessibility?",
+        "required": False
+    },
+    "accessible": {
+        "field_name": "wheelchair_access",
+        "field_type": "boolean",
+        "label": "Do you require wheelchair accessibility?",
+        "required": False
+    },
+    "caregiver": {
+        "field_name": "caregiver_info",
+        "field_type": "text",
+        "label": "Caregiver name and contact (if applicable)",
+        "required": False
+    },
+    "payment": {
+        "field_name": "payment_method",
+        "field_type": "select",
+        "label": "Preferred payment method",
+        "options": ["Cash", "PayNow", "Credit Card", "Caregiver pays"],
+        "required": True
+    },
+    "meal": {
+        "field_name": "dietary_restrictions",
+        "field_type": "text",
+        "label": "Any dietary restrictions or allergies?",
+        "required": False
+    },
+    "food": {
+        "field_name": "dietary_restrictions",
+        "field_type": "text",
+        "label": "Any dietary restrictions or allergies?",
+        "required": False
+    },
+    "lunch": {
+        "field_name": "dietary_restrictions",
+        "field_type": "text",
+        "label": "Any dietary restrictions or allergies?",
+        "required": False
+    },
+    "transport": {
+        "field_name": "transport_needs",
+        "field_type": "select",
+        "label": "Do you need transportation assistance?",
+        "options": ["No", "Pick-up needed", "Drop-off needed", "Both"],
+        "required": False
+    },
+    "medical": {
+        "field_name": "medical_conditions",
+        "field_type": "text",
+        "label": "Any medical conditions we should be aware of?",
+        "required": False
+    },
+    "emergency": {
+        "field_name": "emergency_contact",
+        "field_type": "text",
+        "label": "Emergency contact name and phone number",
+        "required": True
+    }
+}
 
 # Tool definitions for Gemini function calling
 AGENT_TOOLS = [
@@ -63,6 +130,63 @@ AGENT_TOOLS = [
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={}
+                )
+            ),
+            # New AI-powered form tools
+            types.FunctionDeclaration(
+                name="analyze_activity_requirements",
+                description="Analyze an activity to determine what registration form fields are needed. Use this when the user wants to book an activity to understand what additional information is required (e.g., wheelchair access, dietary needs, caregiver info).",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "activity_id": types.Schema(
+                            type=types.Type.STRING,
+                            description="The ID of the activity to analyze"
+                        )
+                    },
+                    required=["activity_id"]
+                )
+            ),
+            types.FunctionDeclaration(
+                name="book_with_form",
+                description="Book an activity with additional registration form data. Use this when the user provides answers to registration questions (like wheelchair needs, dietary restrictions, emergency contacts).",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "activity_id": types.Schema(
+                            type=types.Type.STRING,
+                            description="The ID of the activity to book"
+                        ),
+                        "wheelchair_access": types.Schema(
+                            type=types.Type.BOOLEAN,
+                            description="Whether the user needs wheelchair accessibility"
+                        ),
+                        "caregiver_info": types.Schema(
+                            type=types.Type.STRING,
+                            description="Caregiver name and contact information"
+                        ),
+                        "dietary_restrictions": types.Schema(
+                            type=types.Type.STRING,
+                            description="Any dietary restrictions or allergies"
+                        ),
+                        "transport_needs": types.Schema(
+                            type=types.Type.STRING,
+                            description="Transportation assistance needs"
+                        ),
+                        "medical_conditions": types.Schema(
+                            type=types.Type.STRING,
+                            description="Any medical conditions to be aware of"
+                        ),
+                        "emergency_contact": types.Schema(
+                            type=types.Type.STRING,
+                            description="Emergency contact name and phone"
+                        ),
+                        "payment_method": types.Schema(
+                            type=types.Type.STRING,
+                            description="Preferred payment method"
+                        )
+                    },
+                    required=["activity_id"]
                 )
             )
         ]
@@ -234,6 +358,146 @@ async def get_user_bookings(db, user_id: str) -> List[dict]:
     
     return result
 
+
+async def analyze_activity_requirements(db, activity_id: str) -> dict:
+    """
+    Analyze an activity's description to determine what registration form fields are needed.
+    Uses keyword matching to suggest relevant form fields based on activity content.
+    """
+    if not ObjectId.is_valid(activity_id):
+        return {"success": False, "message": "Invalid activity ID", "fields": []}
+    
+    activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+    if not activity:
+        return {"success": False, "message": "Activity not found", "fields": []}
+    
+    # Check if activity already has custom form fields defined
+    existing_fields = activity.get("custom_form_fields", [])
+    if existing_fields:
+        return {
+            "success": True,
+            "activity_title": activity.get("title", "Untitled"),
+            "message": "This activity has predefined registration fields.",
+            "fields": existing_fields,
+            "source": "predefined"
+        }
+    
+    # Analyze description and title for keywords
+    text_to_analyze = f"{activity.get('title', '')} {activity.get('description', '')}".lower()
+    
+    suggested_fields = []
+    seen_field_names = set()
+    
+    for keyword, field_config in FORM_FIELD_KEYWORDS.items():
+        if keyword in text_to_analyze:
+            field_name = field_config["field_name"]
+            if field_name not in seen_field_names:
+                suggested_fields.append(field_config)
+                seen_field_names.add(field_name)
+    
+    # If no specific fields found, suggest basic emergency contact
+    if not suggested_fields:
+        suggested_fields.append({
+            "field_name": "emergency_contact",
+            "field_type": "text",
+            "label": "Emergency contact name and phone number",
+            "required": False
+        })
+    
+    return {
+        "success": True,
+        "activity_title": activity.get("title", "Untitled"),
+        "activity_description": activity.get("description", ""),
+        "message": f"Based on the activity description, we suggest collecting the following information from participants.",
+        "fields": suggested_fields,
+        "source": "ai_analyzed"
+    }
+
+
+async def book_with_form(db, user_id: str, user_tier: str, activity_id: str, **form_data) -> dict:
+    """
+    Book an activity with additional registration form data.
+    Stores the form responses along with the booking.
+    """
+    from .tier import can_user_book
+    from .calendar import generate_google_calendar_link
+    
+    if not ObjectId.is_valid(activity_id):
+        return {"success": False, "message": "Invalid activity ID"}
+    
+    activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+    if not activity:
+        return {"success": False, "message": "Activity not found"}
+    
+    # Check tier limits
+    from ..models.user import MembershipTier
+    tier_map = {
+        "ad-hoc": "ad-hoc",
+        "weekly": "weekly",
+        "once-a-week": "once-a-week",
+        "twice-a-week": "twice-a-week",
+        "three-plus-a-week": "three-plus-a-week"
+    }
+    tier_enum = MembershipTier(tier_map.get(user_tier, "ad-hoc"))
+    
+    allowed_tiers = activity.get("allowed_tiers", [])
+    tier_check = await can_user_book(
+        tier_enum, 
+        user_id, 
+        [MembershipTier(t) for t in allowed_tiers] if allowed_tiers else None, 
+        db
+    )
+    
+    if not tier_check["allowed"]:
+        return {"success": False, "message": tier_check["message"]}
+    
+    # Clean form data - remove None values and activity_id
+    form_responses = {k: v for k, v in form_data.items() if v is not None and k != "activity_id"}
+    
+    # Create booking with form responses
+    booking = {
+        "user_id": user_id,
+        "activity_id": str(activity["_id"]),
+        "status": "confirmed",
+        "timestamp": datetime.utcnow(),
+        "form_responses": form_responses if form_responses else None
+    }
+    
+    await db.bookings.insert_one(booking)
+    
+    # Generate calendar link
+    calendar_link = generate_google_calendar_link(
+        activity.get("title", "Activity"),
+        activity.get("description", ""),
+        activity.get("location", ""),
+        activity["start_time"],
+        activity.get("end_time", activity["start_time"] + timedelta(hours=1))
+    )
+    
+    # Build response message
+    collected_info = []
+    if form_responses.get("wheelchair_access"):
+        collected_info.append("wheelchair accessibility noted")
+    if form_responses.get("dietary_restrictions"):
+        collected_info.append(f"dietary needs: {form_responses['dietary_restrictions']}")
+    if form_responses.get("caregiver_info"):
+        collected_info.append("caregiver information recorded")
+    if form_responses.get("emergency_contact"):
+        collected_info.append("emergency contact saved")
+    
+    info_summary = f" We've noted: {', '.join(collected_info)}." if collected_info else ""
+    
+    return {
+        "success": True,
+        "message": f"Successfully booked '{activity.get('title')}'!{info_summary}",
+        "activity": activity.get("title"),
+        "date": activity["start_time"].strftime("%Y-%m-%d %H:%M"),
+        "location": activity.get("location", "TBD"),
+        "calendar_link": calendar_link,
+        "form_responses_saved": bool(form_responses)
+    }
+
+
 # Tool dispatcher
 async def execute_tool(tool_name: str, args: dict, db, user_id: str, user_tier: str) -> Any:
     """Execute a tool by name with given arguments."""
@@ -245,5 +509,9 @@ async def execute_tool(tool_name: str, args: dict, db, user_id: str, user_tier: 
         return await book_activity(db, user_id, user_tier, **args)
     elif tool_name == "get_user_bookings":
         return await get_user_bookings(db, user_id)
+    elif tool_name == "analyze_activity_requirements":
+        return await analyze_activity_requirements(db, **args)
+    elif tool_name == "book_with_form":
+        return await book_with_form(db, user_id, user_tier, **args)
     else:
         return {"error": f"Unknown tool: {tool_name}"}
