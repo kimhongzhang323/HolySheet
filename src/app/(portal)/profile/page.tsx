@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
     Calendar, Heart, Clock, Award, MapPin, Mail,
-    Edit3, ChevronRight, Star, TrendingUp, Users, CheckCircle, Music, Ticket
+    Edit3, ChevronRight, Star, TrendingUp, Users, CheckCircle, Ticket
 } from 'lucide-react';
 
 // Mock user data
@@ -253,9 +254,12 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Edit Profile Button */}
-                    <button className="px-6 py-2.5 bg-gray-900 text-white rounded-full font-medium hover:bg-gray-800 transition-colors">
+                    <Link
+                        href="/profile/edit"
+                        className="px-6 py-2.5 bg-gray-900 text-white rounded-full font-medium hover:bg-gray-800 transition-colors"
+                    >
                         Edit Profile
-                    </button>
+                    </Link>
                 </div>
             </motion.div>
 
@@ -342,6 +346,23 @@ export default function ProfilePage() {
             >
                 {activeTab === 'overview' && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Volunteer Resume Card */}
+                        <Link
+                            href="/profile/volunteer-resume"
+                            className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100 shadow-sm hover:shadow-md transition-all group"
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <h2 className="text-lg font-bold text-gray-900">Volunteer Resume</h2>
+                                <ChevronRight size={20} className="text-gray-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
+                            </div>
+                            <p className="text-sm text-gray-600 mb-4">Your profile for volunteer applications</p>
+                            <div className="flex gap-2 flex-wrap">
+                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">3 Skills</span>
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">3 Causes</span>
+                                <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">48 Hours</span>
+                            </div>
+                        </Link>
+
                         {/* Badges/Achievements */}
                         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                             <h2 className="text-lg font-bold text-gray-900 mb-4">Achievements</h2>
@@ -412,8 +433,8 @@ export default function ProfilePage() {
                                         key={filter.id}
                                         onClick={() => setHistoryFilter(filter.id)}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${historyFilter === filter.id
-                                                ? 'bg-white text-gray-900 shadow-sm'
-                                                : 'text-gray-500 hover:text-gray-700'
+                                            ? 'bg-white text-gray-900 shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
                                         {filter.label}

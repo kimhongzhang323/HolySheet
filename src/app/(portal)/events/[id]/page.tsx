@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { MapPin, ArrowLeft, Calendar, Clock, Users, Share2, Heart, CheckCircle } from 'lucide-react';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    MapPin, ArrowLeft, Calendar, Clock, Users, Share2, Heart, CheckCircle,
+    X, AlertCircle, FileText, Send
+} from 'lucide-react';
 
 // This would normally come from an API/database
 const MOCK_EVENTS = [
@@ -286,6 +290,18 @@ Training session provided before the workshop.`,
     },
 ];
 
+// Mock resume check - in real app, this checks if user has filled resume
+const MOCK_HAS_RESUME = true;
+
+// Mock application status - null means not applied
+const getApplicationStatus = (eventId: string) => {
+    const mockStatuses: Record<string, 'pending' | 'approved' | 'rejected' | null> = {
+        'VOL001': 'approved',
+        'VOL003': 'pending',
+    };
+    return mockStatuses[eventId] || null;
+};
+
 interface Event {
     _id: string;
     title: string;
@@ -317,11 +333,21 @@ export default function EventDetailPage() {
     const [event, setEvent] = useState<Event | null>(null);
     const [isRegistered, setIsRegistered] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [showApplicationModal, setShowApplicationModal] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [applicationNote, setApplicationNote] = useState('');
+    const [applicationStatus, setApplicationStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
 
     useEffect(() => {
         // In a real app, fetch from API
         const foundEvent = MOCK_EVENTS.find(e => e._id === params.id);
         setEvent(foundEvent || null);
+
+        // Check application status for volunteer events
+        if (foundEvent?.category === 'volunteer') {
+            setApplicationStatus(getApplicationStatus(foundEvent._id));
+        }
+
         setIsLoading(false);
     }, [params.id]);
 
@@ -334,9 +360,60 @@ export default function EventDetailPage() {
         }
     };
 
+    const handleVolunteerClick = () => {
+        if (!MOCK_HAS_RESUME) {
+            // Redirect to resume page if no resume
+            router.push('/profile/volunteer-resume');
+            return;
+        }
+        setShowApplicationModal(true);
+    };
+
+    const handleSubmitApplication = async () => {
+        setIsSubmitting(true);
+
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        setIsSubmitting(false);
+        setShowApplicationModal(false);
+        setApplicationStatus('pending');
+    };
+
     const handleRegister = () => {
         setIsRegistered(true);
         // In a real app, this would call an API
+    };
+
+    const getStatusDisplay = () => {
+        switch (applicationStatus) {
+            case 'pending':
+                return {
+                    icon: Clock,
+                    title: 'Application Pending',
+                    description: 'Your application is being reviewed by the organizer.',
+                    color: 'bg-yellow-50 border-yellow-200 text-yellow-700',
+                    iconColor: 'text-yellow-500',
+                };
+            case 'approved':
+                return {
+                    icon: CheckCircle,
+                    title: 'Application Approved!',
+                    description: 'Congratulations! You have been accepted as a volunteer.',
+                    color: 'bg-green-50 border-green-200 text-green-700',
+                    iconColor: 'text-green-500',
+                };
+            case 'rejected':
+                return {
+                    icon: X,
+                    title: 'Application Not Accepted',
+                    description: 'Unfortunately, your application was not accepted this time.',
+                    color: 'bg-red-50 border-red-200 text-red-700',
+                    iconColor: 'text-red-500',
+                };
+            default:
+                return null;
+        }
     };
 
     if (isLoading) {
@@ -351,7 +428,7 @@ export default function EventDetailPage() {
         return (
             <div className="text-center py-20">
                 <h1 className="text-2xl font-bold text-gray-900 mb-4">Event Not Found</h1>
-                <p className="text-gray-500 mb-6">The event you're looking for doesn't exist.</p>
+                <p className="text-gray-500 mb-6">The event you&apos;re looking for doesn&apos;t exist.</p>
                 <button
                     onClick={() => router.push('/events')}
                     className="px-6 py-3 bg-gray-900 text-white rounded-full font-medium hover:bg-gray-800 transition-colors"
@@ -362,8 +439,103 @@ export default function EventDetailPage() {
         );
     }
 
+    const statusDisplay = getStatusDisplay();
+
     return (
         <div className="max-w-5xl mx-auto">
+            {/* Application Modal */}
+            <AnimatePresence>
+                {showApplicationModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowApplicationModal(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-gray-900">Apply as Volunteer</h2>
+                                <button
+                                    onClick={() => setShowApplicationModal(false)}
+                                    className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                                >
+                                    <X size={20} className="text-gray-500" />
+                                </button>
+                            </div>
+
+                            {/* Event Summary */}
+                            <div className="bg-gray-50 rounded-2xl p-4 mb-6">
+                                <h3 className="font-semibold text-gray-900 mb-1">
+                                    {event.title} {event.type}
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                    {event.date} {event.month} {event.year} • {event.start_time} - {event.end_time}
+                                </p>
+                            </div>
+
+                            {/* Resume Info */}
+                            <div className="bg-green-50 rounded-2xl p-4 mb-6 flex items-start gap-3">
+                                <FileText size={20} className="text-green-600 mt-0.5" />
+                                <div>
+                                    <p className="font-medium text-gray-900">Your Volunteer Resume</p>
+                                    <p className="text-sm text-gray-600">Your skills and interests will be shared with the organizer.</p>
+                                    <Link
+                                        href="/profile/volunteer-resume"
+                                        className="text-sm text-green-600 font-medium hover:underline"
+                                    >
+                                        View/Edit Resume →
+                                    </Link>
+                                </div>
+                            </div>
+
+                            {/* Application Note */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Why do you want to volunteer? (Optional)
+                                </label>
+                                <textarea
+                                    value={applicationNote}
+                                    onChange={(e) => setApplicationNote(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all resize-none"
+                                    placeholder="Tell the organizer why you're interested..."
+                                />
+                            </div>
+
+                            {/* Submit Button */}
+                            <button
+                                onClick={handleSubmitApplication}
+                                disabled={isSubmitting}
+                                className="w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send size={18} />
+                                        Submit Application
+                                    </>
+                                )}
+                            </button>
+
+                            <p className="text-xs text-gray-500 text-center mt-4">
+                                The organizer will review your application and notify you via email.
+                            </p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Back Button */}
             <motion.button
                 initial={{ opacity: 0, x: -20 }}
@@ -543,11 +715,33 @@ export default function EventDetailPage() {
                         )}
                     </div>
 
+                    {/* Application Status (for volunteer events) */}
+                    {event.category === 'volunteer' && statusDisplay && (
+                        <div className={`rounded-2xl p-6 border text-center ${statusDisplay.color}`}>
+                            <statusDisplay.icon size={48} className={`mx-auto mb-3 ${statusDisplay.iconColor}`} />
+                            <h3 className="text-lg font-bold text-gray-900 mb-1">{statusDisplay.title}</h3>
+                            <p className="text-sm">{statusDisplay.description}</p>
+                        </div>
+                    )}
+
                     {/* CTA Button */}
-                    {isRegistered ? (
+                    {event.category === 'volunteer' ? (
+                        // Volunteer event - show application button or status
+                        !applicationStatus && (
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={handleVolunteerClick}
+                                className="w-full py-4 font-bold tracking-wider rounded-2xl transition-colors flex items-center justify-center gap-3 bg-green-600 text-white hover:bg-green-700"
+                            >
+                                <Heart size={20} />
+                                APPLY TO VOLUNTEER
+                            </motion.button>
+                        )
+                    ) : isRegistered ? (
                         <div className="bg-green-50 rounded-2xl p-6 border border-green-200 text-center">
                             <CheckCircle size={48} className="text-green-500 mx-auto mb-3" />
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">You're Registered!</h3>
+                            <h3 className="te text-lg font-bold text-gray-900 mb-1">You&apos;re Registered!</h3>
                             <p className="text-sm text-gray-600">Check your email for confirmation details.</p>
                         </div>
                     ) : (
@@ -555,22 +749,27 @@ export default function EventDetailPage() {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={handleRegister}
-                            className={`w-full py-4 font-bold tracking-wider rounded-2xl transition-colors flex items-center justify-center gap-3 ${event.category === 'volunteer'
-                                    ? 'bg-green-600 text-white hover:bg-green-700'
-                                    : 'bg-gray-900 text-white hover:bg-gray-800'
-                                }`}
+                            className="w-full py-4 font-bold tracking-wider rounded-2xl transition-colors flex items-center justify-center gap-3 bg-gray-900 text-white hover:bg-gray-800"
                         >
-                            {event.category === 'volunteer' ? (
-                                <>
-                                    <Heart size={20} />
-                                    VOLUNTEER NOW
-                                </>
-                            ) : event.category === 'meetup' ? (
-                                'RSVP NOW'
-                            ) : (
-                                'GET TICKETS'
-                            )}
+                            {event.category === 'meetup' ? 'RSVP NOW' : 'GET TICKETS'}
                         </motion.button>
+                    )}
+
+                    {/* Resume Hint for volunteer events without application */}
+                    {event.category === 'volunteer' && !applicationStatus && !MOCK_HAS_RESUME && (
+                        <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100 flex items-start gap-3">
+                            <AlertCircle size={20} className="text-orange-500 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="font-medium text-gray-900 text-sm">Complete Your Resume First</p>
+                                <p className="text-xs text-gray-600">Create your volunteer resume before applying.</p>
+                                <Link
+                                    href="/profile/volunteer-resume"
+                                    className="text-sm text-orange-600 font-medium hover:underline"
+                                >
+                                    Create Resume →
+                                </Link>
+                            </div>
+                        </div>
                     )}
                 </motion.div>
             </div>
