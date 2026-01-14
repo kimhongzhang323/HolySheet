@@ -294,10 +294,12 @@ Training session provided before the workshop.`,
 const MOCK_HAS_RESUME = true;
 
 // Mock application status - null means not applied
+// In real app, this would come from database based on user's applications
+// Only shows status if user has previously applied to this event
 const getApplicationStatus = (eventId: string) => {
     const mockStatuses: Record<string, 'pending' | 'approved' | 'rejected' | null> = {
-        'VOL001': 'approved',
-        'VOL003': 'pending',
+        // 'VOL001': 'approved', // Uncomment to test approved state
+        'VOL003': 'pending', // Example: user applied but not yet approved
     };
     return mockStatuses[eventId] || null;
 };
@@ -378,6 +380,16 @@ export default function EventDetailPage() {
         setIsSubmitting(false);
         setShowApplicationModal(false);
         setApplicationStatus('pending');
+    };
+
+    const handleWithdrawApplication = async () => {
+        if (!window.confirm('Are you sure you want to withdraw your application?')) {
+            return;
+        }
+
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setApplicationStatus(null);
     };
 
     const handleRegister = () => {
@@ -720,7 +732,17 @@ export default function EventDetailPage() {
                         <div className={`rounded-2xl p-6 border text-center ${statusDisplay.color}`}>
                             <statusDisplay.icon size={48} className={`mx-auto mb-3 ${statusDisplay.iconColor}`} />
                             <h3 className="text-lg font-bold text-gray-900 mb-1">{statusDisplay.title}</h3>
-                            <p className="text-sm">{statusDisplay.description}</p>
+                            <p className="text-sm mb-4">{statusDisplay.description}</p>
+
+                            {/* Withdraw button for pending applications */}
+                            {applicationStatus === 'pending' && (
+                                <button
+                                    onClick={handleWithdrawApplication}
+                                    className="text-sm text-red-600 font-medium hover:text-red-700 hover:underline"
+                                >
+                                    Withdraw Application
+                                </button>
+                            )}
                         </div>
                     )}
 
