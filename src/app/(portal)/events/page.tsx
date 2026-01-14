@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MapPin, X, ArrowUpRight, QrCode, Calendar, Users, Heart, Sparkles, SlidersHorizontal, ChevronDown } from 'lucide-react';
 
@@ -229,6 +230,7 @@ interface Event {
 }
 
 export default function EventsPage() {
+    const router = useRouter();
     const [events] = useState<Event[]>(MOCK_EVENTS);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
@@ -679,6 +681,7 @@ export default function EventsPage() {
                                     transition={{ delay: 0.6 }}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
+                                    onClick={() => router.push(`/events/${selectedEvent._id}`)}
                                     className={`w-full lg:w-auto px-8 py-4 font-bold tracking-wider rounded-full transition-colors flex items-center justify-center gap-3 ${selectedEvent.category === 'volunteer'
                                         ? 'bg-green-600 text-white hover:bg-green-700'
                                         : 'bg-gray-900 text-white hover:bg-gray-800'

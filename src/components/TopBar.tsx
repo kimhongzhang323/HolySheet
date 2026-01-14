@@ -49,15 +49,6 @@ export default function TopBar() {
                             Events
                         </Link>
                         <Link
-                            href="/tickets"
-                            className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${isActive('/tickets')
-                                ? 'bg-gray-900 text-white shadow-md'
-                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                                }`}
-                        >
-                            Tickets
-                        </Link>
-                        <Link
                             href="/calendar"
                             className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${isActive('/calendar')
                                 ? 'bg-gray-900 text-white shadow-md'
