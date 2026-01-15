@@ -8,6 +8,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         Google({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            authorization: {
+                params: {
+                    scope: "openid email profile https://www.googleapis.com/auth/calendar.readonly",
+                    prompt: "consent",
+                    access_type: "offline",
+                    response_type: "code"
+                }
+            }
         }),
     ],
     session: {
@@ -32,6 +40,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             // Send properties to the client
             if (session.user) {
                 session.user.id = token.id as string
+                session.accessToken = token.accessToken as string
             }
             return session
         },

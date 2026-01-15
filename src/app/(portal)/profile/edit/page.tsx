@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import {
     ArrowLeft, Camera, User, Mail, MapPin, Phone, FileText,
@@ -20,11 +21,23 @@ const INITIAL_USER_DATA = {
 
 export default function EditProfilePage() {
     const router = useRouter();
+    const { data: session } = useSession();
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
     // Form state
     const [formData, setFormData] = useState(INITIAL_USER_DATA);
+
+    useEffect(() => {
+        if (session?.user) {
+            setFormData(prev => ({
+                ...prev,
+                name: session.user?.name || prev.name,
+                email: session.user?.email || prev.email,
+                avatar: session.user?.image || prev.avatar,
+            }));
+        }
+    }, [session]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
