@@ -49,15 +49,6 @@ export default function TopBar() {
                             Events
                         </Link>
                         <Link
-                            href="/tickets"
-                            className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${isActive('/tickets')
-                                ? 'bg-gray-900 text-white shadow-md'
-                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                                }`}
-                        >
-                            Tickets
-                        </Link>
-                        <Link
                             href="/calendar"
                             className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${isActive('/calendar')
                                 ? 'bg-gray-900 text-white shadow-md'
@@ -96,7 +87,7 @@ export default function TopBar() {
                             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
                         </button>
 
-                        <div className="flex items-center gap-3 cursor-pointer p-1.5 pr-3 hover:bg-gray-100 rounded-full transition-all border border-transparent hover:border-gray-200">
+                        <Link href="/profile" className="flex items-center gap-3 cursor-pointer p-1.5 pr-3 hover:bg-gray-100 rounded-full transition-all border border-transparent hover:border-gray-200">
                             <div className="w-9 h-9 relative rounded-full overflow-hidden bg-indigo-100 ring-2 ring-white shadow-sm">
                                 <Image
                                     src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
@@ -110,7 +101,7 @@ export default function TopBar() {
                                 <p className="text-[10px] text-gray-500 font-medium mt-0.5">Participant</p>
                             </div>
                             <ChevronDown size={14} className="text-gray-400" />
-                        </div>
+                        </Link>
                     </div>
                 </div>
             </div>
