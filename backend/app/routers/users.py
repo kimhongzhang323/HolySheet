@@ -37,3 +37,7 @@ async def update_profile(
     
     updated_user = await db.users.find_one({"_id": user_id})
     return updated_user
+
+@router.get("/user/profile", response_model=UserResponse)
+async def get_profile(current_user: UserResponse = Depends(get_current_user)):
+    return current_user

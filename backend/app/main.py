@@ -2,6 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
+import os
+
+# Load .env.local if it exists (common in Next.js projects)
+if os.path.exists(".env.local"):
+    load_dotenv(".env.local")
+
 load_dotenv()
 
 from contextlib import asynccontextmanager
