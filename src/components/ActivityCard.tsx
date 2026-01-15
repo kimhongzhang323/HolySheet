@@ -12,6 +12,7 @@ interface Activity {
     end_time: string;
     location: string;
     needs_help?: boolean;
+    image_url?: string;
 }
 
 export default function ActivityCard({ activity }: { activity: Activity }) {
@@ -73,10 +74,21 @@ export default function ActivityCard({ activity }: { activity: Activity }) {
 
     return (
         <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 flex flex-col h-full group overflow-hidden">
-            {/* Image Area - Abstract Gradient */}
-            <div className={`h-48 w-full bg-gradient-to-br ${gradient} relative`}>
+            {/* Image Area */}
+            <div className={`h-48 w-full relative overflow-hidden`}>
+                {activity.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                        src={activity.image_url}
+                        alt={activity.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                ) : (
+                    <div className={`w-full h-full bg-gradient-to-br ${gradient}`}></div>
+                )}
+
                 {activity.needs_help && (
-                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur text-red-600 text-[10px] font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wider">
+                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur text-red-600 text-[10px] font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wider z-10">
                         Urgent
                     </div>
                 )}
