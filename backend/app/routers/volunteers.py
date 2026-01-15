@@ -112,6 +112,23 @@ async def get_crisis_dashboard(
             "needs_help": activity.get("needs_help", False)
         })
     
+    # [DEMO] Mock Crisis Event
+    mock_crisis = {
+        "activity_id": "mock_event_id_123",
+        "title": "🚨 EMERGENCY: Flash Flood Relief",
+        "start_time": now + timedelta(hours=4),
+        "location": "North District Community Hall",
+        "volunteers_needed": 50,
+        "volunteers_registered": 5,
+        "hours_until": 4,
+        "shortage": 45,
+        "fill_percentage": 10,
+        "status": "critical",
+        "skills_required": ["First Aid", "Logistics"],
+        "needs_help": True
+    }
+    crisis_items.append(mock_crisis)
+    
     # Sort by urgency (critical first, then by time)
     crisis_items.sort(key=lambda x: (
         0 if x["status"] == "critical" else 1 if x["status"] == "warning" else 2,

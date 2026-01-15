@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Scan, FileDown, TrendingUp, Users, AlertTriangle, CheckCircle, Bell } from 'lucide-react';
+import { Scan, FileDown, TrendingUp, Users, AlertTriangle, CheckCircle, Bell, ExternalLink, Send } from 'lucide-react';
 import AttendanceScanner from '@/components/AttendanceScanner';
 import OpsCopilot from '@/components/OpsCopilot';
 
@@ -34,6 +34,70 @@ interface AIInsight {
     actionable: boolean;
 }
 
+interface BlastTarget {
+    volunteer_id: string;
+    name: string;
+    phone: string;
+    skills: string[];
+    whatsapp_link: string;
+}
+
+const MOCK_CRISIS_ACTIVITIES: CrisisActivity[] = [
+    {
+        activity_id: 'mock-1',
+        title: 'Urgent: Food Distribution',
+        start_time: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+        location: 'Community Center A',
+        volunteers_needed: 10,
+        volunteers_registered: 2,
+        shortage: 8,
+        status: 'critical'
+    },
+    {
+        activity_id: 'mock-2',
+        title: 'Emergency Medical Support',
+        start_time: new Date(Date.now() + 26 * 3600 * 1000).toISOString(),
+        location: 'City Sports Complex',
+        volunteers_needed: 5,
+        volunteers_registered: 3,
+        shortage: 2,
+        status: 'warning'
+    },
+    {
+        activity_id: 'mock-3',
+        title: 'Logistics Coordination',
+        start_time: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
+        location: 'Warehouse B',
+        volunteers_needed: 8,
+        volunteers_registered: 8,
+        shortage: 0,
+        status: 'ok'
+    }
+];
+
+const MOCK_BLAST_TARGETS: BlastTarget[] = [
+    {
+        volunteer_id: 'v1',
+        name: 'Sarah Chen',
+        phone: '+65 9123 4567',
+        skills: ['First Aid', 'Coordination'],
+        whatsapp_link: 'https://wa.me/6591234567?text=Hi%20Sarah,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
+    },
+    {
+        volunteer_id: 'v2',
+        name: 'Ahmad bin Yusef',
+        phone: '+65 9876 5432',
+        skills: ['Heavy Lifting', 'Driving'],
+        whatsapp_link: 'https://wa.me/6598765432?text=Hi%20Ahmad,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
+    },
+    {
+        volunteer_id: 'v3',
+        name: 'John Tan',
+        phone: '+65 8234 5678',
+        skills: ['Logistics'],
+        whatsapp_link: 'https://wa.me/6582345678?text=Hi%20John,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
+    }
+];
 export default function AdminDashboard() {
     const [showScanner, setShowScanner] = useState(false);
     const [stats, setStats] = useState<DashboardStats>({
@@ -53,26 +117,32 @@ export default function AdminDashboard() {
         activities_count: 3,
         actionable: true
     });
+    const [blastModal, setBlastModal] = useState<{ isOpen: boolean; activityId: string; targets: BlastTarget[] }>({
+        isOpen: false,
+        activityId: '',
+        targets: []
+    });
 
     useEffect(() => {
         fetchCrisisData();
     }, []);
 
     const fetchCrisisData = async () => {
-        try {
-            const response = await fetch('/api/admin/volunteers/crisis-dashboard?days_ahead=7');
-            const data = await response.json();
-            setCrisisActivities(data.activities || []);
-        } catch (error) {
-            console.error('Failed to fetch crisis data:', error);
-        }
+        // Simulating API call with mock data
+        setCrisisActivities(MOCK_CRISIS_ACTIVITIES);
     };
 
     const handleScan = async (userId: string, activityId: string) => {
         try {
+            const token = localStorage.getItem('token');
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch('/api/admin/attendance/mark', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ user_id: userId, activity_id: activityId })
             });
 
@@ -91,9 +161,23 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleBlast = async (activity: CrisisActivity) => {
+        setBlastModal({
+            isOpen: true,
+            activityId: activity.activity_id,
+            targets: MOCK_BLAST_TARGETS
+        });
+    };
+
     const exportWeeklyReport = async () => {
         try {
-            const response = await fetch('/api/admin/reports/volunteers/export');
+            const token = localStorage.getItem('token');
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch('/api/admin/reports/volunteers/export', { headers });
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -312,9 +396,18 @@ export default function AdminDashboard() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors">
-                                                    Assign
-                                                </button>
+                                                {activity.status === 'critical' || activity.status === 'warning' ? (
+                                                    <button
+                                                        onClick={() => handleBlast(activity)}
+                                                        className="inline-flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wide rounded shadow-md transition-all hover:scale-105"
+                                                    >
+                                                        📢 Blast WhatsApp
+                                                    </button>
+                                                ) : (
+                                                    <button className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors">
+                                                        Assign
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -344,6 +437,62 @@ export default function AdminDashboard() {
             <div className="fixed bottom-6 right-6 z-50">
                 <OpsCopilot />
             </div>
+
+            {/* Blast Modal */}
+            {blastModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
+                            <h3 className="text-xl font-bold text-gray-900">WhatsApp Volunteer Blast</h3>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Found {blastModal.targets.length} matching volunteers
+                            </p>
+                        </div>
+
+                        <div className="p-6 space-y-3">
+                            {blastModal.targets.length === 0 ? (
+                                <p className="text-center text-gray-500 py-8">
+                                    No volunteers found with matching skills or phone numbers.
+                                </p>
+                            ) : (
+                                blastModal.targets.map((target) => (
+                                    <div key={target.volunteer_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                        <div>
+                                            <p className="font-semibold text-gray-900">{target.name}</p>
+                                            <p className="text-sm text-gray-600">{target.phone}</p>
+                                            <div className="flex gap-1 mt-1">
+                                                {target.skills.map(skill => (
+                                                    <span key={skill} className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                                        {skill}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={target.whatsapp_link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                                        >
+                                            <ExternalLink size={16} />
+                                            Send
+                                        </a>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-2xl">
+                            <button
+                                onClick={() => setBlastModal({ isOpen: false, activityId: '', targets: [] })}
+                                className="w-full px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

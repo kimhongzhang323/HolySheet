@@ -26,6 +26,73 @@ interface BlastTarget {
 }
 
 export default function CrisisDashboard() {
+    // Mock Data
+    const MOCK_CRISIS_ACTIVITIES: CrisisActivity[] = [
+        {
+            activity_id: 'mock-1',
+            title: 'Urgent: Food Distribution',
+            start_time: new Date(Date.now() + 4 * 3600 * 1000).toISOString(), // 4 hours from now
+            hours_until: 4,
+            location: 'Community Center A',
+            volunteers_needed: 10,
+            volunteers_registered: 2,
+            shortage: 8,
+            fill_percentage: 20,
+            status: 'critical',
+            skills_required: ['Heavy Lifting', 'Coordination']
+        },
+        {
+            activity_id: 'mock-2',
+            title: 'Emergency Medical Support',
+            start_time: new Date(Date.now() + 26 * 3600 * 1000).toISOString(), // 26 hours from now
+            hours_until: 26,
+            location: 'City Sports Complex',
+            volunteers_needed: 5,
+            volunteers_registered: 3,
+            shortage: 2,
+            fill_percentage: 60,
+            status: 'warning',
+            skills_required: ['First Aid', 'Nursing']
+        },
+        {
+            activity_id: 'mock-3',
+            title: 'Logistics Coordination',
+            start_time: new Date(Date.now() + 48 * 3600 * 1000).toISOString(), // 48 hours from now
+            hours_until: 48,
+            location: 'Warehouse B',
+            volunteers_needed: 8,
+            volunteers_registered: 8,
+            shortage: 0,
+            fill_percentage: 100,
+            status: 'ok',
+            skills_required: ['Inventory Mgmt']
+        }
+    ];
+
+    const MOCK_BLAST_TARGETS: BlastTarget[] = [
+        {
+            volunteer_id: 'v1',
+            name: 'Sarah Chen',
+            phone: '+65 9123 4567',
+            skills: ['First Aid', 'Coordination'],
+            whatsapp_link: 'https://wa.me/6591234567?text=Hi%20Sarah,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
+        },
+        {
+            volunteer_id: 'v2',
+            name: 'Ahmad bin Yusef',
+            phone: '+65 9876 5432',
+            skills: ['Heavy Lifting', 'Driving'],
+            whatsapp_link: 'https://wa.me/6598765432?text=Hi%20Ahmad,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
+        },
+        {
+            volunteer_id: 'v3',
+            name: 'John Tan',
+            phone: '+65 8234 5678',
+            skills: ['Logistics'],
+            whatsapp_link: 'https://wa.me/6582345678?text=Hi%20John,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
+        }
+    ];
+
     const [activities, setActivities] = useState<CrisisActivity[]>([]);
     const [loading, setLoading] = useState(true);
     const [blastModal, setBlastModal] = useState<{ isOpen: boolean; activityId: string; targets: BlastTarget[] }>({
@@ -42,35 +109,21 @@ export default function CrisisDashboard() {
     }, []);
 
     const fetchCrisisData = async () => {
-        try {
-            const response = await fetch('/api/admin/volunteers/crisis-dashboard?days_ahead=7');
-            const data = await response.json();
-            setActivities(data.activities || []);
-        } catch (error) {
-            console.error('Failed to fetch crisis data:', error);
-        } finally {
+        // Simulating API call with mock data
+        setLoading(true);
+        setTimeout(() => {
+            setActivities(MOCK_CRISIS_ACTIVITIES);
             setLoading(false);
-        }
+        }, 500);
     };
 
     const handleBlastRequest = async (activityId: string) => {
-        try {
-            const response = await fetch('/api/admin/volunteers/generate-blast', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ activity_id: activityId })
-            });
-
-            const data = await response.json();
-            setBlastModal({
-                isOpen: true,
-                activityId,
-                targets: data.targets || []
-            });
-        } catch (error) {
-            console.error('Failed to generate blast:', error);
-            alert('Failed to generate volunteer blast');
-        }
+        // Simulating blast request
+        setBlastModal({
+            isOpen: true,
+            activityId,
+            targets: MOCK_BLAST_TARGETS
+        });
     };
 
     const criticalCount = activities.filter(a => a.status === 'critical').length;
@@ -173,10 +226,10 @@ export default function CrisisDashboard() {
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${activity.status === 'critical'
-                                                    ? 'bg-red-100 text-red-700'
-                                                    : activity.status === 'warning'
-                                                        ? 'bg-yellow-100 text-yellow-700'
-                                                        : 'bg-green-100 text-green-700'
+                                                ? 'bg-red-100 text-red-700'
+                                                : activity.status === 'warning'
+                                                    ? 'bg-yellow-100 text-yellow-700'
+                                                    : 'bg-green-100 text-green-700'
                                                 }`}>
                                                 {activity.status === 'critical' && '🔴 '}
                                                 {activity.status === 'warning' && '🟡 '}

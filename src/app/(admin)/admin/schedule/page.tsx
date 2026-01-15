@@ -142,8 +142,28 @@ export default function SchedulePage() {
 
     const fetchActivities = async () => {
         try {
-            const response = await fetch('/api/admin/activities');
+            const token = localStorage.getItem('token');
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch('/api/admin/activities', { headers });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.error('Unauthorized access to activities');
+                    // Optionally redirect to login or show error
+                }
+                return;
+            }
+
             const data = await response.json();
+
+            if (!Array.isArray(data)) {
+                console.error('Expected array of activities but got:', data);
+                return;
+            }
 
             const formattedEvents: CalendarEvent[] = data.map((activity: any) => ({
                 id: activity._id || activity.id,

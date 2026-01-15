@@ -39,9 +39,18 @@ export default function OpsCopilot() {
         setLoading(true);
 
         try {
+            const token = localStorage.getItem('token');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch('/api/admin/ai/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ query })
             });
 
