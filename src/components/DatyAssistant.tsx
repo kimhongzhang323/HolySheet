@@ -46,28 +46,14 @@ export default function DatyAssistant() {
             });
 
             if (!response.ok) throw new Error('Failed to send message');
-            if (!response.body) return;
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-
-            const assistantMessageId = (Date.now() + 1).toString();
-            setMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value, { stream: true });
-                // Plain text stream - append directly
-                if (chunk) {
-                    setMessages(prev => prev.map(msg =>
-                        msg.id === assistantMessageId
-                            ? { ...msg, content: msg.content + chunk }
-                            : msg
-                    ));
-                }
-            }
+            const data = await response.json();
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: data.response || 'Sorry, I could not process that request.'
+            };
+            setMessages(prev => [...prev, assistantMessage]);
         } catch (error) {
             console.error('Chat error:', error);
             setMessages(prev => [...prev, {
