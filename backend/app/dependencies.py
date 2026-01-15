@@ -48,3 +48,22 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db = Depends(get
         raise credentials_exception
     
     return UserResponse(**user)
+
+
+async def get_current_user_optional(token: str = Depends(OAuth2PasswordBearer(tokenUrl="token", auto_error=False)), db = Depends(get_database)) -> Optional[UserResponse]:
+    if not token:
+        return None
+    
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+    except JWTError:
+        return None
+
+    user = await db.users.find_one({"email": email})
+    if user is None:
+        return None
+    
+    return UserResponse(**user)

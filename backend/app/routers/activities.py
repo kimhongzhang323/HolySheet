@@ -4,13 +4,13 @@ from datetime import datetime
 from ..db import get_database
 from ..models.activity import ActivityResponse
 from ..models.user import UserResponse, UserRole, MembershipTier
-from ..dependencies import get_current_user
+from ..dependencies import get_current_user, get_current_user_optional
 
 router = APIRouter()
 
 @router.get("/activities/feed", response_model=List[ActivityResponse])
 async def get_activity_feed(
-    current_user: UserResponse = Depends(get_current_user),
+    current_user: Optional[UserResponse] = Depends(get_current_user_optional),
     db = Depends(get_database)
 ):
     now = datetime.utcnow()
@@ -18,13 +18,14 @@ async def get_activity_feed(
     
     query = {}
     
-    if current_user.role == UserRole.VOLUNTEER:
+    if current_user and current_user.role == UserRole.VOLUNTEER:
         # Volunteers see "Needs Help" (and maybe others? Logic said prioritize needs_help)
         # Original: query = { ...baseQuery, needs_help: true };
         query = {**base_query, "needs_help": True}
     else:
         # Participants sees allowed tiers
-        user_tier = current_user.tier or MembershipTier.AD_HOC
+        # Default to AD_HOC if not logged in
+        user_tier = current_user.tier if current_user else MembershipTier.AD_HOC
         
         # Logic: allowed_tiers doesnt exist, OR allows_tiers is empty, OR allowed_tiers contains user_tier
         query = {
