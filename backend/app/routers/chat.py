@@ -13,7 +13,7 @@ from google import genai
 from google.genai import types
 from ..config import get_settings
 from ..db import get_database
-from ..dependencies import get_current_user
+from ..dependencies import get_current_user, get_current_user_optional
 from ..models.user import UserResponse
 from ..services.agent import AGENT_TOOLS, execute_tool
 
@@ -57,7 +57,7 @@ SYSTEM_INSTRUCTION = """You are MINDS Buddy, a friendly AI assistant for the MIN
 @router.post("/chat")
 async def chat_with_agent(
     request: ChatRequest,
-    current_user: UserResponse = Depends(get_current_user),
+    current_user: UserResponse = Depends(get_current_user_optional),
     db = Depends(get_database)
 ):
     if not client:
@@ -95,12 +95,14 @@ async def chat_with_agent(
                     tool_args = dict(fc.args) if fc.args else {}
                     
                     # Execute the tool
+                    user_id = str(current_user.id) if current_user else "guest"
+                    user_tier = current_user.tier.value if current_user and current_user.tier else "ad-hoc"
                     result = await execute_tool(
                         tool_name, 
                         tool_args, 
                         db, 
-                        str(current_user.id), 
-                        current_user.tier.value if current_user.tier else "ad-hoc"
+                        user_id, 
+                        user_tier
                     )
                     
                     # Format result nicely
