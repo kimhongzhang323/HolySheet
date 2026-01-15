@@ -28,7 +28,11 @@ export default function PortalPage() {
                 const res = await fetch('/api/activities/feed');
                 if (res.ok) {
                     const data = await res.json();
-                    setActivities(data.activities);
+                    if (Array.isArray(data)) {
+                        setActivities(data);
+                    } else if (data && data.activities && Array.isArray(data.activities)) {
+                        setActivities(data.activities);
+                    }
                 }
             } catch (error) {
                 console.error('Failed to fetch feed', error);
@@ -138,17 +142,26 @@ export default function PortalPage() {
                         </div>
                         <div className="grid grid-cols-3 gap-3">
                             {/* Mock Destinations */}
-                            {['Boston', 'Chicago', 'Atlanta'].map(city => (
-                                <div key={city} className="h-24 rounded-xl bg-gray-200 relative overflow-hidden group">
+                            {[
+                                { city: 'Boston', img: '/images/city-boston.png' },
+                                { city: 'Chicago', img: '/images/city-chicago.png' },
+                                { city: 'Atlanta', img: '/images/city-atlanta.png' }
+                            ].map(dest => (
+                                <div key={dest.city} className="h-24 rounded-xl bg-gray-200 relative overflow-hidden group">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={dest.img} alt={dest.city} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors"></div>
-                                    <span className="absolute bottom-2 left-3 text-white font-bold text-sm text-shadow">{city}</span>
+                                    <span className="absolute bottom-2 left-3 text-white font-bold text-sm text-shadow">{dest.city}</span>
                                 </div>
                             ))}
                         </div>
 
                         {/* Japan Event Large Card (Simulated) */}
                         <div className="mt-6 flex gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                            <div className="w-24 h-24 bg-blue-100 rounded-xl shrink-0"></div>
+                            <div className="w-24 h-24 bg-blue-100 rounded-xl shrink-0 overflow-hidden relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src="/images/japan-event.png" alt="Japan Event" className="w-full h-full object-cover" />
+                            </div>
                             <div className="flex-1 py-1">
                                 <div className="flex justify-between">
                                     <h3 className="font-bold text-gray-900">Japan Event</h3>
