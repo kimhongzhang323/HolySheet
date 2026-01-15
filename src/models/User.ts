@@ -30,6 +30,21 @@ const UserSchema: Schema = new Schema({
         city: { type: String },
         country: { type: String },
     },
+    volunteerResume: {
+        bio: { type: String, default: '' },
+        interests: { type: [String], default: [] },
+        availability: { type: [String], default: [] },
+        history: [{
+            id: { type: String },
+            title: { type: String },
+            organization: { type: String },
+            date: { type: String },
+            hours: { type: Number },
+            category: { type: String },
+            proof: { type: String }, // Base64 encoded image or file
+            proofName: { type: String }, // Original filename
+        }],
+    },
     profileDeadline: { type: Date }, // Grace period deadline
     // NextAuth fields
     emailVerified: { type: Date, default: null },
@@ -38,6 +53,17 @@ const UserSchema: Schema = new Schema({
 });
 
 // Update Interface
+export interface IVolunteerHistoryEntry {
+    id: string;
+    title: string;
+    organization: string;
+    date: string;
+    hours: number;
+    category: string;
+    proof?: string;
+    proofName?: string;
+}
+
 export interface IUser extends Document {
     name: string;
     email: string;
@@ -56,6 +82,12 @@ export interface IUser extends Document {
         postalCode?: string;
         city?: string;
         country?: string;
+    };
+    volunteerResume?: {
+        bio?: string;
+        interests?: string[];
+        availability?: string[];
+        history?: IVolunteerHistoryEntry[];
     };
     profileDeadline?: Date;
     emailVerified?: Date;
