@@ -18,6 +18,10 @@ class ActivityBase(BaseModel):
     needs_help: bool = False
     metadata: Optional[Dict[str, str]] = None
     allowed_tiers: Optional[List[MembershipTier]] = None
+    volunteers_registered: int = 0  # Track current volunteer count
+    attendees: Optional[List[str]] = []  # List of user IDs who attended
+    qr_code: Optional[str] = None  # QR code data for check-in
+    skills_required: Optional[List[str]] = []  # Required skills for volunteers
 
 class ActivityCreate(ActivityBase):
     pass
