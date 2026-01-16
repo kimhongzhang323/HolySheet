@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, Plus, MoreHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, Plus, MoreHorizontal, RefreshCcw } from 'lucide-react';
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 6); // 6 AM to 6 PM
 
@@ -40,6 +40,8 @@ export default function CalendarPage() {
     const [selectedView, setSelectedView] = useState<'Month' | 'Week' | 'Day'>('Week');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [calendarData, setCalendarData] = useState<{ day: string; date: number; fullDate: string; isToday: boolean; isCurrentMonth?: boolean }[]>([]);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
 
     useEffect(() => {
         const data = [];
@@ -108,6 +110,28 @@ export default function CalendarPage() {
 
     const goToToday = () => setCurrentDate(new Date());
 
+    const handleSync = async () => {
+        setIsSyncing(true);
+        try {
+            const response = await fetch('/api/calendar/sync');
+            const data = await response.json();
+
+            if (response.ok && data.events) {
+                setEvents(data.events);
+            } else {
+                console.error("Sync failed:", data.error);
+                // If 401, they might need to re-login to grant permission
+                if (response.status === 401) {
+                    alert("Please log out and log back in to grant Google Calendar permissions.");
+                }
+            }
+        } catch (error) {
+            console.error("Sync error:", error);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     return (
         <div className="space-y-6 relative h-[calc(100vh-140px)] flex flex-col">
             {/* Header Controls */}
@@ -122,8 +146,8 @@ export default function CalendarPage() {
                                 key={view}
                                 onClick={() => setSelectedView(view)}
                                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${selectedView === view
-                                        ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5'
-                                        : 'text-gray-500 hover:text-gray-700'
+                                    ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5'
+                                    : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 {view}
@@ -133,6 +157,15 @@ export default function CalendarPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className={`flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-100 font-medium rounded-lg text-sm hover:bg-emerald-100 transition-all ${isSyncing ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    >
+                        <RefreshCcw size={16} className={`${isSyncing ? 'animate-spin' : ''}`} />
+                        {isSyncing ? 'Syncing...' : 'Sync Calendar'}
+                    </button>
+                    <div className="w-px h-6 bg-gray-200 mx-1"></div>
                     <button onClick={() => navigate('prev')} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 border border-gray-200">
                         <ChevronLeft size={20} />
                     </button>
@@ -160,8 +193,8 @@ export default function CalendarPage() {
                                         <div key={i} className="text-center group cursor-pointer">
                                             <span className={`block text-xs font-semibold mb-1 uppercase tracking-wide ${d.isToday ? 'text-blue-600' : 'text-gray-500'}`}>{d.day}</span>
                                             <div className={`mx-auto w-10 h-10 flex items-center justify-center rounded-full text-lg font-bold transition-all ${d.isToday
-                                                    ? 'bg-gray-900 text-white shadow-md'
-                                                    : 'text-gray-900 hover:bg-gray-100'
+                                                ? 'bg-gray-900 text-white shadow-md'
+                                                : 'text-gray-900 hover:bg-gray-100'
                                                 }`}>
                                                 {d.date}
                                             </div>
@@ -184,7 +217,7 @@ export default function CalendarPage() {
                         {selectedView === 'Month' ? (
                             <div className="grid grid-cols-7 grid-rows-6 gap-2 h-full">
                                 {calendarData.map((day, i) => {
-                                    const dayEvents = MOCK_EVENTS.filter(e => e.date === day.fullDate);
+                                    const dayEvents = events.filter(e => e.date === day.fullDate);
                                     return (
                                         <div
                                             key={i}
@@ -240,7 +273,7 @@ export default function CalendarPage() {
                                     {calendarData.map((day, colIndex) => (
                                         <div key={colIndex} className="relative h-[850px]">
                                             {/* Render Events for this day */}
-                                            {MOCK_EVENTS.filter(e => e.date === day.fullDate).map(event => (
+                                            {events.filter(e => e.date === day.fullDate).map(event => (
                                                 <div
                                                     key={event.id}
                                                     className={`absolute inset-x-0 mx-1 rounded-lg p-3 border text-xs cursor-pointer hover:shadow-md transition-all group ${event.color}`}

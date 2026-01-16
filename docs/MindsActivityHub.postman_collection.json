@@ -1,19 +1,24 @@
 {
     "info": {
         "_postman_id": "minds-activity-hub-collection",
-        "name": "MINDS Activity Hub (FastAPI)",
-        "description": "Collection for testing MINDS Activity Hub API endpoints on the new Python FastAPI backend.",
+        "name": "MINDS Activity Hub (Supabase Auth)",
+        "description": "API collection for MINDS Activity Hub. \n\n**Authentication:**\nThis backend now uses Supabase Auth. To make authenticated requests:\n1. Use the 'Supabase Auth > LOGIN' request to get an `access_token`.\n2. The test script will automatically save it to the `token` variable.\n3. All other requests will use this `{{token}}`.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
         {
-            "name": "Auth",
+            "name": "Supabase Auth",
             "item": [
                 {
-                    "name": "Signup (Create Account)",
+                    "name": "SIGN UP",
                     "request": {
                         "method": "POST",
                         "header": [
+                            {
+                                "key": "apikey",
+                                "value": "{{supabaseAnonKey}}",
+                                "type": "text"
+                            },
                             {
                                 "key": "Content-Type",
                                 "value": "application/json",
@@ -22,53 +27,24 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"phoneNumber\": \"+6591234567\",\n    \"address\": {\n        \"street\": \"123 Serangoon Road\",\n        \"unit\": \"#10-01\",\n        \"postalCode\": \"123456\",\n        \"city\": \"Singapore\",\n        \"country\": \"Singapore\"\n    }\n}"
+                            "raw": "{\n    \"email\": \"newuser@example.com\",\n    \"password\": \"password123\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/auth/signup",
+                            "raw": "{{supabaseUrl}}/auth/v1/signup",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{supabaseUrl}}"
                             ],
                             "path": [
                                 "auth",
+                                "v1",
                                 "signup"
                             ]
                         },
-                        "description": "Register a new user account. Returns user ID."
-                    },
-                    "response": []
+                        "description": "Register a new user via Supabase."
+                    }
                 },
                 {
-                    "name": "Verify OTP",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/auth/verify?email=test@example.com&otp=REPLACE_WITH_OTP",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "auth",
-                                "verify"
-                            ],
-                            "query": [
-                                {
-                                    "key": "email",
-                                    "value": "test@example.com"
-                                },
-                                {
-                                    "key": "otp",
-                                    "value": "REPLACE_WITH_OTP"
-                                }
-                            ]
-                        },
-                        "description": "Verify the OTP sent to email console log."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Login (Get Token)",
+                    "name": "LOGIN (Get Token)",
                     "event": [
                         {
                             "listen": "test",
@@ -77,53 +53,7 @@
                                     "var jsonData = pm.response.json();",
                                     "if (jsonData.access_token) {",
                                     "    pm.collectionVariables.set(\"token\", jsonData.access_token);",
-                                    "}"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "body": {
-                            "mode": "urlencoded",
-                            "urlencoded": [
-                                {
-                                    "key": "username",
-                                    "value": "test@example.com",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "password",
-                                    "value": "password123",
-                                    "type": "text"
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/token",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "token"
-                            ]
-                        },
-                        "description": "OAuth2 Password Flow. Automatically saves 'token' to collection variables."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Google Login (Backend Swap)",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "var jsonData = pm.response.json();",
-                                    "if (jsonData.access_token) {",
-                                    "    pm.collectionVariables.set(\"token\", jsonData.access_token);",
+                                    "    console.log(\"Token updated successfully\");",
                                     "}"
                                 ],
                                 "type": "text/javascript"
@@ -134,6 +64,11 @@
                         "method": "POST",
                         "header": [
                             {
+                                "key": "apikey",
+                                "value": "{{supabaseAnonKey}}",
+                                "type": "text"
+                            },
+                            {
                                 "key": "Content-Type",
                                 "value": "application/json",
                                 "type": "text"
@@ -141,26 +76,32 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"token\": \"PASTE_GOOGLE_ID_TOKEN_HERE\"\n}"
+                            "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/auth/google",
+                            "raw": "{{supabaseUrl}}/auth/v1/token?grant_type=password",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{supabaseUrl}}"
                             ],
                             "path": [
                                 "auth",
-                                "google"
+                                "v1",
+                                "token"
+                            ],
+                            "query": [
+                                {
+                                    "key": "grant_type",
+                                    "value": "password"
+                                }
                             ]
                         },
-                        "description": "Exchange Google ID Token for Backend JWT."
-                    },
-                    "response": []
+                        "description": "Log in directly via Supabase API to get a JWT."
+                    }
                 }
             ]
         },
         {
-            "name": "Activities",
+            "name": "Activities (Public/User)",
             "item": [
                 {
                     "name": "Get Smart Feed",
@@ -176,7 +117,6 @@
                             ]
                         },
                         "method": "GET",
-                        "header": [],
                         "url": {
                             "raw": "{{baseUrl}}/activities/feed",
                             "host": [
@@ -186,10 +126,55 @@
                                 "activities",
                                 "feed"
                             ]
+                        }
+                    }
+                },
+                {
+                    "name": "Filter Activities",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
                         },
-                        "description": "Returns personalized feed based on logged-in user (Volunteer vs Participant)."
-                    },
-                    "response": []
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/activities/filter?keyword=yoga",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "activities",
+                                "filter"
+                            ],
+                            "query": [
+                                {
+                                    "key": "start_date",
+                                    "value": "2024-01-01",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "end_date",
+                                    "value": "2024-12-31",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "keyword",
+                                    "value": "yoga"
+                                },
+                                {
+                                    "key": "time_slot",
+                                    "value": "morning",
+                                    "disabled": true
+                                }
+                            ]
+                        }
+                    }
                 }
             ]
         },
@@ -229,16 +214,40 @@
                             "path": [
                                 "bookings"
                             ]
-                        },
-                        "description": "Book an activity. Checks for time conflicts and tier limits."
-                    },
-                    "response": []
+                        }
+                    }
                 }
             ]
         },
         {
             "name": "User Profile",
             "item": [
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/user/profile",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "user",
+                                "profile"
+                            ]
+                        }
+                    }
+                },
                 {
                     "name": "Update Profile",
                     "request": {
@@ -273,10 +282,8 @@
                                 "user",
                                 "profile"
                             ]
-                        },
-                        "description": "Update user profile details."
-                    },
-                    "response": []
+                        }
+                    }
                 }
             ]
         },
@@ -297,7 +304,6 @@
                             ]
                         },
                         "method": "GET",
-                        "header": [],
                         "url": {
                             "raw": "{{baseUrl}}/admin/users/:id/tier",
                             "host": [
@@ -315,10 +321,8 @@
                                     "value": "USER_ID_HERE"
                                 }
                             ]
-                        },
-                        "description": "Get current tier for a user (Admin/Staff only)"
-                    },
-                    "response": []
+                        }
+                    }
                 },
                 {
                     "name": "Update User Tier",
@@ -362,10 +366,322 @@
                                     "value": "USER_ID_HERE"
                                 }
                             ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin - Activities",
+            "item": [
+                {
+                    "name": "Create Activity",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
                         },
-                        "description": "Update user tier. Options: ad-hoc, once-a-week, twice-a-week, three-plus-a-week"
-                    },
-                    "response": []
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"New Workshop\",\n  \"description\": \"A fun workshop\",\n  \"start_time\": \"2024-04-01T10:00:00\",\n  \"end_time\": \"2024-04-01T12:00:00\",\n  \"location\": \"Hall A\",\n  \"capacity\": 20,\n  \"volunteers_needed\": 2,\n  \"status\": \"published\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/activities",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "activities"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Activity Volunteer Status",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/activities/:id/volunteer-status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "activities",
+                                ":id",
+                                "volunteer-status"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "ACTIVITY_ID_HERE"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Admin Activities",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/activities",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "activities"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin - Attendance",
+            "item": [
+                {
+                    "name": "Generate QR Code",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/activities/:id/qr",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "activities",
+                                ":id",
+                                "qr"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "ACTIVITY_ID_HERE"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Mark Attendance",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/attendance/mark?activity_id=ACT_ID&user_id=USER_ID",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "attendance",
+                                "mark"
+                            ],
+                            "query": [
+                                {
+                                    "key": "activity_id",
+                                    "value": "ACT_ID"
+                                },
+                                {
+                                    "key": "user_id",
+                                    "value": "USER_ID"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin - Volunteers",
+            "item": [
+                {
+                    "name": "Crisis Dashboard",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/volunteers/crisis-dashboard?days_ahead=7",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "volunteers",
+                                "crisis-dashboard"
+                            ],
+                            "query": [
+                                {
+                                    "key": "days_ahead",
+                                    "value": "7"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Generate Blast",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"activity_id\": \"ACTIVITY_ID_HERE\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/volunteers/generate-blast",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "volunteers",
+                                "generate-blast"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin - Reports",
+            "item": [
+                {
+                    "name": "Weekly Report",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/reports/weekly",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "reports",
+                                "weekly"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Export Volunteers",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/reports/volunteers/export",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "reports",
+                                "volunteers",
+                                "export"
+                            ]
+                        }
+                    }
                 }
             ]
         },
@@ -373,7 +689,7 @@
             "name": "AI",
             "item": [
                 {
-                    "name": "Chat with AI",
+                    "name": "Chat with AI (User)",
                     "request": {
                         "method": "POST",
                         "header": [
@@ -395,10 +711,84 @@
                             "path": [
                                 "chat"
                             ]
+                        }
+                    }
+                },
+                {
+                    "name": "Admin AI Query",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
                         },
-                        "description": "Send a message to the AI agent."
-                    },
-                    "response": []
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"How many volunteers do we have?\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/ai/query",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "ai",
+                                "query"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Generate Form",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"topic\": \"Weekend Art Workshop\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/ai/generate-form",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "ai",
+                                "generate-form"
+                            ]
+                        }
+                    }
                 }
             ]
         }
@@ -412,6 +802,16 @@
         {
             "key": "token",
             "value": "",
+            "type": "string"
+        },
+        {
+            "key": "supabaseUrl",
+            "value": "https://rogmzuqycesicuhehrqs.supabase.co",
+            "type": "string"
+        },
+        {
+            "key": "supabaseAnonKey",
+            "value": "sb_publishable_oUcmZiFs4LWVK79B8IXXqg_-BOMVyvv",
             "type": "string"
         }
     ]

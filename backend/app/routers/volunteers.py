@@ -1,21 +1,195 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
-from typing import List, Optional
-from bson import ObjectId
 from datetime import datetime, timedelta
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, func
+from uuid import UUID
+
 from ..db import get_database
-from ..models.user import UserResponse, UserRole
+from ..models.user import UserDB, UserResponse, UserRole
+from ..models.activity import ActivityDB
+from ..models.volunteer import VolunteerDB, VolunteerCreate
+from ..models.form_response import FormResponseDB
 from ..dependencies import get_current_user
 
 router = APIRouter()
 
+def is_admin_or_staff(role: str) -> bool:
+    return role in ["admin", "staff"]
+
+@router.get("/admin/volunteers")
+async def get_all_volunteers(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    """Get all users with volunteer role (Admin/Staff only)"""
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden"
+        )
+    
+    # Fetch users where role is 'volunteer'
+    query = select(UserDB).where(UserDB.role == "volunteer")
+    result = await db.execute(query)
+    users = result.scalars().all()
+    
+    return [
+        {
+            "id": str(u.id),
+            "name": u.name,
+            "email": u.email,
+            "role": u.role,
+            "tier": u.tier, # This is the Engagement Type
+            "location": u.location,
+            "phone_number": u.phone_number,
+            "total_events": u.total_events,
+            "volunteer_hours": u.volunteer_hours,
+            "skills": u.skills
+        }
+        for u in users
+    ]
+
+@router.post("/volunteers/register")
+async def register_as_volunteer(
+    register_req: VolunteerCreate,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    """Register the current user as a volunteer for an activity"""
+    try:
+        activity_uuid = UUID(register_req.activity_id)
+        user_uuid = UUID(current_user.id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid ID format")
+
+    # Check if activity exists
+    result = await db.execute(select(ActivityDB).where(ActivityDB.id == activity_uuid))
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    # Check if already registered
+    vol_result = await db.execute(
+        select(VolunteerDB).where(
+            VolunteerDB.activity_id == activity_uuid,
+            VolunteerDB.user_id == user_uuid
+        )
+    )
+    if vol_result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="User already registered for this activity")
+
+    # Create volunteer record
+    new_volunteer = VolunteerDB(
+        user_id=user_uuid,
+        activity_id=activity_uuid,
+        role=register_req.role,
+        skills_offered=register_req.skills_offered,
+        status="confirmed" # Auto-confirm for now or set to pending
+    )
+
+    # Increment activity volunteer count
+    activity.volunteers_registered = (activity.volunteers_registered or 0) + 1
+
+    db.add(new_volunteer)
+    await db.commit()
+    await db.refresh(new_volunteer)
+
+    return {
+        "message": "Registration successful",
+        "volunteer_id": str(new_volunteer.id),
+        "status": new_volunteer.status
+    }
+
+@router.get("/admin/activities/{activity_id}/volunteers")
+async def get_activity_volunteers(
+    activity_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    """Get list of volunteers registered for an activity"""
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin or staff can view volunteers"
+        )
+    
+    try:
+        activity_uuid = UUID(activity_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Activity ID")
+    
+    # Query VolunteerDB joined with UserDB
+    query = select(VolunteerDB, UserDB).join(UserDB, VolunteerDB.user_id == UserDB.id).where(
+        VolunteerDB.activity_id == activity_uuid
+    )
+    result = await db.execute(query)
+    rows = result.all()
+    
+    volunteers = []
+    for vol_rec, user_rec in rows:
+        volunteers.append({
+            "id": str(user_rec.id),
+            "name": user_rec.name,
+            "email": user_rec.email,
+            "role": vol_rec.role,
+            "status": vol_rec.status,
+            "applied_at": vol_rec.applied_at.isoformat() if vol_rec.applied_at else None,
+            "skills": vol_rec.skills_offered
+        })
+    
+    return volunteers
+
+
+@router.get("/admin/activities/{activity_id}/form-responses")
+async def get_activity_form_responses(
+    activity_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    """Get list of form responses for an activity"""
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden"
+        )
+    
+    try:
+        activity_uuid = UUID(activity_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Activity ID")
+    
+    # Query FormResponseDB joined with UserDB
+    query = select(FormResponseDB, UserDB).join(UserDB, FormResponseDB.user_id == UserDB.id).where(
+        FormResponseDB.activity_id == activity_uuid
+    )
+    result = await db.execute(query)
+    rows = result.all()
+    
+    responses = []
+    for resp_rec, user_rec in rows:
+        responses.append({
+            "id": str(resp_rec.id),
+            "user_id": str(user_rec.id),
+            "user_name": user_rec.name,
+            "user_email": user_rec.email,
+            "responses": resp_rec.responses,
+            "submitted_at": resp_rec.submitted_at.isoformat() if resp_rec.submitted_at else None
+        })
+    
+    return responses
+
+def is_admin_or_staff(role: str) -> bool:
+    return role in ["admin", "staff"]
+
+
 @router.get("/admin/volunteers/by-skills")
 async def get_volunteers_by_skills(
-    skills: str,  # Comma-separated skills
+    skills: str,
     current_user: UserResponse = Depends(get_current_user),
-    db = Depends(get_database)
+    db: AsyncSession = Depends(get_database)
 ):
     """Find volunteers with specific skills"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.STAFF]:
+    if not is_admin_or_staff(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin or staff can access volunteer management"
@@ -23,32 +197,30 @@ async def get_volunteers_by_skills(
     
     skill_list = [s.strip() for s in skills.split(",")]
     
-    # Find users with volunteer role and matching skills
-    query = {
-        "role": {"$in": [UserRole.VOLUNTEER, "volunteer"]},
-        "skills": {"$in": skill_list}
-    }
+    # Get all volunteers
+    result = await db.execute(select(UserDB).where(UserDB.role == "volunteer"))
+    all_volunteers = result.scalars().all()
     
-    cursor = db.users.find(query)
-    volunteers = await cursor.to_list(length=200)
-    
-    result = []
-    for vol in volunteers:
-        matching_skills = [s for s in vol.get("skills", []) if s in skill_list]
-        result.append({
-            "id": str(vol["_id"]),
-            "name": vol.get("name"),
-            "email": vol.get("email"),
-            "phone": vol.get("phoneNumber"),
-            "skills": vol.get("skills", []),
-            "matching_skills": matching_skills,
-            "tier": vol.get("tier")
-        })
+    # Filter by skills in Python (since ARRAY contains is complex in SQLAlchemy)
+    volunteers = []
+    for vol in all_volunteers:
+        vol_skills = vol.skills or []
+        matching = [s for s in vol_skills if s in skill_list]
+        if matching:
+            volunteers.append({
+                "id": str(vol.id),
+                "name": vol.name,
+                "email": vol.email,
+                "phone": vol.phone_number,
+                "skills": vol_skills,
+                "matching_skills": matching,
+                "tier": vol.tier
+            })
     
     return {
         "requested_skills": skill_list,
-        "total_found": len(result),
-        "volunteers": result
+        "total_found": len(volunteers),
+        "volunteers": volunteers
     }
 
 
@@ -56,10 +228,10 @@ async def get_volunteers_by_skills(
 async def get_crisis_dashboard(
     days_ahead: int = 7,
     current_user: UserResponse = Depends(get_current_user),
-    db = Depends(get_database)
+    db: AsyncSession = Depends(get_database)
 ):
     """Get activities with unmet volunteer quotas"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.STAFF]:
+    if not is_admin_or_staff(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin or staff can access crisis dashboard"
@@ -68,68 +240,51 @@ async def get_crisis_dashboard(
     now = datetime.utcnow()
     future_date = now + timedelta(days=days_ahead)
     
-    # Find upcoming activities
-    query = {
-        "start_time": {"$gte": now, "$lte": future_date},
-        "volunteers_needed": {"$gt": 0}
-    }
+    query = select(ActivityDB).where(
+        and_(
+            ActivityDB.start_time >= now,
+            ActivityDB.start_time <= future_date,
+            ActivityDB.volunteers_needed > 0
+        )
+    ).order_by(ActivityDB.start_time)
     
-    cursor = db.activities.find(query).sort("start_time", 1)
-    activities = await cursor.to_list(length=100)
+    result = await db.execute(query)
+    activities = result.scalars().all()
     
     crisis_items = []
     for activity in activities:
-        volunteers_needed = activity.get("volunteers_needed", 0)
-        volunteers_registered = activity.get("volunteers_registered", 0)
+        volunteers_needed = activity.volunteers_needed or 0
+        volunteers_registered = activity.volunteers_registered or 0
         shortage = max(0, volunteers_needed - volunteers_registered)
         
         fill_percentage = 0
         if volunteers_needed > 0:
             fill_percentage = int((volunteers_registered / volunteers_needed) * 100)
         
-        # Determine status
         status_label = "ok"
         if fill_percentage < 50:
             status_label = "critical"
         elif fill_percentage < 100:
             status_label = "warning"
         
-        # Calculate hours until event
-        hours_until = (activity["start_time"] - now).total_seconds() / 3600
+        hours_until = (activity.start_time - now).total_seconds() / 3600 if activity.start_time else 0
         
         crisis_items.append({
-            "activity_id": str(activity["_id"]),
-            "title": activity["title"],
-            "start_time": activity["start_time"],
+            "activity_id": str(activity.id),
+            "title": activity.title,
+            "start_time": activity.start_time.isoformat() if activity.start_time else None,
             "hours_until": int(hours_until),
-            "location": activity.get("location"),
+            "location": activity.location,
             "volunteers_needed": volunteers_needed,
             "volunteers_registered": volunteers_registered,
             "shortage": shortage,
             "fill_percentage": fill_percentage,
             "status": status_label,
-            "skills_required": activity.get("skills_required", []),
-            "needs_help": activity.get("needs_help", False)
+            "skills_required": activity.skills_required or [],
+            "needs_help": activity.needs_help
         })
     
-    # [DEMO] Mock Crisis Event
-    mock_crisis = {
-        "activity_id": "mock_event_id_123",
-        "title": "🚨 EMERGENCY: Flash Flood Relief",
-        "start_time": now + timedelta(hours=4),
-        "location": "North District Community Hall",
-        "volunteers_needed": 50,
-        "volunteers_registered": 5,
-        "hours_until": 4,
-        "shortage": 45,
-        "fill_percentage": 10,
-        "status": "critical",
-        "skills_required": ["First Aid", "Logistics"],
-        "needs_help": True
-    }
-    crisis_items.append(mock_crisis)
-    
-    # Sort by urgency (critical first, then by time)
+    # Sort by urgency
     crisis_items.sort(key=lambda x: (
         0 if x["status"] == "critical" else 1 if x["status"] == "warning" else 2,
         x["hours_until"]
@@ -147,68 +302,62 @@ async def get_crisis_dashboard(
 async def generate_volunteer_blast(
     activity_id: str = Body(..., embed=True),
     current_user: UserResponse = Depends(get_current_user),
-    db = Depends(get_database)
+    db: AsyncSession = Depends(get_database)
 ):
     """Generate WhatsApp blast message for volunteer recruitment"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.STAFF]:
+    if not is_admin_or_staff(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin or staff can generate blast messages"
         )
     
-    if not ObjectId.is_valid(activity_id):
+    try:
+        activity_uuid = UUID(activity_id)
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid activity ID")
     
-    activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+    result = await db.execute(select(ActivityDB).where(ActivityDB.id == activity_uuid))
+    activity = result.scalar_one_or_none()
+    
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     
-    # Find matching volunteers
-    skills_required = activity.get("skills_required", [])
-    query = {"role": {"$in": [UserRole.VOLUNTEER, "volunteer"]}}
+    # Get all volunteers
+    vol_result = await db.execute(select(UserDB).where(UserDB.role == "volunteer"))
+    volunteers = vol_result.scalars().all()
     
-    if skills_required:
-        query["skills"] = {"$in": skills_required}
-    
-    cursor = db.users.find(query)
-    volunteers = await cursor.to_list(length=200)
-    
-    # Generate message template
-    shortage = activity.get("volunteers_needed", 0) - activity.get("volunteers_registered", 0)
-    activity_date = activity["start_time"].strftime("%A, %B %d at %I:%M %p")
+    shortage = (activity.volunteers_needed or 0) - (activity.volunteers_registered or 0)
+    activity_date = activity.start_time.strftime("%A, %B %d at %I:%M %p") if activity.start_time else "TBA"
     
     message_template = f"""Hi {{name}}! 👋
 
 We need {shortage} more volunteer(s) for:
-📅 {activity['title']}
+📅 {activity.title}
 🕐 {activity_date}
-📍 {activity.get('location', 'TBA')}
+📍 {activity.location or 'TBA'}
 
 Would you be available to help? Your support makes a difference! 🙌
 
 Reply YES to confirm."""
     
-    # Generate WhatsApp links
     blast_targets = []
     for vol in volunteers:
-        phone = vol.get("phoneNumber", "")
+        phone = vol.phone_number or ""
         if phone:
-            # Format phone number (remove special characters)
             clean_phone = ''.join(filter(str.isdigit, phone))
-            personalized_msg = message_template.replace("{name}", vol.get("name", "there"))
-            whatsapp_url = f"https://wa.me/{clean_phone}?text={personalized_msg}"
+            personalized_msg = message_template.replace("{name}", vol.name or "there")
             
             blast_targets.append({
-                "volunteer_id": str(vol["_id"]),
-                "name": vol.get("name"),
+                "volunteer_id": str(vol.id),
+                "name": vol.name,
                 "phone": phone,
-                "skills": vol.get("skills", []),
-                "whatsapp_link": whatsapp_url
+                "skills": vol.skills or [],
+                "whatsapp_link": f"https://wa.me/{clean_phone}?text={personalized_msg}"
             })
     
     return {
-        "activity_id": str(activity["_id"]),
-        "activity_title": activity["title"],
+        "activity_id": str(activity.id),
+        "activity_title": activity.title,
         "shortage": shortage,
         "message_template": message_template,
         "total_targets": len(blast_targets),

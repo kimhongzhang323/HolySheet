@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import ActivityCard from '@/components/ActivityCard';
 import TicketCard from '@/components/TicketCard';
 import MiniCalendar from '@/components/MiniCalendar';
@@ -9,7 +10,7 @@ import { MOCK_TICKETS, CALENDAR_DAYS } from '@/lib/mockData';
 import { Sparkles, ChevronLeft, ChevronRight, User } from 'lucide-react';
 
 interface Activity {
-    _id: string;
+    id: string;
     title: string;
     description: string;
     start_time: string;
@@ -19,13 +20,20 @@ interface Activity {
 }
 
 export default function PortalPage() {
+    const { data: session } = useSession();
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function fetchFeed() {
             try {
-                const res = await fetch('/api/activities/feed');
+                // Wait for session to be available if needed, or proceed
+                const token = (session as any)?.accessToken;
+                const headers: HeadersInit = token
+                    ? { 'Authorization': `Bearer ${token}` }
+                    : {};
+
+                const res = await fetch('/api/activities/feed', { headers });
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data)) {
@@ -33,6 +41,8 @@ export default function PortalPage() {
                     } else if (data && data.activities && Array.isArray(data.activities)) {
                         setActivities(data.activities);
                     }
+                } else {
+                    console.error("Fetch failed:", res.status, res.statusText);
                 }
             } catch (error) {
                 console.error('Failed to fetch feed', error);
@@ -41,8 +51,10 @@ export default function PortalPage() {
             }
         }
 
-        fetchFeed();
-    }, []);
+        if (session) {
+            fetchFeed();
+        }
+    }, [session]);
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -116,7 +128,7 @@ export default function PortalPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                             {/* Render Actual Activities */}
                             {activities.slice(0, 3).map((activity) => (
-                                <ActivityCard key={activity._id} activity={activity} />
+                                <ActivityCard key={activity.id} activity={activity} />
                             ))}
                             {/* Fillers if empty */}
                             {activities.length === 0 && (

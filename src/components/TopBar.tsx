@@ -4,9 +4,11 @@ import { Search, Bell, Settings, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 export default function TopBar() {
     const pathname = usePathname();
+    const { data: session } = useSession();
 
     const isActive = (path: string) => {
         if (path === '/' && pathname === '/') return true;
@@ -90,14 +92,14 @@ export default function TopBar() {
                         <Link href="/profile" className="flex items-center gap-3 cursor-pointer p-1.5 pr-3 hover:bg-gray-100 rounded-full transition-all border border-transparent hover:border-gray-200">
                             <div className="w-9 h-9 relative rounded-full overflow-hidden bg-indigo-100 ring-2 ring-white shadow-sm">
                                 <Image
-                                    src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                                    src={session?.user?.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"}
                                     alt="User"
                                     fill
                                     className="object-cover"
                                 />
                             </div>
                             <div className="hidden md:block text-left">
-                                <p className="text-sm font-bold text-gray-900 leading-none">Kim Ho</p>
+                                <p className="text-sm font-bold text-gray-900 leading-none">{session?.user?.name || "Kim Ho"}</p>
                                 <p className="text-[10px] text-gray-500 font-medium mt-0.5">Participant</p>
                             </div>
                             <ChevronDown size={14} className="text-gray-400" />

@@ -1,8 +1,31 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import GridMotion from '@/components/GridMotion';
 import Link from 'next/link';
 import PixelCard from '@/components/PixelCard';
 
 export default function LandingPage() {
+    const { status } = useSession();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (status === 'authenticated') {
+            router.replace('/dashboard');
+        }
+    }, [status, router]);
+
+    // Show loading or nothing while checking auth status
+    if (status === 'loading' || status === 'authenticated') {
+        return (
+            <main className="w-full h-screen relative bg-black overflow-hidden font-sans flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+            </main>
+        );
+    }
+
     return (
         <main className="w-full h-screen relative bg-black overflow-hidden font-sans">
             <div className="absolute inset-0 z-0">

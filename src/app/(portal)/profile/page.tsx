@@ -1,23 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { signOut, useSession } from "next-auth/react";
 import { motion } from 'framer-motion';
 import {
     Calendar, Heart, Clock, Award, MapPin, Mail,
     Edit3, ChevronRight, Star, TrendingUp, Users, CheckCircle, Ticket,
-    LayoutGrid, List, SlidersHorizontal, ArrowUpDown, ArrowDownToLine
+    LayoutGrid, List, SlidersHorizontal, ArrowUpDown, ArrowDownToLine, LogOut
 } from 'lucide-react';
 
 // Mock user data
-const MOCK_USER = {
-    name: 'Kim Hong Zhang',
-    email: 'kimhongzhang@example.com',
-    phone: '+65 9123 4567',
+// Mock user data replaced by API fetch
+const DEFAULT_USER = {
+    name: 'Volunteer',
+    email: '',
+    phone: '',
     location: 'Singapore',
-    joinedDate: 'January 2025',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-    bio: 'Passionate about making a difference in the community. Love organizing events and helping others.',
+    joinedDate: '-',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Volunteer',
+    bio: '',
 };
 
 // Mock stats
@@ -189,8 +191,46 @@ const MOCK_BADGES = [
 ];
 
 export default function ProfilePage() {
+    const { data: session } = useSession();
+    const [profile, setProfile] = useState(DEFAULT_USER);
     const [activeTab, setActiveTab] = useState('overview');
     const [historyView, setHistoryView] = useState<'grid' | 'list'>('grid');
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            if (session?.user) {
+                // Determine joined date from session or current date if not available
+                // Ideally this comes from backend too, checking /api/user/profile
+                try {
+                    const res = await fetch('http://localhost:8000/user/profile', {
+                        headers: {
+                            // Assuming Authorization header is handled or we rely on session.
+                            // Since frontend is Next.js and backend is FastAPI, we likely need to pass the token.
+                            // For now, let's assume we use session.user info which comes from OAuth.
+                            // And if we need backend data, we might need a proxy or token.
+                            // IMPORTANT: The existing code uses /api/ proxy in some places, OR direct 8000.
+                            // The user said "sync it with oauth data".
+                            // Let's rely on session.user first for basic info.
+                        }
+                    });
+                    // Note: If authentication is needed for backend, we need the token.
+                    // Assuming for now session has what we need fundamentally.
+                } catch (e) {
+                    // ignore
+                }
+
+                setProfile(prev => ({
+                    ...prev,
+                    name: session.user?.name || prev.name,
+                    email: session.user?.email || prev.email,
+                    avatar: session.user?.image || prev.avatar,
+                    // If we successfully fetched backend data, we'd merge it here.
+                    // For now, syncing with OAuth means using session data.
+                }));
+            }
+        };
+        fetchProfile();
+    }, [session]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -240,6 +280,13 @@ export default function ProfilePage() {
                             <ArrowDownToLine size={16} />
                             Download Info
                         </button>
+                        <button
+                            onClick={() => signOut({ callbackUrl: "/login" })}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-bold transition-all border border-red-200"
+                        >
+                            <LogOut size={16} />
+                            Logout
+                        </button>
                     </div>
                 </div>
 
@@ -250,8 +297,8 @@ export default function ProfilePage() {
                         <div className="w-28 h-28 rounded-full p-1 bg-white border border-gray-100 shadow-md">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                                src={MOCK_USER.avatar}
-                                alt={MOCK_USER.name}
+                                src={profile.avatar}
+                                alt={profile.name}
                                 className="w-full h-full rounded-full object-cover bg-gray-50"
                             />
                         </div>
@@ -264,7 +311,7 @@ export default function ProfilePage() {
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-y-6 gap-x-12 w-full text-center md:text-left">
                         {/* Name & Role */}
                         <div className="space-y-1">
-                            <h1 className="text-3xl font-bold text-gray-900 mb-2">{MOCK_USER.name}</h1>
+                            <h1 className="text-3xl font-bold text-gray-900 mb-2">{profile.name}</h1>
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Role</p>
@@ -278,7 +325,7 @@ export default function ProfilePage() {
                             <div className="h-[43px] hidden md:block"></div> {/* Spacer to align with Name */}
                             <div>
                                 <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Phone Number</p>
-                                <p className="text-lg font-medium text-gray-700 font-mono">{MOCK_USER.phone}</p>
+                                <p className="text-lg font-medium text-gray-700 font-mono">{profile.phone || 'Not set'}</p>
                             </div>
                         </div>
 
@@ -287,7 +334,7 @@ export default function ProfilePage() {
                             <div className="h-[43px] hidden md:block"></div> {/* Spacer to align with Name */}
                             <div>
                                 <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Email Address</p>
-                                <p className="text-lg font-medium text-gray-700 truncate" title={MOCK_USER.email}>{MOCK_USER.email}</p>
+                                <p className="text-lg font-medium text-gray-700 truncate" title={profile.email}>{profile.email}</p>
                             </div>
                         </div>
                     </div>

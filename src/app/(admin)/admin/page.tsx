@@ -1,498 +1,301 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Scan, FileDown, TrendingUp, Users, AlertTriangle, CheckCircle, Bell, ExternalLink, Send } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import {
+    Sparkles, Users, PlayCircle, ArrowRight, Zap,
+    TrendingUp, Calendar, Activity, PieChart as PieChartIcon, BarChart3
+} from 'lucide-react';
 import AttendanceScanner from '@/components/AttendanceScanner';
-import OpsCopilot from '@/components/OpsCopilot';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, Legend, BarChart, Bar
+} from 'recharts';
 
-interface DashboardStats {
-    volunteers_deployed: number;
-    volunteers_deployed_change: number;
-    fill_rate: number;
-    fill_rate_change: number;
-    upcoming_crises: number;
-    upcoming_crises_change: number;
-    pending_approvals: number;
-    pending_approvals_change: number;
-}
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
 
-interface CrisisActivity {
-    activity_id: string;
-    title: string;
-    start_time: string;
-    location?: string;
-    volunteers_needed: number;
-    volunteers_registered: number;
-    shortage: number;
-    status: 'critical' | 'warning' | 'ok';
-}
-
-interface AIInsight {
-    type: 'volunteer_shortage' | 'feedback_summary' | 'suggestion';
-    message: string;
-    activities_count?: number;
-    actionable: boolean;
-}
-
-interface BlastTarget {
-    volunteer_id: string;
-    name: string;
-    phone: string;
-    skills: string[];
-    whatsapp_link: string;
-}
-
-const MOCK_CRISIS_ACTIVITIES: CrisisActivity[] = [
-    {
-        activity_id: 'mock-1',
-        title: 'Urgent: Food Distribution',
-        start_time: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
-        location: 'Community Center A',
-        volunteers_needed: 10,
-        volunteers_registered: 2,
-        shortage: 8,
-        status: 'critical'
-    },
-    {
-        activity_id: 'mock-2',
-        title: 'Emergency Medical Support',
-        start_time: new Date(Date.now() + 26 * 3600 * 1000).toISOString(),
-        location: 'City Sports Complex',
-        volunteers_needed: 5,
-        volunteers_registered: 3,
-        shortage: 2,
-        status: 'warning'
-    },
-    {
-        activity_id: 'mock-3',
-        title: 'Logistics Coordination',
-        start_time: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
-        location: 'Warehouse B',
-        volunteers_needed: 8,
-        volunteers_registered: 8,
-        shortage: 0,
-        status: 'ok'
-    }
-];
-
-const MOCK_BLAST_TARGETS: BlastTarget[] = [
-    {
-        volunteer_id: 'v1',
-        name: 'Sarah Chen',
-        phone: '+65 9123 4567',
-        skills: ['First Aid', 'Coordination'],
-        whatsapp_link: 'https://wa.me/6591234567?text=Hi%20Sarah,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
-    },
-    {
-        volunteer_id: 'v2',
-        name: 'Ahmad bin Yusef',
-        phone: '+65 9876 5432',
-        skills: ['Heavy Lifting', 'Driving'],
-        whatsapp_link: 'https://wa.me/6598765432?text=Hi%20Ahmad,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
-    },
-    {
-        volunteer_id: 'v3',
-        name: 'John Tan',
-        phone: '+65 8234 5678',
-        skills: ['Logistics'],
-        whatsapp_link: 'https://wa.me/6582345678?text=Hi%20John,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
-    }
-];
 export default function AdminDashboard() {
+    const { data: session } = useSession();
+    const router = useRouter();
+
+    // Data State
+    const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState({
+        total_volunteers: 0,
+        total_activities: 0,
+        active_now: 0
+    });
+    const [trendData, setTrendData] = useState<any[]>([]);
+    const [distributionData, setDistributionData] = useState<any[]>([]);
+    const [recentActivities, setRecentActivities] = useState<any[]>([]);
+    const [timeRange, setTimeRange] = useState('6m');
+
+    // Form Generation State
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+
+    // Scanner State
     const [showScanner, setShowScanner] = useState(false);
-    const [stats, setStats] = useState<DashboardStats>({
-        volunteers_deployed: 142,
-        volunteers_deployed_change: 12,
-        fill_rate: 88,
-        fill_rate_change: 5,
-        upcoming_crises: 5,
-        upcoming_crises_change: 2,
-        pending_approvals: 12,
-        pending_approvals_change: -3,
-    });
-    const [crisisActivities, setCrisisActivities] = useState<CrisisActivity[]>([]);
-    const [aiInsight, setAIInsight] = useState<AIInsight>({
-        type: 'volunteer_shortage',
-        message: "I've identified 3 activities with zero volunteers for this weekend. I've drafted urgent WhatsApp blasts targeting volunteers with relevant skills.",
-        activities_count: 3,
-        actionable: true
-    });
-    const [blastModal, setBlastModal] = useState<{ isOpen: boolean; activityId: string; targets: BlastTarget[] }>({
-        isOpen: false,
-        activityId: '',
-        targets: []
-    });
+    const handleScan = async (result: string) => {
+        console.log('Scanned:', result);
+        return { success: true, message: 'Scan received' };
+    };
 
     useEffect(() => {
-        fetchCrisisData();
-    }, []);
+        fetchData();
+    }, [session, timeRange]);
 
-    const fetchCrisisData = async () => {
-        // Simulating API call with mock data
-        setCrisisActivities(MOCK_CRISIS_ACTIVITIES);
-    };
-
-    const handleScan = async (userId: string, activityId: string) => {
+    const fetchData = async () => {
+        if (!session?.accessToken) return;
+        setLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
-            const response = await fetch('/api/admin/attendance/mark', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ user_id: userId, activity_id: activityId })
+            // 1. Fetch Chart Stats
+            const statsRes = await fetch(`/api/admin/reports/stats?time_range=${timeRange}`, {
+                headers: { 'Authorization': `Bearer ${session.accessToken}` }
             });
 
-            const data = await response.json();
-
-            return {
-                success: response.ok,
-                message: data.message || 'Failed to mark attendance',
-                userName: data.user_name
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: 'Network error occurred'
-            };
-        }
-    };
-
-    const handleBlast = async (activity: CrisisActivity) => {
-        setBlastModal({
-            isOpen: true,
-            activityId: activity.activity_id,
-            targets: MOCK_BLAST_TARGETS
-        });
-    };
-
-    const exportWeeklyReport = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const headers: Record<string, string> = {};
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
+            if (statsRes.ok) {
+                const data = await statsRes.json();
+                setStats(data.stats);
+                setTrendData(data.participation_trends);
+                setDistributionData(data.activity_distribution);
             }
 
-            const response = await fetch('/api/admin/reports/volunteers/export', { headers });
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'weekly_report.xlsx';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+            // 2. Fetch Recent Activities (re-using existing endpoint or filtered list)
+            const actRes = await fetch('/api/admin/activities', {
+                headers: { 'Authorization': `Bearer ${session.accessToken}` }
+            });
+            if (actRes.ok) {
+                const acts = await actRes.json();
+                // Taking top 5 most recent upcoming
+                setRecentActivities(acts.slice(0, 5));
+            }
+
         } catch (error) {
-            console.error('Export failed:', error);
+            console.error("Dashboard fetch error:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="flex flex-col h-full bg-gray-50/50 p-8 overflow-y-auto">
             {/* Header */}
-            <header className="border-b border-gray-200 bg-white px-8 py-6">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
-                    <div className="flex gap-3">
-                        <button
-                            onClick={exportWeeklyReport}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors border border-gray-300"
-                        >
-                            <FileDown size={18} />
-                            Export Weekly Report
-                        </button>
-                        <button
-                            onClick={() => setShowScanner(true)}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md"
-                        >
-                            <Scan size={18} />
-                            Launch Scanner Mode
-                        </button>
-                    </div>
+            <div className="flex justify-between items-end mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                        Dashboard
+                    </h1>
+                    <p className="text-gray-500 mt-1">Overview of volunteer engagement and activities.</p>
                 </div>
-            </header>
-
-            {/* Main Content */}
-            <div className="p-8 space-y-6">
-                {/* KPI Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Volunteers Deployed */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-blue-50 rounded-lg">
-                                <Users className="text-blue-600" size={24} />
-                            </div>
-                            <span className="text-sm font-semibold text-emerald-600">
-                                +{stats.volunteers_deployed_change}%
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">Volunteers Deployed</p>
-                        <p className="text-3xl font-bold text-gray-900">{stats.volunteers_deployed}</p>
-                    </div>
-
-                    {/* Fill Rate */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-purple-50 rounded-lg">
-                                <TrendingUp className="text-purple-600" size={24} />
-                            </div>
-                            <span className="text-sm font-semibold text-emerald-600">
-                                +{stats.fill_rate_change}%
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">Fill Rate</p>
-                        <p className="text-3xl font-bold text-gray-900">{stats.fill_rate}%</p>
-                    </div>
-
-                    {/* Upcoming Crises */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-red-50 rounded-lg">
-                                <AlertTriangle className="text-red-600" size={24} />
-                            </div>
-                            <span className="text-sm font-semibold text-red-600">
-                                +{stats.upcoming_crises_change} new
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">Upcoming Crises</p>
-                        <p className="text-3xl font-bold text-gray-900">{stats.upcoming_crises}</p>
-                    </div>
-
-                    {/* Pending Approvals */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-orange-50 rounded-lg">
-                                <Bell className="text-orange-600" size={24} />
-                            </div>
-                            <span className="text-sm font-semibold text-gray-500">
-                                {stats.pending_approvals_change}
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">Pending Approvals</p>
-                        <p className="text-3xl font-bold text-gray-900">{stats.pending_approvals}</p>
-                    </div>
-                </div>
-
-                {/* AI Ops Copilot Insight */}
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
-                    <div className="flex items-start gap-4">
-                        <div className="p-3 bg-blue-600 rounded-xl shadow-lg">
-                            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                            </svg>
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                                <h3 className="text-lg font-bold text-gray-900">AI Ops Copilot</h3>
-                                <span className="px-2 py-0.5 bg-blue-600 text-white text-xs font-semibold rounded">
-                                    NEW INSIGHT
-                                </span>
-                            </div>
-                            <p className="text-gray-700 mb-4">{aiInsight.message}</p>
-                            <div className="flex gap-3">
-                                <button className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors border border-gray-300">
-                                    Dismiss
-                                </button>
-                                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md">
-                                    Review Drafts
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Crisis Monitor */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                        <div className="flex items-center gap-3">
-                            <AlertTriangle className="text-red-600" size={24} />
-                            <h2 className="text-xl font-bold text-gray-900">Crisis Monitor</h2>
-                        </div>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                placeholder="Search events..."
-                                className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                            />
-                            <button className="p-2 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors">
-                                <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Event Name
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Date / Time
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Location
-                                    </th>
-                                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Required PAX
-                                    </th>
-                                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Current Status
-                                    </th>
-                                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Action
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
-                                {crisisActivities.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center">
-                                            <CheckCircle className="mx-auto text-emerald-500 mb-3" size={48} />
-                                            <p className="text-gray-600 font-medium">No volunteer shortages! 🎉</p>
-                                            <p className="text-sm text-gray-400 mt-1">All activities are properly staffed</p>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    crisisActivities.slice(0, 5).map((activity) => (
-                                        <tr key={activity.activity_id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <p className="font-semibold text-gray-900">{activity.title}</p>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm text-gray-700">
-                                                    {new Date(activity.start_time).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
-                                                </p>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm text-gray-700">{activity.location}</p>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="text-sm font-semibold text-gray-900">
-                                                    {activity.volunteers_needed}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${activity.status === 'critical'
-                                                    ? 'bg-red-100 text-red-700'
-                                                    : activity.status === 'warning'
-                                                        ? 'bg-orange-100 text-orange-700'
-                                                        : 'bg-emerald-100 text-emerald-700'
-                                                    }`}>
-                                                    {activity.status === 'critical' && '▶ '}
-                                                    {activity.volunteers_registered} / {activity.volunteers_needed}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                {activity.status === 'critical' || activity.status === 'warning' ? (
-                                                    <button
-                                                        onClick={() => handleBlast(activity)}
-                                                        className="inline-flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wide rounded shadow-md transition-all hover:scale-105"
-                                                    >
-                                                        📢 Blast WhatsApp
-                                                    </button>
-                                                ) : (
-                                                    <button className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors">
-                                                        Assign
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {crisisActivities.length > 5 && (
-                        <div className="px-6 py-4 border-t border-gray-200 text-center bg-gray-50">
-                            <button className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors">
-                                View All Activities →
-                            </button>
-                        </div>
-                    )}
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => setShowScanner(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+                    >
+                        <Zap size={18} className="text-orange-500" />
+                        Scan Attendance
+                    </button>
+                    <button
+                        onClick={() => setIsFormModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#101828] text-white font-bold rounded-xl hover:bg-gray-800 shadow-lg shadow-gray-200 transition-all"
+                    >
+                        <Sparkles size={18} className="text-yellow-400" />
+                        AI Form Generator
+                    </button>
                 </div>
             </div>
 
-            {/* Scanner Modal */}
-            <AttendanceScanner
-                isOpen={showScanner}
-                onClose={() => setShowScanner(false)}
-                onScan={handleScan}
-            />
+            {/* Key Metrics Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between h-32">
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-500 font-medium text-sm">Total Volunteers</span>
+                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <Users size={18} />
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="text-3xl font-bold text-gray-900">{stats.total_volunteers}</h3>
+                        <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
+                            <TrendingUp size={12} />
+                            <span>+12% from last month</span>
+                        </div>
+                    </div>
+                </div>
 
-            {/* AI Ops Copilot Chatbot */}
-            <div className="fixed bottom-6 right-6 z-50">
-                <OpsCopilot />
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between h-32">
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-500 font-medium text-sm">Total Activities</span>
+                        <div className="p-2 bg-pink-50 text-pink-600 rounded-lg">
+                            <Calendar size={18} />
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="text-3xl font-bold text-gray-900">{stats.total_activities}</h3>
+                        <p className="text-xs text-gray-400 mt-1">All time events</p>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between h-32">
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-500 font-medium text-sm">Avg Attendance</span>
+                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                            <Activity size={18} />
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="text-3xl font-bold text-gray-900">85%</h3>
+                        <p className="text-xs text-gray-400 mt-1">Consistent engagement</p>
+                    </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-[#101828] to-[#1e293b] p-6 rounded-2xl border border-gray-800 shadow-sm flex flex-col justify-between h-32 text-white">
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-400 font-medium text-sm">AI Insights</span>
+                        <Sparkles size={18} className="text-yellow-400" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium leading-tight">"Engagement peaks on weekends. Try scheduling more social events on Fridays."</p>
+                    </div>
+                </div>
             </div>
 
-            {/* Blast Modal */}
-            {blastModal.isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
-                            <h3 className="text-xl font-bold text-gray-900">WhatsApp Volunteer Blast</h3>
-                            <p className="text-sm text-gray-500 mt-1">
-                                Found {blastModal.targets.length} matching volunteers
-                            </p>
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Main Trend Chart */}
+                <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col h-[400px]">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                            <BarChart3 className="text-gray-400" size={20} />
+                            Volunteer Participation Trends
+                        </h3>
+                        <div className="flex bg-gray-50 p-1 rounded-lg">
+                            {['7d', '30d', '6m'].map((range) => (
+                                <button
+                                    key={range}
+                                    onClick={() => setTimeRange(range)}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${timeRange === range
+                                        ? 'bg-white text-indigo-600 shadow-sm'
+                                        : 'text-gray-400 hover:text-gray-600'
+                                        }`}
+                                >
+                                    {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '6 Months'}
+                                </button>
+                            ))}
                         </div>
+                    </div>
+                    <div className="flex-1 w-full min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorNeed" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="colorReg" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F2F4F7" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Area type="monotone" dataKey="volunteers_needed" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorNeed)" name="Openings" />
+                                <Area type="monotone" dataKey="volunteers_registered" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorReg)" name="Registered" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
 
-                        <div className="p-6 space-y-3">
-                            {blastModal.targets.length === 0 ? (
-                                <p className="text-center text-gray-500 py-8">
-                                    No volunteers found with matching skills or phone numbers.
-                                </p>
-                            ) : (
-                                blastModal.targets.map((target) => (
-                                    <div key={target.volunteer_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                        <div>
-                                            <p className="font-semibold text-gray-900">{target.name}</p>
-                                            <p className="text-sm text-gray-600">{target.phone}</p>
-                                            <div className="flex gap-1 mt-1">
-                                                {target.skills.map(skill => (
-                                                    <span key={skill} className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                                        {skill}
-                                                    </span>
-                                                ))}
+                {/* Distribution Chart */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col h-[400px]">
+                    <h3 className="font-bold text-gray-900 text-lg mb-2 flex items-center gap-2">
+                        <PieChartIcon className="text-gray-400" size={20} />
+                        Activity Types
+                    </h3>
+                    <div className="flex-1 w-full min-h-0 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={distributionData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={80}
+                                    outerRadius={110}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {distributionData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        {/* Center Text Overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                            <span className="text-3xl font-bold text-gray-900">{stats.total_activities}</span>
+                            <span className="text-sm text-gray-500">Total</span>
+                        </div>
+                    </div>
+                    {/* Updated Legend */}
+                    <div className="mt-2 flex flex-wrap gap-2 justify-center pb-2">
+                        {distributionData.map((entry, index) => (
+                            <div key={index} className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                <span className="text-xs font-medium text-gray-600">{entry.name} ({entry.value})</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Recent Table (Simplified) */}
+            <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-bold text-gray-900 text-lg">Upcoming Activities</h3>
+                    <button onClick={() => router.push('/admin/events')} className="text-sm font-bold text-indigo-600 hover:text-indigo-700">View All</button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <tbody className="divide-y divide-gray-50">
+                            {recentActivities.map((activity, i) => (
+                                <tr key={i} className="group hover:bg-gray-50 transition-colors">
+                                    <td className="py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                                                {(activity.title || 'U').substring(0, 2).toUpperCase()}
                                             </div>
+                                            <span className="font-bold text-gray-900 text-sm">{activity.title}</span>
                                         </div>
-                                        <a
-                                            href={target.whatsapp_link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
-                                        >
-                                            <ExternalLink size={16} />
-                                            Send
-                                        </a>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-                        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-2xl">
-                            <button
-                                onClick={() => setBlastModal({ isOpen: false, activityId: '', targets: [] })}
-                                className="w-full px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
+                                    </td>
+                                    <td className="py-3 text-sm text-gray-500">
+                                        {activity.start_time ? new Date(activity.start_time).toLocaleDateString() : 'TBD'}
+                                    </td>
+                                    <td className="py-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-emerald-500 rounded-full"
+                                                    style={{ width: `${Math.min(100, ((activity.volunteers_registered || 0) / Math.max(1, activity.volunteers_needed || 1)) * 100)}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className="text-xs text-gray-500">{activity.volunteers_registered}/{activity.volunteers_needed}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
-            )}
+            </div>
+
+            {/* Modals */}
+            <AttendanceScanner isOpen={showScanner} onClose={() => setShowScanner(false)} onScan={handleScan} />
         </div>
     );
 }
