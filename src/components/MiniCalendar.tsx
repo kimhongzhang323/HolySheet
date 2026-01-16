@@ -94,7 +94,7 @@ export default function MiniCalendar() {
                     </div>
                     <div>
                         <h4 className="font-bold text-gray-900 text-sm group-hover:text-orange-500 transition-colors">Urban Wellness Expo</h4>
-                        <p className="text-xs text-gray-400 mt-0.5">Riverside Center, Bangkok</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Suntec City, Singapore</p>
                     </div>
                 </div>
 
@@ -106,7 +106,7 @@ export default function MiniCalendar() {
                     </div>
                     <div>
                         <h4 className="font-bold text-gray-900 text-sm group-hover:text-gray-600 transition-colors">Neon Nights Live</h4>
-                        <p className="text-xs text-gray-400 mt-0.5">The Glass Hall, Tokyo</p>
+                        <p className="text-xs text-gray-400 mt-0.5">The Glass Hall, Singapore</p>
                     </div>
                 </div>
             </div>

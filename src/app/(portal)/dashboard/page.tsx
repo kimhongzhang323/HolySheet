@@ -79,7 +79,7 @@ export default function PortalPage() {
 
                         <div className="h-32 bg-gray-100 rounded-xl mb-3 relative overflow-hidden">
                             <iframe
-                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15935.334099507856!2d101.69119295!3d3.139003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc362db7d05711%3A0xe5a363231317586a!2sKuala%20Lumpur%20City%20Centre%2C%20Kuala%20Lumpur%2C%20Federal%20Territory%20of%20Kuala%20Lumpur!5e0!3m2!1sen!2smy!4v1653846660000!5m2!1sen!2smy"
+                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d127641.05435010996!2d103.819836!3d1.352083!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da11238a8b9375%3A0x887869cf52abf5c4!2sSingapore!5e0!3m2!1sen!2ssg!4v1653846660000!5m2!1sen!2ssg"
                                 width="100%"
                                 height="100%"
                                 style={{ border: 0 }}
@@ -143,9 +143,9 @@ export default function PortalPage() {
                         <div className="grid grid-cols-3 gap-3">
                             {/* Mock Destinations */}
                             {[
-                                { city: 'Boston', img: '/images/city-boston.png' },
-                                { city: 'Chicago', img: '/images/city-chicago.png' },
-                                { city: 'Atlanta', img: '/images/city-atlanta.png' }
+                                { city: 'Sentosa', img: '/images/city-boston.png' },
+                                { city: 'Marina Bay', img: '/images/city-chicago.png' },
+                                { city: 'Orchard', img: '/images/city-atlanta.png' }
                             ].map(dest => (
                                 <div key={dest.city} className="h-24 rounded-xl bg-gray-200 relative overflow-hidden group">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -160,16 +160,16 @@ export default function PortalPage() {
                         <div className="mt-6 flex gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
                             <div className="w-24 h-24 bg-blue-100 rounded-xl shrink-0 overflow-hidden relative">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src="/images/japan-event.png" alt="Japan Event" className="w-full h-full object-cover" />
+                                <img src="/images/japan-event.png" alt="Sands Theatre" className="w-full h-full object-cover" />
                             </div>
                             <div className="flex-1 py-1">
                                 <div className="flex justify-between">
-                                    <h3 className="font-bold text-gray-900">Japan Event</h3>
+                                    <h3 className="font-bold text-gray-900">Sands Theatre</h3>
                                     <span className="text-xs text-gray-400">See more</span>
                                 </div>
                                 <div className="mt-2 space-y-1">
-                                    <p className="text-xs text-gray-600"><span className="text-gray-400">20 May</span> The Weekend</p>
-                                    <p className="text-xs text-gray-600"><span className="text-gray-400">22 May</span> Blackpink</p>
+                                    <p className="text-xs text-gray-600"><span className="text-gray-400">20 May</span> The Phantom of the Opera</p>
+                                    <p className="text-xs text-gray-600"><span className="text-gray-400">22 May</span> Hamilton</p>
                                 </div>
                             </div>
                         </div>
