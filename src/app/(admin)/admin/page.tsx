@@ -79,26 +79,26 @@ export default function AdminDashboard() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50/50 p-8 overflow-y-auto">
+        <div className="flex flex-col h-full bg-gray-50/50 p-4 md:p-8 overflow-y-auto">
             {/* Header */}
-            <div className="flex justify-between items-end mb-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
                         Dashboard
                     </h1>
                     <p className="text-gray-500 mt-1">Overview of volunteer engagement and activities.</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-3 w-full md:w-auto">
                     <button
                         onClick={() => setShowScanner(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+                        className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all shadow-sm"
                     >
                         <Zap size={18} className="text-orange-500" />
                         Scan Attendance
                     </button>
                     <button
                         onClick={() => setIsFormModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#101828] text-white font-bold rounded-xl hover:bg-gray-800 shadow-lg shadow-gray-200 transition-all"
+                        className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 bg-[#101828] text-white font-bold rounded-xl hover:bg-gray-800 shadow-lg shadow-gray-200 transition-all"
                     >
                         <Sparkles size={18} className="text-yellow-400" />
                         AI Form Generator
@@ -107,7 +107,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Key Metrics Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between h-32">
                     <div className="flex items-center justify-between">
                         <span className="text-gray-500 font-medium text-sm">Total Volunteers</span>

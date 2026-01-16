@@ -194,27 +194,18 @@ export default function ProfilePage() {
     const { data: session } = useSession();
     const [profile, setProfile] = useState(DEFAULT_USER);
     const [activeTab, setActiveTab] = useState('overview');
+    const [isStatsOpen, setIsStatsOpen] = useState(false);
+    const [isAchievementsOpen, setIsAchievementsOpen] = useState(false);
+    const [isUpcomingOpen, setIsUpcomingOpen] = useState(false);
     const [historyView, setHistoryView] = useState<'grid' | 'list'>('grid');
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
             if (session?.user) {
-                // Determine joined date from session or current date if not available
-                // Ideally this comes from backend too, checking /api/user/profile
                 try {
-                    const res = await fetch('http://localhost:8000/user/profile', {
-                        headers: {
-                            // Assuming Authorization header is handled or we rely on session.
-                            // Since frontend is Next.js and backend is FastAPI, we likely need to pass the token.
-                            // For now, let's assume we use session.user info which comes from OAuth.
-                            // And if we need backend data, we might need a proxy or token.
-                            // IMPORTANT: The existing code uses /api/ proxy in some places, OR direct 8000.
-                            // The user said "sync it with oauth data".
-                            // Let's rely on session.user first for basic info.
-                        }
-                    });
-                    // Note: If authentication is needed for backend, we need the token.
-                    // Assuming for now session has what we need fundamentally.
+                    const res = await fetch('http://localhost:8000/user/profile', {});
                 } catch (e) {
                     // ignore
                 }
@@ -224,8 +215,6 @@ export default function ProfilePage() {
                     name: session.user?.name || prev.name,
                     email: session.user?.email || prev.email,
                     avatar: session.user?.image || prev.avatar,
-                    // If we successfully fetched backend data, we'd merge it here.
-                    // For now, syncing with OAuth means using session data.
                 }));
             }
         };
@@ -273,13 +262,6 @@ export default function ProfilePage() {
                         <h2 className="text-2xl font-bold tracking-tight text-gray-900">Volunteer Details</h2>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-xl text-sm font-medium text-gray-600 transition-colors border border-gray-200">
-                            This Year <ChevronRight size={14} className="rotate-90" />
-                        </button>
-                        <button className="flex items-center gap-2 px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-md transform hover:-translate-y-0.5">
-                            <ArrowDownToLine size={16} />
-                            Download Info
-                        </button>
                         <button
                             onClick={() => signOut({ callbackUrl: "/login" })}
                             className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-bold transition-all border border-red-200"
@@ -341,48 +323,58 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Stats Row (Light Cards) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Stat 1: Total Events */}
-                    <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
-                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                            <Calendar size={20} className="text-blue-600" />
-                        </div>
-                        <div>
-                            <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.totalEvents}</h4>
-                            <p className="text-xs text-gray-500 font-medium">Total Events</p>
-                        </div>
+                <div>
+                    {/* Mobile Header for Stats */}
+                    <div
+                        className="flex md:hidden items-center justify-between mb-4 cursor-pointer"
+                        onClick={() => setIsStatsOpen(!isStatsOpen)}
+                    >
+                        <h3 className="text-lg font-bold text-gray-900">Overview Stats</h3>
+                        <ChevronRight size={20} className={`text-gray-400 transition-transform duration-200 ${isStatsOpen ? 'rotate-90' : ''}`} />
                     </div>
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ${isStatsOpen ? '' : 'hidden md:grid'}`}>
+                        {/* Stat 1: Total Events */}
+                        <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
+                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                                <Calendar size={20} className="text-blue-600" />
+                            </div>
+                            <div>
+                                <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.totalEvents}</h4>
+                                <p className="text-xs text-gray-500 font-medium">Total Events</p>
+                            </div>
+                        </div>
 
-                    {/* Stat 2: Volunteer */}
-                    <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
-                        <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                            <Heart size={20} className="text-green-600" />
+                        {/* Stat 2: Volunteer */}
+                        <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
+                            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                                <Heart size={20} className="text-green-600" />
+                            </div>
+                            <div>
+                                <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.volunteerEvents}</h4>
+                                <p className="text-xs text-gray-500 font-medium">Volunteer</p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.volunteerEvents}</h4>
-                            <p className="text-xs text-gray-500 font-medium">Volunteer</p>
-                        </div>
-                    </div>
 
-                    {/* Stat 3: Meetups */}
-                    <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
-                        <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                            <Users size={20} className="text-purple-600" />
+                        {/* Stat 3: Meetups */}
+                        <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
+                            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                                <Users size={20} className="text-purple-600" />
+                            </div>
+                            <div>
+                                <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.meetups}</h4>
+                                <p className="text-xs text-gray-500 font-medium">Meetups</p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.meetups}</h4>
-                            <p className="text-xs text-gray-500 font-medium">Meetups</p>
-                        </div>
-                    </div>
 
-                    {/* Stat 4: Volunteer Hrs */}
-                    <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
-                        <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                            <Clock size={20} className="text-orange-600" />
-                        </div>
-                        <div>
-                            <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.totalHours}</h4>
-                            <p className="text-xs text-gray-500 font-medium">Volunteer Hrs</p>
+                        {/* Stat 4: Volunteer Hrs */}
+                        <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
+                            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                                <Clock size={20} className="text-orange-600" />
+                            </div>
+                            <div>
+                                <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.totalHours}</h4>
+                                <p className="text-xs text-gray-500 font-medium">Volunteer Hrs</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -450,13 +442,19 @@ export default function ProfilePage() {
                             <div className="space-y-6">
                                 {/* Achievements / Badges */}
                                 <div className="bg-white p-6 rounded-[20px] border border-gray-100 shadow-sm">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h3 className="text-xl font-bold text-gray-900">Achievements in Progress</h3>
-                                        <Link href="/achievements" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">
+                                    <div
+                                        className="flex items-center justify-between mb-4 md:mb-6 cursor-pointer md:cursor-default"
+                                        onClick={() => setIsAchievementsOpen(!isAchievementsOpen)}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-xl font-bold text-gray-900">Achievements in Progress</h3>
+                                            <ChevronRight size={20} className={`text-gray-400 md:hidden transition-transform duration-200 ${isAchievementsOpen ? 'rotate-90' : ''}`} />
+                                        </div>
+                                        <Link href="/achievements" className="hidden md:block text-sm font-semibold text-emerald-600 hover:text-emerald-700" onClick={(e) => e.stopPropagation()}>
                                             View All
                                         </Link>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${isAchievementsOpen ? '' : 'hidden md:grid'}`}>
                                         {MOCK_BADGES.map((badge) => (
                                             <div
                                                 key={badge.id}
@@ -494,13 +492,19 @@ export default function ProfilePage() {
 
                                 {/* Upcoming */}
                                 <div className="bg-white p-6 rounded-[20px] border border-gray-100 shadow-sm">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h3 className="text-lg font-bold text-gray-900">Upcoming Schedule</h3>
-                                        <Link href="/events" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                                    <div
+                                        className="flex items-center justify-between mb-4 md:mb-6 cursor-pointer md:cursor-default"
+                                        onClick={() => setIsUpcomingOpen(!isUpcomingOpen)}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-lg font-bold text-gray-900">Upcoming Schedule</h3>
+                                            <ChevronRight size={20} className={`text-gray-400 md:hidden transition-transform duration-200 ${isUpcomingOpen ? 'rotate-90' : ''}`} />
+                                        </div>
+                                        <Link href="/events" className="hidden md:block text-sm font-semibold text-indigo-600 hover:text-indigo-700" onClick={(e) => e.stopPropagation()}>
                                             Find more
                                         </Link>
                                     </div>
-                                    <div className="space-y-3">
+                                    <div className={`space-y-3 ${isUpcomingOpen ? '' : 'hidden md:block'}`}>
                                         {MOCK_UPCOMING.map((event) => {
                                             const CategoryIcon = getCategoryIcon(event.category);
                                             return (
@@ -532,25 +536,31 @@ export default function ProfilePage() {
                         {activeTab === 'history' && (
                             <div className="bg-white p-6 rounded-[20px] border border-gray-100 shadow-sm">
                                 {/* Header with Controls */}
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-                                        <h3 className="text-xl font-bold text-gray-900">Attendance History</h3>
+                                <div
+                                    className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 cursor-pointer md:cursor-default"
+                                    onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                                >
+                                    <div className="flex items-center justify-between w-full md:w-auto">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
+                                            <h3 className="text-xl font-bold text-gray-900">Attendance History</h3>
+                                        </div>
+                                        <ChevronRight size={20} className={`text-gray-400 md:hidden transition-transform duration-200 ${isHistoryOpen ? 'rotate-90' : ''}`} />
                                     </div>
 
-                                    <div className="flex items-center gap-2">
+                                    <div className={`flex items-center gap-2 ${isHistoryOpen ? '' : 'hidden md:flex'}`}>
                                         <button
-                                            onClick={() => setHistoryView(historyView === 'grid' ? 'list' : 'grid')}
+                                            onClick={(e) => { e.stopPropagation(); setHistoryView(historyView === 'grid' ? 'list' : 'grid'); }}
                                             className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
                                             title="Toggle View"
                                         >
                                             {historyView === 'grid' ? <List size={20} /> : <LayoutGrid size={20} />}
                                         </button>
-                                        <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                        <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" onClick={(e) => e.stopPropagation()}>
                                             <ArrowUpDown size={16} />
                                             Sort
                                         </button>
-                                        <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                        <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" onClick={(e) => e.stopPropagation()}>
                                             <SlidersHorizontal size={16} />
                                             Filter
                                         </button>
@@ -558,7 +568,7 @@ export default function ProfilePage() {
                                 </div>
 
                                 {/* History Grid */}
-                                <div className={`grid gap-4 ${historyView === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+                                <div className={`grid gap-4 ${isHistoryOpen ? '' : 'hidden md:grid'} ${historyView === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
                                     {MOCK_EVENT_HISTORY.map((event) => (
                                         <div
                                             key={event.id}
@@ -633,7 +643,7 @@ export default function ProfilePage() {
                                 </div>
 
                                 {/* Pagination */}
-                                <div className="flex justify-center items-center gap-2 mt-8">
+                                <div className={`flex justify-center items-center gap-2 mt-8 ${isHistoryOpen ? '' : 'hidden md:flex'}`}>
                                     <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-900 text-white text-sm font-bold shadow-sm">1</button>
                                     {[2, 3, 4].map(page => (
                                         <button key={page} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">
@@ -649,20 +659,33 @@ export default function ProfilePage() {
                         )}
 
                         {activeTab === 'applications' && (
-                            <div className="bg-white p-6 rounded-[20px] border border-gray-100 shadow-sm min-h-[400px] flex flex-col items-center justify-center text-center">
-                                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                                    <Clock size={32} className="text-gray-400" />
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-900">No Pending Applications</h3>
-                                <p className="text-gray-500 text-sm max-w-xs mt-2">
-                                    You have no pending volunteer or event applications at the moment.
-                                </p>
-                                <Link
-                                    href="/events"
-                                    className="mt-6 px-6 py-2.5 bg-indigo-600 text-white rounded-full font-semibold text-sm hover:bg-indigo-700 transition-colors"
+                            <div className="bg-white p-6 rounded-[20px] border border-gray-100 shadow-sm">
+                                {/* Header for Applications */}
+                                <div
+                                    className="flex items-center justify-between mb-8 cursor-pointer md:cursor-default"
+                                    onClick={() => setIsApplicationsOpen(!isApplicationsOpen)}
                                 >
-                                    Browse Events
-                                </Link>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-1.5 h-6 bg-blue-500 rounded-full"></div>
+                                        <h3 className="text-xl font-bold text-gray-900">Your Applications</h3>
+                                    </div>
+                                    <ChevronRight size={20} className={`text-gray-400 md:hidden transition-transform duration-200 ${isApplicationsOpen ? 'rotate-90' : ''}`} />
+                                </div>
+                                <div className={`min-h-[400px] flex flex-col items-center justify-center text-center ${isApplicationsOpen ? 'flex' : 'hidden md:flex'}`}>
+                                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                                        <Clock size={32} className="text-gray-400" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-900">No Pending Applications</h3>
+                                    <p className="text-gray-500 text-sm max-w-xs mt-2">
+                                        You have no pending volunteer or event applications at the moment.
+                                    </p>
+                                    <Link
+                                        href="/events"
+                                        className="mt-6 px-6 py-2.5 bg-indigo-600 text-white rounded-full font-semibold text-sm hover:bg-indigo-700 transition-colors"
+                                    >
+                                        Browse Events
+                                    </Link>
+                                </div>
                             </div>
                         )}
                     </motion.div>
