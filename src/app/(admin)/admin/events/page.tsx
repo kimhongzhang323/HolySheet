@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Calendar, MapPin, Users, Clock, Filter, Plus, Search, MoreVertical, Loader2, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 interface Activity {
-    _id: string;
+    id: string;
     title: string;
     description: string;
     start_time: string;
@@ -134,64 +135,66 @@ export default function EventsPage() {
                 )}
 
                 {activities.map((activity) => (
-                    <div key={activity._id} className="group bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-indigo-100 transition-all cursor-pointer relative overflow-hidden">
-                        {/* Status Badge */}
-                        <div className={`absolute top-5 right-5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(activity)}`}>
-                            {getStatusText(activity)}
-                        </div>
-
-                        <div className="mb-4">
-                            <h3 className="font-bold text-gray-900 text-lg mb-1 pr-24 truncate">{activity.title}</h3>
-                            <div className="flex items-center gap-2 text-gray-500 text-xs font-medium">
-                                <Clock size={14} />
-                                <span>
-                                    {new Date(activity.start_time).toLocaleDateString()} • {new Date(activity.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3 mb-5">
-                            <div className="flex items-start gap-2.5">
-                                <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
-                                <p className="text-sm text-gray-600 line-clamp-1">{activity.location}</p>
+                    <Link key={activity.id} href={`/admin/events/${activity.id}`}>
+                        <div className="group bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-indigo-100 transition-all cursor-pointer relative overflow-hidden h-full">
+                            {/* Status Badge */}
+                            <div className={`absolute top-5 right-5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(activity)}`}>
+                                {getStatusText(activity)}
                             </div>
 
-                            <div className="flex items-start gap-2.5">
-                                <Users size={16} className="text-gray-400 mt-0.5 shrink-0" />
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-center mb-1.5">
-                                        <span className="text-sm text-gray-600">Volunteers</span>
-                                        <span className="text-xs font-bold text-gray-900">{activity.volunteers_registered} / {activity.volunteers_needed}</span>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full ${(activity.volunteers_registered / activity.volunteers_needed) >= 1 ? 'bg-emerald-500' : 'bg-indigo-500'
-                                                }`}
-                                            style={{ width: `${Math.min(100, (activity.volunteers_registered / Math.max(1, activity.volunteers_needed)) * 100)}%` }}
-                                        ></div>
+                            <div className="mb-4">
+                                <h3 className="font-bold text-gray-900 text-lg mb-1 pr-24 truncate">{activity.title}</h3>
+                                <div className="flex items-center gap-2 text-gray-500 text-xs font-medium">
+                                    <Clock size={14} />
+                                    <span>
+                                        {new Date(activity.start_time).toLocaleDateString()} • {new Date(activity.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 mb-5">
+                                <div className="flex items-start gap-2.5">
+                                    <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                                    <p className="text-sm text-gray-600 line-clamp-1">{activity.location}</p>
+                                </div>
+
+                                <div className="flex items-start gap-2.5">
+                                    <Users size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <span className="text-sm text-gray-600">Volunteers</span>
+                                            <span className="text-xs font-bold text-gray-900">{activity.volunteers_registered} / {activity.volunteers_needed}</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full ${(activity.volunteers_registered / activity.volunteers_needed) >= 1 ? 'bg-emerald-500' : 'bg-indigo-500'
+                                                    }`}
+                                                style={{ width: `${Math.min(100, (activity.volunteers_registered / Math.max(1, activity.volunteers_needed)) * 100)}%` }}
+                                            ></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
-                            <div className="flex -space-x-2">
-                                {[...Array(Math.min(3, activity.volunteers_registered))].map((_, i) => (
-                                    <div key={i} className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-[8px] font-bold text-gray-500">
-                                        {/* Placeholder avatars */}
-                                    </div>
-                                ))}
-                                {activity.volunteers_registered > 3 && (
-                                    <div className="w-7 h-7 rounded-full bg-gray-50 border-2 border-white flex items-center justify-center text-[9px] font-bold text-gray-500">
-                                        +{activity.volunteers_registered - 3}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button className="text-xs font-bold text-indigo-600 hover:text-indigo-700">View Details</button>
+                            <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                                <div className="flex -space-x-2">
+                                    {[...Array(Math.min(3, activity.volunteers_registered))].map((_, i) => (
+                                        <div key={i} className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-[8px] font-bold text-gray-500">
+                                            {/* Placeholder avatars */}
+                                        </div>
+                                    ))}
+                                    {activity.volunteers_registered > 3 && (
+                                        <div className="w-7 h-7 rounded-full bg-gray-50 border-2 border-white flex items-center justify-center text-[9px] font-bold text-gray-500">
+                                            +{activity.volunteers_registered - 3}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button className="text-xs font-bold text-indigo-600 hover:text-indigo-700">View Details</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </Link>
                 ))}
             </div>
         </div>

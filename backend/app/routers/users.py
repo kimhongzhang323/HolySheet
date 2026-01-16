@@ -52,7 +52,13 @@ async def update_profile(
         isVerified=user.is_verified,
         address=user.address,
         profileDeadline=user.profile_deadline,
-        emailVerified=user.email_verified
+        emailVerified=user.email_verified,
+        # New fields
+        total_events=user.total_events or 0,
+        volunteer_count=user.volunteer_count or 0,
+        meetups_count=user.meetups_count or 0,
+        volunteer_hours=user.volunteer_hours or 0,
+        achievements=user.achievements or []
     )
 
 @router.get("/user/profile", response_model=UserResponse)

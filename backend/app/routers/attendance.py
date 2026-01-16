@@ -10,14 +10,13 @@ from uuid import UUID
 from ..db import get_database
 from ..models.user import UserDB, UserResponse
 from ..models.activity import ActivityDB
+from ..models.attendance import AttendanceDB
 from ..dependencies import get_current_user
 
 router = APIRouter()
 
-
 def is_admin_or_staff(role: str) -> bool:
     return role in ["admin", "staff"]
-
 
 @router.post("/admin/attendance/mark")
 async def mark_attendance(
@@ -35,52 +34,65 @@ async def mark_attendance(
     
     try:
         activity_uuid = UUID(activity_id)
+        user_uuid = UUID(user_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid activity ID")
+        raise HTTPException(status_code=400, detail="Invalid ID format")
     
+    # Check if activity exists
     result = await db.execute(select(ActivityDB).where(ActivityDB.id == activity_uuid))
     activity = result.scalar_one_or_none()
-    
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     
     # Check if user exists
-    try:
-        user_uuid = UUID(user_id)
-        user_result = await db.execute(select(UserDB).where(UserDB.id == user_uuid))
-        user = user_result.scalar_one_or_none()
-    except ValueError:
-        # Try by email
-        user_result = await db.execute(select(UserDB).where(UserDB.email == user_id))
-        user = user_result.scalar_one_or_none()
-    
+    user_result = await db.execute(select(UserDB).where(UserDB.id == user_uuid))
+    user = user_result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    user_id_str = str(user.id)
-    attendees = activity.attendees or []
+    # Check if already marked
+    att_result = await db.execute(
+        select(AttendanceDB).where(
+            AttendanceDB.activity_id == activity_uuid,
+            AttendanceDB.user_id == user_uuid
+        )
+    )
+    existing_attendance = att_result.scalar_one_or_none()
     
-    if user_id_str in attendees:
+    if existing_attendance:
         return {
             "message": "User already marked as attended",
-            "activity_id": str(activity.id),
-            "user_id": user_id_str,
-            "user_name": user.name,
+            "activity_id": activity_id,
+            "user_id": user_id,
             "already_attended": True
         }
     
-    # Add to attendees list
-    new_attendees = attendees + [user_id_str]
-    activity.attendees = new_attendees
+    # Create attendance record
+    # Calculate hours: end_time - start_time
+    duration = activity.end_time - activity.start_time
+    hours = int(duration.total_seconds() / 3600) or 2 # default 2 hours if too short
+    
+    attendance = AttendanceDB(
+        activity_id=activity_uuid,
+        user_id=user_uuid,
+        hours_earned=hours,
+        verified_by=UUID(current_user.id)
+    )
+    
+    # Also update the legacy attendees list for compatibility
+    if not activity.attendees:
+        activity.attendees = []
+    activity.attendees = list(activity.attendees) + [user_id]
+    
+    db.add(attendance)
     await db.commit()
     
     return {
         "message": "Attendance marked successfully",
-        "activity_id": str(activity.id),
-        "user_id": user_id_str,
-        "user_name": user.name,
-        "already_attended": False,
-        "total_attended": len(new_attendees)
+        "activity_id": activity_id,
+        "user_id": user_id,
+        "hours_earned": hours,
+        "already_attended": False
     }
 
 

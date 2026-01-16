@@ -180,6 +180,35 @@ async def generate_form(topic: str) -> Dict:
             ]
         }
 
+
+async def generate_field(prompt: str) -> Dict:
+    """Generate a single form field structure based on a user prompt"""
+    system_instruction = """You are an expert form designer for MINDS.
+    Generate a SINGLE form field JSON object based on the user's requirement.
+    The response MUST be a valid JSON object with the following structure:
+    {
+        "label": "Question Label",
+        "type": "text" | "textarea" | "select" | "checkbox" | "date" | "tel",
+        "required": true | false,
+        "options": ["Option 1", "Option 2"] // ONLY for select and checkbox types, otherwise empty array
+    }
+    """
+    
+    try:
+        if not client: return {"error": "AI not configured"}
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-exp",
+            contents=prompt,
+            config={
+                "system_instruction": system_instruction,
+                "response_mime_type": "application/json"
+            }
+        )
+        data = json.loads(response.text.strip())
+        return data
+    except Exception as e:
+        return {"error": f"Failed to generate field: {str(e)}"}
+
 # Admin Tool Definitions (for chat_with_tools)
 ADMIN_TOOLS = [
     {

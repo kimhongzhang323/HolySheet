@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ARRAY, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 import uuid
 
@@ -26,10 +26,12 @@ class ActivityDB(Base):
     skills_required = Column(ARRAY(String), default=[])
     image_url = Column(String(500), nullable=True)
     organiser = Column(String(255), nullable=True)
+    activity_type = Column(String(50), default="volunteer") # volunteer, meetup
     status = Column(String(50), default="published")
     created_by = Column(UUID(as_uuid=True), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    volunteer_form = Column(JSON, nullable=True) # JSON structure for custom application form
 
 
 # Pydantic Models for API
@@ -47,7 +49,9 @@ class ActivityBase(BaseModel):
     skills_required: List[str] = []
     image_url: Optional[str] = None
     organiser: Optional[str] = None
+    activity_type: str = "volunteer"
     status: str = "published"
+    volunteer_form: Optional[Dict] = None
 
 
 class ActivityCreate(ActivityBase):

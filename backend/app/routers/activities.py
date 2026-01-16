@@ -178,9 +178,54 @@ async def create_activity(
         skills_required=new_activity.skills_required or [],
         image_url=new_activity.image_url,
         organiser=new_activity.organiser,
+        activity_type=new_activity.activity_type,
         status=new_activity.status,
+        volunteer_form=new_activity.volunteer_form,
         created_by=str(new_activity.created_by) if new_activity.created_by else None,
         created_at=new_activity.created_at
+    )
+
+@router.get("/admin/activities/{activity_id}", response_model=ActivityResponse)
+async def get_activity(
+    activity_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    """Get a single activity by ID (Admin/Staff only)"""
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    try:
+        uuid_id = UUID(activity_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid activity ID")
+    
+    result = await db.execute(select(ActivityDB).where(ActivityDB.id == uuid_id))
+    activity = result.scalar_one_or_none()
+    
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+        
+    return ActivityResponse(
+        id=str(activity.id),
+        title=activity.title,
+        description=activity.description,
+        start_time=activity.start_time,
+        end_time=activity.end_time,
+        location=activity.location,
+        capacity=activity.capacity,
+        volunteers_needed=activity.volunteers_needed,
+        volunteers_registered=activity.volunteers_registered,
+        needs_help=activity.needs_help,
+        attendees=activity.attendees or [],
+        skills_required=activity.skills_required or [],
+        image_url=activity.image_url,
+        organiser=activity.organiser,
+        activity_type=activity.activity_type,
+        status=activity.status,
+        volunteer_form=activity.volunteer_form,
+        created_by=str(activity.created_by) if activity.created_by else None,
+        created_at=activity.created_at
     )
 
 
@@ -233,6 +278,7 @@ async def update_activity(
         image_url=existing.image_url,
         organiser=existing.organiser,
         status=existing.status,
+        volunteer_form=existing.volunteer_form,
         created_by=str(existing.created_by) if existing.created_by else None,
         created_at=existing.created_at
     )

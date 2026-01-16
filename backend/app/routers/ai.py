@@ -172,3 +172,43 @@ async def generate_form_endpoint(
     
     form_structure = await ai_service.generate_form(topic)
     return form_structure
+
+
+@router.post("/admin/ai/generate-field")
+async def generate_field_endpoint(
+    prompt: str = Body(..., embed=True),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    field_structure = await ai_service.generate_field(prompt)
+    return field_structure
+
+
+@router.post("/admin/ai/save-form")
+async def save_form_endpoint(
+    activity_id: str = Body(..., embed=True),
+    form_structure: dict = Body(..., embed=True),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    try:
+        uuid_id = UUID(activity_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid activity ID")
+    
+    result = await db.execute(select(ActivityDB).where(ActivityDB.id == uuid_id))
+    activity = result.scalar_one_or_none()
+    
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    
+    activity.volunteer_form = form_structure
+    await db.commit()
+    
+    return {"message": "Form saved successfully", "form": form_structure}

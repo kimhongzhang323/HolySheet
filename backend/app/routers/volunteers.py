@@ -7,10 +7,140 @@ from uuid import UUID
 from ..db import get_database
 from ..models.user import UserDB, UserResponse
 from ..models.activity import ActivityDB
+from ..models.volunteer import VolunteerDB, VolunteerCreate
+from ..models.form_response import FormResponseDB
 from ..dependencies import get_current_user
 
 router = APIRouter()
 
+@router.post("/volunteers/register")
+async def register_as_volunteer(
+    register_req: VolunteerCreate,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    """Register the current user as a volunteer for an activity"""
+    try:
+        activity_uuid = UUID(register_req.activity_id)
+        user_uuid = UUID(current_user.id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid ID format")
+
+    # Check if activity exists
+    result = await db.execute(select(ActivityDB).where(ActivityDB.id == activity_uuid))
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    # Check if already registered
+    vol_result = await db.execute(
+        select(VolunteerDB).where(
+            VolunteerDB.activity_id == activity_uuid,
+            VolunteerDB.user_id == user_uuid
+        )
+    )
+    if vol_result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="User already registered for this activity")
+
+    # Create volunteer record
+    new_volunteer = VolunteerDB(
+        user_id=user_uuid,
+        activity_id=activity_uuid,
+        role=register_req.role,
+        skills_offered=register_req.skills_offered,
+        status="confirmed" # Auto-confirm for now or set to pending
+    )
+
+    # Increment activity volunteer count
+    activity.volunteers_registered = (activity.volunteers_registered or 0) + 1
+
+    db.add(new_volunteer)
+    await db.commit()
+    await db.refresh(new_volunteer)
+
+    return {
+        "message": "Registration successful",
+        "volunteer_id": str(new_volunteer.id),
+        "status": new_volunteer.status
+    }
+
+@router.get("/admin/activities/{activity_id}/volunteers")
+async def get_activity_volunteers(
+    activity_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    """Get list of volunteers registered for an activity"""
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin or staff can view volunteers"
+        )
+    
+    try:
+        activity_uuid = UUID(activity_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Activity ID")
+    
+    # Query VolunteerDB joined with UserDB
+    query = select(VolunteerDB, UserDB).join(UserDB, VolunteerDB.user_id == UserDB.id).where(
+        VolunteerDB.activity_id == activity_uuid
+    )
+    result = await db.execute(query)
+    rows = result.all()
+    
+    volunteers = []
+    for vol_rec, user_rec in rows:
+        volunteers.append({
+            "id": str(user_rec.id),
+            "name": user_rec.name,
+            "email": user_rec.email,
+            "role": vol_rec.role,
+            "status": vol_rec.status,
+            "applied_at": vol_rec.applied_at.isoformat() if vol_rec.applied_at else None,
+            "skills": vol_rec.skills_offered
+        })
+    
+    return volunteers
+
+
+@router.get("/admin/activities/{activity_id}/form-responses")
+async def get_activity_form_responses(
+    activity_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    """Get list of form responses for an activity"""
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden"
+        )
+    
+    try:
+        activity_uuid = UUID(activity_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Activity ID")
+    
+    # Query FormResponseDB joined with UserDB
+    query = select(FormResponseDB, UserDB).join(UserDB, FormResponseDB.user_id == UserDB.id).where(
+        FormResponseDB.activity_id == activity_uuid
+    )
+    result = await db.execute(query)
+    rows = result.all()
+    
+    responses = []
+    for resp_rec, user_rec in rows:
+        responses.append({
+            "id": str(resp_rec.id),
+            "user_id": str(user_rec.id),
+            "user_name": user_rec.name,
+            "user_email": user_rec.email,
+            "responses": resp_rec.responses,
+            "submitted_at": resp_rec.submitted_at.isoformat() if resp_rec.submitted_at else None
+        })
+    
+    return responses
 
 def is_admin_or_staff(role: str) -> bool:
     return role in ["admin", "staff"]
