@@ -26,6 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const router = useRouter();
     const { data: session, status } = useSession();
     const [isChatOpen, setIsChatOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -34,6 +35,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             router.push('/dashboard');
         }
     }, [status, session, router]);
+
+    // Close sidebar on route change
+    useEffect(() => {
+        setIsSidebarOpen(false);
+    }, [pathname]);
 
     if (status === 'loading') {
         return (
@@ -47,20 +53,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <div className="flex h-screen bg-white overflow-hidden text-gray-900 font-sans selection:bg-blue-100">
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Left Sidebar */}
-            <aside className="w-64 bg-white flex flex-col border-r border-gray-100 shrink-0 z-20">
+            <aside className={`fixed inset-y-0 left-0 bg-white flex flex-col border-r border-gray-100 shrink-0 z-40 transition-transform duration-300 ease-in-out md:static md:translate-x-0 w-[280px] md:w-64 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}>
                 {/* Header/Logo */}
-                <div className="p-8 pb-4">
+                <div className="p-6 md:p-8 pb-4 flex justify-between items-center">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
                             <Network className="text-white w-6 h-6" />
                         </div>
                         <span className="font-bold text-xl tracking-tight">holysheet</span>
                     </div>
+                    {/* Mobile Close Button */}
+                    <button
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+                    >
+                        <PanelRightClose size={20} />
+                    </button>
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 px-4 py-4 space-y-1">
+                <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
                     {NAV_ITEMS.map((item) => {
                         const isActive = pathname === item.path;
                         return (
@@ -98,8 +120,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </aside>
 
             {/* Main Content (Middle View) */}
-            <main className="flex-1 overflow-auto bg-white relative z-10 scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                {children}
+            <main className="flex-1 overflow-auto bg-white relative z-10 scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] flex flex-col">
+                {/* Mobile Header */}
+                <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                        >
+                            <LayoutGrid size={24} />
+                        </button>
+                        <span className="font-bold text-lg">Admin</span>
+                    </div>
+                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
+                        <Network className="text-white w-4 h-4" />
+                    </div>
+                </div>
+
+                <div className="flex-1">
+                    {children}
+                </div>
 
                 {/* AI Chat Toggle Button (Visible when closed) */}
                 {!isChatOpen && (
@@ -112,9 +152,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 )}
             </main>
 
-            {/* Right Panel (AI Chat) */}
-            <aside className={`bg-white border-l border-gray-100 shrink-0 z-20 transition-all duration-300 ease-in-out relative ${isChatOpen ? 'w-[380px]' : 'w-0 border-none overflow-hidden'}`}>
-                <div className="h-full relative">
+            {/* Right Panel (AI Chat) - Responsive */}
+            <aside className={`bg-white border-l border-gray-100 shrink-0 z-50 fixed inset-y-0 right-0 md:static transition-all duration-300 ease-in-out shadow-2xl md:shadow-none ${isChatOpen
+                ? 'translate-x-0 w-full md:w-[380px]'
+                : 'translate-x-full w-0 md:translate-x-0 md:border-none md:overflow-hidden'
+                }`}>
+                <div className="h-full relative w-full border-l border-gray-100">
                     {/* Close Button (Absolute inside sidebar) */}
                     <button
                         onClick={() => setIsChatOpen(false)}

@@ -221,7 +221,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             </Link>
 
             <div className="bg-white border border-gray-100 rounded-3xl p-8 mb-8 shadow-sm">
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
                     <div>
                         <div className="flex items-center gap-3 mb-3">
                             <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${activity.activity_type === 'meetup'
@@ -237,17 +237,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         <p className="text-gray-600 max-w-2xl leading-relaxed">{activity.description}</p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                         <button
                             onClick={() => setIsEditDialogOpen(true)}
-                            className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
+                            className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2 flex-1 md:flex-none justify-center"
                         >
                             <Edit2 size={16} />
                             Edit Event
                         </button>
                         <Link
                             href={`/admin/events/${id}/form-editor`}
-                            className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
+                            className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2 flex-1 md:flex-none justify-center"
                         >
                             <Type size={16} />
                             Manage Form
@@ -255,7 +255,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         <button
                             onClick={handleGenerateAIForm}
                             disabled={isGeneratingForm}
-                            className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
+                            className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 flex-1 md:flex-none justify-center"
                         >
                             {isGeneratingForm ? (
                                 <Loader2 size={16} className="animate-spin" />

@@ -1,14 +1,16 @@
 'use client';
 
-import { Search, Bell, Settings, ChevronDown } from 'lucide-react';
+import { Search, Bell, Settings, ChevronDown, Menu, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useState } from 'react';
 
 export default function TopBar() {
     const pathname = usePathname();
     const { data: session } = useSession();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const isActive = (path: string) => {
         if (path === '/' && pathname === '/') return true;
@@ -18,7 +20,7 @@ export default function TopBar() {
 
     return (
         <div className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
-            <div className="flex items-center justify-between px-6 py-3 max-w-[1400px] mx-auto">
+            <div className="flex items-center justify-between px-4 md:px-6 py-3 max-w-[1400px] mx-auto">
 
                 {/* Left: Logo & Nav */}
                 <div className="flex items-center gap-12">
@@ -27,14 +29,14 @@ export default function TopBar() {
                         <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg shadow-black/20 group-hover:scale-105 transition-transform">
                             <span className="text-white font-bold text-xl">H</span>
                         </div>
-                        <span className="font-bold text-xl tracking-tight text-gray-900">HolySheet</span>
+                        <span className="font-bold text-xl tracking-tight text-gray-900 hidden sm:block">HolySheet</span>
                     </Link>
 
-                    {/* Navigation Pills */}
+                    {/* Desktop Navigation Pills */}
                     <nav className="hidden md:flex items-center p-1.5 bg-gray-100/80 rounded-full border border-gray-200/50">
                         <Link
                             href="/dashboard"
-                            className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${pathname === '/'
+                            className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${pathname === '/' || pathname === '/dashboard'
                                 ? 'bg-gray-900 text-white shadow-md'
                                 : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
                                 }`}
@@ -71,8 +73,8 @@ export default function TopBar() {
                     </nav>
                 </div>
 
-                {/* Right: Search & Profile */}
-                <div className="flex items-center gap-5">
+                {/* Right: Search & Profile & Mobile Toggle */}
+                <div className="flex items-center gap-3 md:gap-5">
                     {/* Search */}
                     <div className="relative hidden lg:block group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-indigo-500 transition-colors" />
@@ -84,7 +86,7 @@ export default function TopBar() {
                     </div>
 
                     <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
-                        <button className="relative p-2.5 hover:bg-gray-100 rounded-full transition-colors">
+                        <button className="relative p-2.5 hover:bg-gray-100 rounded-full transition-colors hidden sm:block">
                             <Bell size={20} className="text-gray-600" />
                             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
                         </button>
@@ -102,11 +104,72 @@ export default function TopBar() {
                                 <p className="text-sm font-bold text-gray-900 leading-none">{session?.user?.name || "Kim Ho"}</p>
                                 <p className="text-[10px] text-gray-500 font-medium mt-0.5">Participant</p>
                             </div>
-                            <ChevronDown size={14} className="text-gray-400" />
+                            <ChevronDown size={14} className="text-gray-400 hidden md:block" />
                         </Link>
+
+                        {/* Mobile Menu Toggle */}
+                        <button
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                        >
+                            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                        </button>
                     </div>
                 </div>
             </div>
+
+            {/* Mobile Navigation Menu */}
+            {isMobileMenuOpen && (
+                <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-gray-100 shadow-xl py-4 px-6 flex flex-col gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                    <Link
+                        href="/dashboard"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`p-3 rounded-xl text-sm font-bold transition-all flex items-center gap-3 ${pathname === '/' || pathname === '/dashboard'
+                            ? 'bg-gray-900 text-white'
+                            : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        Dashboard
+                    </Link>
+                    <Link
+                        href="/events"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`p-3 rounded-xl text-sm font-bold transition-all flex items-center gap-3 ${isActive('/events')
+                            ? 'bg-gray-900 text-white'
+                            : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        Events
+                    </Link>
+                    <Link
+                        href="/calendar"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`p-3 rounded-xl text-sm font-bold transition-all flex items-center gap-3 ${isActive('/calendar')
+                            ? 'bg-gray-900 text-white'
+                            : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        Calendar
+                    </Link>
+                    <Link
+                        href="/support"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`p-3 rounded-xl text-sm font-bold transition-all flex items-center gap-3 ${isActive('/support')
+                            ? 'bg-gray-900 text-white'
+                            : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        Support
+                    </Link>
+
+                    <div className="h-px bg-gray-100 my-2"></div>
+
+                    <div className="p-3 flex items-center gap-3 text-gray-500 text-sm">
+                        <Search size={16} />
+                        <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none w-full placeholder:text-gray-400" />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

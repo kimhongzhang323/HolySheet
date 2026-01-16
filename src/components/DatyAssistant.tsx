@@ -67,12 +67,12 @@ export default function DatyAssistant() {
     };
 
     return (
-        <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-4 font-sans">
+        <div className={`fixed z-50 font-sans ${isOpen ? 'inset-0 md:inset-auto md:bottom-8 md:right-8 flex flex-col items-end' : 'bottom-4 right-4 md:bottom-8 md:right-8 flex flex-col items-end gap-4'}`}>
             {/* Chat Bubble */}
             {isOpen && (
-                <div className="bg-white rounded-2xl shadow-2xl border border-indigo-50 w-[380px] h-[550px] animate-in slide-in-from-bottom-5 fade-in duration-300 mb-2 relative flex flex-col overflow-hidden">
+                <div className="bg-white md:rounded-2xl shadow-none md:shadow-2xl border-none md:border border-indigo-50 w-full h-full md:w-[380px] md:h-[500px] md:max-h-[80vh] animate-in slide-in-from-bottom-5 fade-in duration-300 relative flex flex-col overflow-hidden">
                     {/* Header */}
-                    <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-indigo-50/50 to-white">
+                    <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-indigo-50/50 to-white shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-600 p-0.5 shadow-md">
                                 <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
@@ -152,7 +152,7 @@ export default function DatyAssistant() {
                     </div>
 
                     {/* Input Area */}
-                    <form onSubmit={handleFormSubmit} className="p-3 bg-white border-t border-gray-100">
+                    <form onSubmit={handleFormSubmit} className="p-3 bg-white border-t border-gray-100 shrink-0 mb-safe-area">
                         <div className="relative flex items-center">
                             <input
                                 value={input}
@@ -178,10 +178,10 @@ export default function DatyAssistant() {
                 </div>
             )}
 
-            {/* Floating Trigger Button */}
+            {/* Floating Trigger Button - Hidden when open on mobile */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-14 h-14 bg-white rounded-full shadow-xl shadow-indigo-900/10 flex items-center justify-center hover:scale-105 transition-transform group border border-indigo-50 relative z-50"
+                className={`w-14 h-14 bg-white rounded-full shadow-xl shadow-indigo-900/10 flex items-center justify-center hover:scale-105 transition-transform group border border-indigo-50 relative z-50 ${isOpen ? 'hidden md:flex' : 'flex'}`}
             >
                 <div className="absolute inset-0 bg-gradient-to-tr from-indigo-50 to-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 {isOpen ? (

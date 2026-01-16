@@ -110,54 +110,24 @@ export default function JointAttendancePage() {
     const renderEventContent = (eventInfo: any) => {
         const props = eventInfo.event.extendedProps;
         const type = props.type;
-        const registered = props.volunteers_registered || 0;
-        const needed = props.volunteers_needed || 1; // Avoid division by zero
-        const percentage = Math.min(100, Math.round((registered / needed) * 100));
 
-        // Define colors for background, text, border, and progress bar
-        let colors = {
-            bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200',
-            barBg: 'bg-gray-200', barFill: 'bg-gray-500'
-        };
+        // Define colors for background, text, border
+        let colors = 'bg-gray-100 text-gray-700';
 
         switch (type) {
-            case 'purple':
-                colors = { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-100', barBg: 'bg-purple-200', barFill: 'bg-purple-600' };
-                break;
-            case 'blue':
-                colors = { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100', barBg: 'bg-blue-200', barFill: 'bg-blue-600' };
-                break;
-            case 'blue-dark':
-                colors = { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200', barBg: 'bg-blue-300', barFill: 'bg-blue-700' };
-                break;
-            case 'pink':
-                colors = { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-100', barBg: 'bg-pink-200', barFill: 'bg-pink-600' };
-                break;
-            case 'green':
-                colors = { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-100', barBg: 'bg-green-200', barFill: 'bg-green-600' };
-                break;
-            case 'orange':
-                colors = { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-100', barBg: 'bg-orange-200', barFill: 'bg-orange-600' };
-                break;
+            case 'purple': colors = 'bg-purple-100 text-purple-700'; break;
+            case 'blue': colors = 'bg-blue-100 text-blue-700'; break;
+            case 'blue-dark': colors = 'bg-indigo-100 text-indigo-800'; break;
+            case 'pink': colors = 'bg-pink-100 text-pink-700'; break;
+            case 'green': colors = 'bg-green-100 text-green-700'; break;
+            case 'orange': colors = 'bg-orange-100 text-orange-700'; break;
+            default: colors = 'bg-gray-100 text-gray-700';
         }
 
+        // Simpler "Text Bar" style matching Portal
         return (
-            <div className={`px-2 py-1.5 rounded-md text-[11px] w-full ${colors.bg} ${colors.text} border ${colors.border} cursor-pointer hover:opacity-90 transition-all shadow-sm flex flex-col gap-1`}>
-                <div className="flex items-center justify-between gap-2">
-                    <span className="truncate font-semibold">{eventInfo.event.title}</span>
-                </div>
-
-                <div className="flex items-center gap-2 w-full">
-                    <div className={`h-1.5 flex-1 rounded-full ${colors.barBg} overflow-hidden`}>
-                        <div
-                            className={`h-full rounded-full ${colors.barFill}`}
-                            style={{ width: `${percentage}%` }}
-                        ></div>
-                    </div>
-                    <span className="text-[10px] opacity-80 font-medium shrink-0">
-                        {registered}/{needed}
-                    </span>
-                </div>
+            <div className={`px-1.5 py-0.5 md:py-1 rounded-sm md:rounded-md text-[10px] md:text-xs w-full ${colors} cursor-pointer hover:opacity-80 transition-opacity truncate font-medium`}>
+                {eventInfo.event.title}
             </div>
         );
     };
@@ -175,11 +145,11 @@ export default function JointAttendancePage() {
     // ... (keep handleNext, handlePrev, handleToday, handleViewChange) ... 
 
     return (
-        <div className="flex flex-col h-full bg-white relative p-8">
+        <div className="flex flex-col h-full bg-white relative p-0 md:p-8">
             {/* Custom Calendar Toolbar & Wrapper */}
-            <div className="flex flex-col flex-1 bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+            <div className="flex flex-col flex-1 bg-white md:border md:border-gray-200 shadow-none md:shadow-sm md:rounded-2xl overflow-hidden">
                 {/* Custom Toolbar */}
-                <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
+                <div className="p-4 border-b border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white">
                     <div className="flex items-center gap-4">
                         <div className="flex flex-col">
                             <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
@@ -193,10 +163,10 @@ export default function JointAttendancePage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
                         <div className="flex items-center gap-1 relative">
                             {isSearchOpen ? (
-                                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 transition-all w-64">
+                                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 transition-all w-full md:w-64">
                                     <Search size={16} className="text-gray-400 mr-2" />
                                     <input
                                         type="text"
@@ -217,34 +187,34 @@ export default function JointAttendancePage() {
                                 </button>
                             )}
                         </div>
-                        <div className="h-6 w-px bg-gray-200 mx-1"></div>
+                        <div className="h-6 w-px bg-gray-200 mx-1 hidden md:block"></div>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={handleToday}
-                                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 shadow-sm transition-all"
+                                className="px-3 py-1.5 md:px-4 md:py-2 bg-white border border-gray-200 text-gray-700 text-xs md:text-sm font-bold rounded-lg hover:bg-gray-50 shadow-sm transition-all"
                             >
                                 Today
                             </button>
                             <div className="flex items-center bg-white border border-gray-200 rounded-lg shadow-sm">
                                 <button
                                     onClick={handlePrev}
-                                    className="p-2 hover:bg-gray-50 border-r border-gray-200 rounded-l-lg text-gray-600"
+                                    className="p-1.5 md:p-2 hover:bg-gray-50 border-r border-gray-200 rounded-l-lg text-gray-600"
                                 >
-                                    <ChevronLeft size={18} />
+                                    <ChevronLeft size={16} className="md:w-[18px] md:h-[18px]" />
                                 </button>
                                 <button
                                     onClick={handleNext}
-                                    className="p-2 hover:bg-gray-50 rounded-r-lg text-gray-600"
+                                    className="p-1.5 md:p-2 hover:bg-gray-50 rounded-r-lg text-gray-600"
                                 >
-                                    <ChevronRight size={18} />
+                                    <ChevronRight size={16} className="md:w-[18px] md:h-[18px]" />
                                 </button>
                             </div>
                         </div>
 
                         {/* View Toggle Placeholder - using a simple select for now or custom dropdown */}
                         <div className="relative group">
-                            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 shadow-sm">
-                                <span>{view === 'dayGridMonth' ? 'Month' : view === 'timeGridWeek' ? 'Week' : 'Day'} view</span>
+                            <button className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-white border border-gray-200 text-gray-700 text-xs md:text-sm font-bold rounded-lg hover:bg-gray-50 shadow-sm">
+                                <span>{view === 'dayGridMonth' ? 'Month' : view === 'timeGridWeek' ? 'Week' : 'Day'}</span>
                                 <ChevronDown size={14} className="text-gray-400 transition-transform group-hover:rotate-180" />
                             </button>
                             {/* Dropdown Menu */}
@@ -255,9 +225,10 @@ export default function JointAttendancePage() {
                             </div>
                         </div>
 
-                        <button className="flex items-center gap-2 px-4 py-2 bg-[#101828] text-white text-sm font-bold rounded-lg hover:bg-gray-800 shadow-lg shadow-gray-200 transition-all">
+                        <button className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-[#101828] text-white text-xs md:text-sm font-bold rounded-lg hover:bg-gray-800 shadow-lg shadow-gray-200 transition-all ml-auto md:ml-0">
                             <Plus size={16} />
-                            Add event
+                            <span className="hidden md:inline">Add event</span>
+                            <span className="md:hidden">Add</span>
                         </button>
                     </div>
                 </div>

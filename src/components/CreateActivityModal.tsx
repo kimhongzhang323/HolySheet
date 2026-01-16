@@ -151,7 +151,7 @@ export default function CreateActivityModal({
                     </div>
 
                     {/* Date & Time */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 Start Time *
@@ -194,7 +194,7 @@ export default function CreateActivityModal({
                     </div>
 
                     {/* Capacity & Volunteers */}
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 Capacity *
@@ -246,8 +246,8 @@ export default function CreateActivityModal({
                                     type="button"
                                     onClick={() => toggleSkill(skill)}
                                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${formData.skills_required.includes(skill)
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                 >
                                     {skill}
@@ -268,8 +268,8 @@ export default function CreateActivityModal({
                                     type="button"
                                     onClick={() => toggleTier(tier)}
                                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all capitalize ${formData.allowed_tiers.includes(tier)
-                                            ? 'bg-green-600 text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        ? 'bg-green-600 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                 >
                                     {tier.replace(/-/g, ' ')}
