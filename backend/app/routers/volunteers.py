@@ -5,13 +5,49 @@ from sqlalchemy import select, and_, func
 from uuid import UUID
 
 from ..db import get_database
-from ..models.user import UserDB, UserResponse
+from ..models.user import UserDB, UserResponse, UserRole
 from ..models.activity import ActivityDB
 from ..models.volunteer import VolunteerDB, VolunteerCreate
 from ..models.form_response import FormResponseDB
 from ..dependencies import get_current_user
 
 router = APIRouter()
+
+def is_admin_or_staff(role: str) -> bool:
+    return role in ["admin", "staff"]
+
+@router.get("/admin/volunteers")
+async def get_all_volunteers(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    """Get all users with volunteer role (Admin/Staff only)"""
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden"
+        )
+    
+    # Fetch users where role is 'volunteer'
+    query = select(UserDB).where(UserDB.role == "volunteer")
+    result = await db.execute(query)
+    users = result.scalars().all()
+    
+    return [
+        {
+            "id": str(u.id),
+            "name": u.name,
+            "email": u.email,
+            "role": u.role,
+            "tier": u.tier, # This is the Engagement Type
+            "location": u.location,
+            "phone_number": u.phone_number,
+            "total_events": u.total_events,
+            "volunteer_hours": u.volunteer_hours,
+            "skills": u.skills
+        }
+        for u in users
+    ]
 
 @router.post("/volunteers/register")
 async def register_as_volunteer(

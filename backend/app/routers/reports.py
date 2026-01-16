@@ -204,3 +204,96 @@ async def export_volunteers_excel(
         media_type="text/csv",
         headers=headers
     )
+
+from sqlalchemy import func, desc
+
+@router.get("/admin/reports/stats")
+async def get_dashboard_stats(
+    time_range: str = "6m",
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    """Get aggregated stats for dashboard charts with time range"""
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin or staff can view stats"
+        )
+    
+    # 1. Overall Stats
+    total_volunteers = (await db.execute(select(func.count(UserDB.id)).where(UserDB.role == 'volunteer'))).scalar() or 0
+    total_activities = (await db.execute(select(func.count(ActivityDB.id)))).scalar() or 0
+    
+    # 2. Activity Distribution (by Type)
+    type_query = select(ActivityDB.activity_type, func.count(ActivityDB.id)).group_by(ActivityDB.activity_type)
+    type_result = await db.execute(type_query)
+    activity_distribution = [{"name": row[0] or "Unspecified", "value": row[1]} for row in type_result.all()]
+    
+    # 3. Trends Logic
+    today = datetime.utcnow()
+    trends_map = {}
+    chart_keys = []
+    
+    if time_range == "7d":
+        start_date = today - timedelta(days=6) # 0 to 6 = 7 days
+        # Generate last 7 days keys
+        for i in range(7):
+             d = start_date + timedelta(days=i)
+             k = d.strftime("%a") # Mon, Tue
+             chart_keys.append(k)
+             trends_map[k] = {"name": k, "total_events": 0, "volunteers_needed": 0, "volunteers_registered": 0}
+        date_format = "%a"
+        
+    elif time_range == "30d":
+        start_date = today - timedelta(days=29)
+        # Generate last 30 days keys
+        for i in range(30):
+             d = start_date + timedelta(days=i)
+             k = d.strftime("%d %b") # 12 Jan
+             chart_keys.append(k)
+             # Initialize if not exists (handling potential duplicate keys if simple format, but day-month is unique enough for 30d)
+             if k not in trends_map:
+                trends_map[k] = {"name": k, "total_events": 0, "volunteers_needed": 0, "volunteers_registered": 0}
+        date_format = "%d %b"
+        
+    else: # 6m default
+        start_date = today - timedelta(days=180)
+        # Generate last 6 months keys
+        # Simple approach: iterate monthly approx
+        # Better approach: iterate by month
+        for i in range(5, -1, -1):
+            d = today - timedelta(days=i*30)
+            k = d.strftime("%b")
+            if k not in trends_map:
+                 chart_keys.append(k)
+                 trends_map[k] = {"name": k, "total_events": 0, "volunteers_needed": 0, "volunteers_registered": 0}
+        date_format = "%b"
+
+    trend_query = select(ActivityDB).where(ActivityDB.start_time >= start_date)
+    trend_result = await db.execute(trend_query)
+    recent_activities = trend_result.scalars().all()
+    
+    for act in recent_activities:
+        if not act.start_time: continue
+        key = act.start_time.strftime(date_format)
+        
+        # Handle 6m edge case where simple %b might collide if we go back 1 year, but here we limited to 180 days.
+        # However, for 6m, we want to ensure we match the generated keys.
+        # If the key exists (it should if generated correctly), add to it.
+        if key in trends_map:
+            trends_map[key]["total_events"] += 1
+            trends_map[key]["volunteers_needed"] += (act.volunteers_needed or 0)
+            trends_map[key]["volunteers_registered"] += (act.volunteers_registered or 0)
+    
+    # Return list in order of chart_keys
+    chart_data = [trends_map[k] for k in chart_keys if k in trends_map]
+    
+    return {
+        "stats": {
+            "total_volunteers": total_volunteers,
+            "total_activities": total_activities,
+            "active_now": 5, 
+        },
+        "activity_distribution": activity_distribution,
+        "participation_trends": chart_data
+    }

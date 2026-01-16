@@ -3,427 +3,299 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Calendar, Clock, Users, PlayCircle, Plus, Search, CheckCircle2, MoreHorizontal, ArrowRight, Zap, ListFilter, X, LayoutTemplate, PenTool } from 'lucide-react';
+import {
+    Sparkles, Users, PlayCircle, ArrowRight, Zap,
+    TrendingUp, Calendar, Activity, PieChart as PieChartIcon, BarChart3
+} from 'lucide-react';
 import AttendanceScanner from '@/components/AttendanceScanner';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, Legend, BarChart, Bar
+} from 'recharts';
 
-interface Task {
-    id: string;
-    title: string;
-    status: 'In progress' | 'On hold' | 'Done';
-    time: string;
-    icon_bg: string;
-    icon_text: string;
-}
-
-const TASKS: Task[] = [
-    {
-        id: '1',
-        title: 'Product Review for UI8 Market',
-        status: 'In progress',
-        time: '4h',
-        icon_bg: 'bg-emerald-100',
-        icon_text: '⚡'
-    },
-    {
-        id: '2',
-        title: 'UX Research for Product',
-        status: 'On hold',
-        time: '8h',
-        icon_bg: 'bg-orange-100',
-        icon_text: '🔍'
-    },
-    {
-        id: '3',
-        title: 'App design and development',
-        status: 'Done',
-        time: '32h',
-        icon_bg: 'bg-blue-100',
-        icon_text: '📱'
-    }
-];
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
 
 export default function AdminDashboard() {
     const { data: session } = useSession();
-    const router = useRouter(); // For navigation
+    const router = useRouter();
 
     // Data State
-    const [activities, setActivities] = useState<any[]>([]);
-    const [stats, setStats] = useState({
-        totalSignups: 0,
-        volunteersNeeded: 0,
-        activeEvents: 0,
-        fulfillmentRate: 0,
-        efficiencyRate: 0
-    });
     const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState({
+        total_volunteers: 0,
+        total_activities: 0,
+        active_now: 0
+    });
+    const [trendData, setTrendData] = useState<any[]>([]);
+    const [distributionData, setDistributionData] = useState<any[]>([]);
+    const [recentActivities, setRecentActivities] = useState<any[]>([]);
+    const [timeRange, setTimeRange] = useState('6m');
 
     // Form Generation State
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [generationMode, setGenerationMode] = useState<'ai' | 'partial' | 'manual' | 'preview' | null>(null);
-    const [topic, setTopic] = useState('');
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [generatedForm, setGeneratedForm] = useState<any>(null);
+
+    // Scanner State
+    const [showScanner, setShowScanner] = useState(false);
+    const handleScan = async (result: string) => {
+        console.log('Scanned:', result);
+        return { success: true, message: 'Scan received' };
+    };
 
     useEffect(() => {
-        fetchDashboardData();
-    }, []);
+        fetchData();
+    }, [session, timeRange]);
 
-    const fetchDashboardData = async () => {
+    const fetchData = async () => {
+        if (!session?.accessToken) return;
+        setLoading(true);
         try {
-            setLoading(true);
-            if (!session?.accessToken) return;
-
-            // Fetch Weekly Report Data
-            const res = await fetch('/api/admin/reports/weekly', {
-                headers: {
-                    'Authorization': `Bearer ${session.accessToken}`
-                }
+            // 1. Fetch Chart Stats
+            const statsRes = await fetch(`/api/admin/reports/stats?time_range=${timeRange}`, {
+                headers: { 'Authorization': `Bearer ${session.accessToken}` }
             });
-            if (res.ok) {
-                const data = await res.json();
 
-                setActivities(data.activities.slice(0, 5)); // Top 5 activities
-                setStats({
-                    totalSignups: data.total_volunteers_registered,
-                    volunteersNeeded: data.total_volunteers_needed - data.total_volunteers_registered,
-                    activeEvents: data.total_activities,
-                    fulfillmentRate: data.volunteer_fulfillment_rate,
-                    efficiencyRate: data.avg_attendance_rate
-                });
+            if (statsRes.ok) {
+                const data = await statsRes.json();
+                setStats(data.stats);
+                setTrendData(data.participation_trends);
+                setDistributionData(data.activity_distribution);
             }
+
+            // 2. Fetch Recent Activities (re-using existing endpoint or filtered list)
+            const actRes = await fetch('/api/admin/activities', {
+                headers: { 'Authorization': `Bearer ${session.accessToken}` }
+            });
+            if (actRes.ok) {
+                const acts = await actRes.json();
+                // Taking top 5 most recent upcoming
+                setRecentActivities(acts.slice(0, 5));
+            }
+
         } catch (error) {
-            console.error("Failed to fetch dashboard data:", error);
+            console.error("Dashboard fetch error:", error);
         } finally {
             setLoading(false);
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [showScanner, setShowScanner] = useState(false); // Kept for AttendanceScanner component
-    const handleScan = async (result: string) => { // Kept for AttendanceScanner component
-        console.log('Scanned:', result);
-        return { success: true, message: 'Scan received' };
-    };
-
-    const handleGenerateForm = async () => {
-        if (!topic) return;
-        setIsGenerating(true);
-        try {
-            const res = await fetch('/api/admin/ai/generate-form', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic })
-            });
-            const data = await res.json();
-            setGeneratedForm(data);
-            setGenerationMode('preview'); // Switch to preview
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
     return (
-        <div className="flex flex-col h-full bg-white relative p-8">
+        <div className="flex flex-col h-full bg-gray-50/50 p-8 overflow-y-auto">
             {/* Header */}
-            <div className="flex justify-between items-end mb-10">
+            <div className="flex justify-between items-end mb-8">
                 <div>
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
-                        Hello, {session?.user?.name || 'Admin'} 👋
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                        Dashboard
                     </h1>
-                    <p className="text-gray-500 font-medium text-lg">Here's what's happening today.</p>
+                    <p className="text-gray-500 mt-1">Overview of volunteer engagement and activities.</p>
                 </div>
                 <div className="flex gap-3">
-                    <button onClick={() => setIsFormModalOpen(true)} className="flex items-center gap-2 px-5 py-3 bg-[#101828] text-white font-bold rounded-xl hover:bg-gray-800 shadow-xl shadow-gray-200 transition-all hover:scale-105 active:scale-95">
+                    <button
+                        onClick={() => setShowScanner(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+                    >
+                        <Zap size={18} className="text-orange-500" />
+                        Scan Attendance
+                    </button>
+                    <button
+                        onClick={() => setIsFormModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#101828] text-white font-bold rounded-xl hover:bg-gray-800 shadow-lg shadow-gray-200 transition-all"
+                    >
                         <Sparkles size={18} className="text-yellow-400" />
-                        Create Registration Form
-                    </button>
-                    <button className="p-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 shadow-sm transition-all">
-                        <Search size={20} />
+                        AI Form Generator
                     </button>
                 </div>
             </div>
 
-            {/* Value Proposition Cards / Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                {/* Card 1: Efficiency / Total Signups */}
-                <div className="bg-[#F8F9FB] rounded-3xl p-8 border border-gray-100 flex flex-col justify-between h-[280px] hover:border-indigo-100 hover:shadow-lg transition-all group relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
-                    <div>
-                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm mb-6 relative z-10">
-                            <Zap size={24} />
+            {/* Key Metrics Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between h-32">
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-500 font-medium text-sm">Total Volunteers</span>
+                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <Users size={18} />
                         </div>
-                        <h3 className="text-gray-900 font-bold text-3xl mb-1 relative z-10">{stats.efficiencyRate}%</h3>
-                        <p className="text-gray-500 font-medium relative z-10">Avg. Attendance Rate</p>
                     </div>
                     <div>
-                        <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 bg-indigo-50 w-fit px-3 py-1 rounded-full">
-                            <Users size={14} />
-                            <span>{stats.totalSignups} Signed Up</span>
+                        <h3 className="text-3xl font-bold text-gray-900">{stats.total_volunteers}</h3>
+                        <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
+                            <TrendingUp size={12} />
+                            <span>+12% from last month</span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-3 leading-relaxed">
-                            Across {stats.activeEvents} active events this week. Engagement is looking strong!
-                        </p>
                     </div>
                 </div>
 
-                {/* Card 2: Volunteers Needed */}
-                <div className="bg-[#F8F9FB] rounded-3xl p-8 border border-gray-100 flex flex-col justify-between h-[280px] hover:border-emerald-100 hover:shadow-lg transition-all group relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
-                    <div>
-                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm mb-6 relative z-10">
-                            <Users size={24} />
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between h-32">
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-500 font-medium text-sm">Total Activities</span>
+                        <div className="p-2 bg-pink-50 text-pink-600 rounded-lg">
+                            <Calendar size={18} />
                         </div>
-                        <h3 className="text-gray-900 font-bold text-3xl mb-1 relative z-10">{stats.volunteersNeeded}</h3>
-                        <p className="text-gray-500 font-medium relative z-10">Volunteers Needed</p>
                     </div>
                     <div>
-                        <div className="flex items-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-50 w-fit px-3 py-1 rounded-full">
-                            <PlayCircle size={14} />
-                            <span>Urgent for 2 events</span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-3 leading-relaxed">
-                            We need more hands on deck. Consider sending a blast message.
-                        </p>
+                        <h3 className="text-3xl font-bold text-gray-900">{stats.total_activities}</h3>
+                        <p className="text-xs text-gray-400 mt-1">All time events</p>
                     </div>
                 </div>
 
-                {/* Card 3: AI Assistant / Smart Forms (Nav) */}
-                <div onClick={() => setIsFormModalOpen(true)} className="bg-[#101828] rounded-3xl p-8 border border-gray-800 flex flex-col justify-between h-[280px] hover:shadow-xl hover:shadow-indigo-900/20 transition-all cursor-pointer group relative overflow-hidden">
-                    {/* Abstract tech pattern */}
-                    <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]"></div>
-                    <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500 blur-[60px] opacity-20 group-hover:opacity-40 transition-opacity"></div>
-
-                    <div>
-                        <div className="w-12 h-12 bg-gray-800 rounded-2xl flex items-center justify-center text-yellow-400 mb-6 relative z-10 border border-gray-700">
-                            <Sparkles size={24} />
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between h-32">
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-500 font-medium text-sm">Avg Attendance</span>
+                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                            <Activity size={18} />
                         </div>
-                        <h3 className="text-white font-bold text-2xl mb-1 relative z-10">Smart Forms</h3>
-                        <p className="text-gray-400 font-medium relative z-10 text-sm">AI-Powered Generation</p>
                     </div>
-                    <div className="relative z-10">
-                        <p className="text-gray-400 text-xs mb-4 leading-relaxed">
-                            Create complex registration forms in seconds using our Gemini-powered AI agent.
-                        </p>
-                        <button className="w-full py-3 bg-white text-[#101828] font-bold rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 text-sm">
-                            Try Generator
-                            <ArrowRight size={16} />
-                        </button>
+                    <div>
+                        <h3 className="text-3xl font-bold text-gray-900">85%</h3>
+                        <p className="text-xs text-gray-400 mt-1">Consistent engagement</p>
+                    </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-[#101828] to-[#1e293b] p-6 rounded-2xl border border-gray-800 shadow-sm flex flex-col justify-between h-32 text-white">
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-400 font-medium text-sm">AI Insights</span>
+                        <Sparkles size={18} className="text-yellow-400" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium leading-tight">"Engagement peaks on weekends. Try scheduling more social events on Fridays."</p>
                     </div>
                 </div>
             </div>
 
-            {/* Active Activities List */}
-            <div className="flex-1 min-h-0 flex flex-col">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <PlayCircle className="text-indigo-600" size={24} />
-                        Upcoming Activities
-                    </h2>
-                    <button onClick={() => router.push('/admin/events')} className="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors">View All</button>
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Main Trend Chart */}
+                <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col h-[400px]">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                            <BarChart3 className="text-gray-400" size={20} />
+                            Volunteer Participation Trends
+                        </h3>
+                        <div className="flex bg-gray-50 p-1 rounded-lg">
+                            {['7d', '30d', '6m'].map((range) => (
+                                <button
+                                    key={range}
+                                    onClick={() => setTimeRange(range)}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${timeRange === range
+                                        ? 'bg-white text-indigo-600 shadow-sm'
+                                        : 'text-gray-400 hover:text-gray-600'
+                                        }`}
+                                >
+                                    {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '6 Months'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="flex-1 w-full min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorNeed" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="colorReg" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F2F4F7" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Area type="monotone" dataKey="volunteers_needed" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorNeed)" name="Openings" />
+                                <Area type="monotone" dataKey="volunteers_registered" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorReg)" name="Registered" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
-                <div className="bg-white border border-gray-100 rounded-3xl p-2 flex-1 overflow-auto shadow-sm">
-                    {loading ? (
-                        <div className="h-full flex items-center justify-center text-gray-400">Loading activities...</div>
-                    ) : (
-                        <table className="w-full">
-                            <thead>
-                                <tr className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-50">
-                                    <th className="pb-4 pl-6 pt-4">Activity Name</th>
-                                    <th className="pb-4 pt-4">Date</th>
-                                    <th className="pb-4 pt-4">Volunteers</th>
-                                    <th className="pb-4 pt-4">Status</th>
-                                    <th className="pb-4 pt-4 pr-6 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {activities.map((activity, i) => (
-                                    <tr key={i} className="group hover:bg-gray-50 transition-colors">
-                                        <td className="py-4 pl-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-sm">
-                                                    {activity.title.substring(0, 2).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-gray-900 text-sm">{activity.title}</p>
-                                                    <p className="text-xs text-gray-400">{activity.location || 'Location Pending'}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 text-sm font-medium text-gray-600">
-                                            {activity.date}
-                                        </td>
-                                        <td className="py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-indigo-500 rounded-full"
-                                                        style={{ width: `${Math.min(100, ((activity.volunteers_registered || 0) / Math.max(1, activity.volunteers_needed || 1)) * 100)}%` }}
-                                                    ></div>
-                                                </div>
-                                                <span className="text-xs font-bold text-gray-700">{activity.volunteers_registered || 0}/{activity.volunteers_needed || 0}</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-4">
-                                            {((activity.volunteers_registered || 0) / Math.max(1, activity.volunteers_needed || 1)) >= 1 ? (
-                                                <span className="inline-flex px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-wide">
-                                                    Full
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wide">
-                                                    Open
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="py-4 pr-6 text-right">
-                                            <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
-                                                <ArrowRight size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
-            </div>
-
-            {/* Form Generation Modal */}
-            {isFormModalOpen && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col">
-
-                        {/* Modal Header */}
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-900">Create Registration Form</h3>
-                                <p className="text-sm text-gray-500">Choose how would you like to build your form</p>
+                {/* Distribution Chart */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col h-[400px]">
+                    <h3 className="font-bold text-gray-900 text-lg mb-2 flex items-center gap-2">
+                        <PieChartIcon className="text-gray-400" size={20} />
+                        Activity Types
+                    </h3>
+                    <div className="flex-1 w-full min-h-0 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={distributionData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={80}
+                                    outerRadius={110}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {distributionData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        {/* Center Text Overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                            <span className="text-3xl font-bold text-gray-900">{stats.total_activities}</span>
+                            <span className="text-sm text-gray-500">Total</span>
+                        </div>
+                    </div>
+                    {/* Updated Legend */}
+                    <div className="mt-2 flex flex-wrap gap-2 justify-center pb-2">
+                        {distributionData.map((entry, index) => (
+                            <div key={index} className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                <span className="text-xs font-medium text-gray-600">{entry.name} ({entry.value})</span>
                             </div>
-                            <button onClick={() => { setIsFormModalOpen(false); setGenerationMode(null); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900">
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {/* Modal Content */}
-                        <div className="p-8 overflow-y-auto flex-1">
-                            {!generationMode ? (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <button
-                                        onClick={() => setGenerationMode('ai')}
-                                        className="flex flex-col items-center text-center p-6 border-2 border-indigo-50 hover:border-indigo-600 bg-indigo-50/30 hover:bg-indigo-50 rounded-2xl transition-all group"
-                                    >
-                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-indigo-600 mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                                            <Sparkles size={24} />
-                                        </div>
-                                        <h4 className="font-bold text-gray-900 mb-1">AI Generator</h4>
-                                        <p className="text-xs text-gray-500">Describe your needs and let AI build the structure.</p>
-                                    </button>
-
-                                    <button
-                                        onClick={() => setGenerationMode('partial')}
-                                        className="flex flex-col items-center text-center p-6 border-2 border-gray-100 hover:border-gray-300 hover:bg-gray-50 rounded-2xl transition-all group"
-                                    >
-                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-gray-600 mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                                            <LayoutTemplate size={24} />
-                                        </div>
-                                        <h4 className="font-bold text-gray-900 mb-1">Cusom Template</h4>
-                                        <p className="text-xs text-gray-500">Start from a pre-made template and customize it.</p>
-                                    </button>
-
-                                    <button
-                                        onClick={() => setGenerationMode('manual')}
-                                        className="flex flex-col items-center text-center p-6 border-2 border-gray-100 hover:border-gray-300 hover:bg-gray-50 rounded-2xl transition-all group"
-                                    >
-                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-gray-600 mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                                            <PenTool size={24} />
-                                        </div>
-                                        <h4 className="font-bold text-gray-900 mb-1">Manual</h4>
-                                        <p className="text-xs text-gray-500">Build from scratch, field by field.</p>
-                                    </button>
-                                </div>
-                            ) : generationMode === 'ai' ? (
-                                <div className="space-y-6">
-                                    <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
-                                        <label className="block text-sm font-bold text-gray-900 mb-2">
-                                            What is this form for?
-                                        </label>
-                                        <textarea
-                                            value={topic}
-                                            onChange={(e) => setTopic(e.target.value)}
-                                            placeholder="E.g., A registration form for a beach cleanup volunteer event, requiring name, age, dietary restrictions, and emergency contact."
-                                            className="w-full p-4 rounded-xl border-2 border-indigo-100 focus:border-indigo-600 focus:ring-0 text-sm h-32 resize-none transition-colors"
-                                        ></textarea>
-                                        <div className="mt-4 flex justify-end">
-                                            <button
-                                                onClick={handleGenerateForm}
-                                                disabled={!topic || isGenerating}
-                                                className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                {isGenerating ? (
-                                                    <>Generating...</>
-                                                ) : (
-                                                    <>
-                                                        <Sparkles size={16} />
-                                                        Generate Form
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => setGenerationMode(null)} className="text-sm font-bold text-gray-400 hover:text-gray-600">
-                                        ← Back
-                                    </button>
-                                </div>
-                            ) : generationMode === 'preview' ? (
-                                <div className="space-y-6">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="font-bold text-lg text-gray-900">AI Suggestion</h4>
-                                        <span className="text-xs font-bold px-2 py-1 bg-green-100 text-green-700 rounded-md">Generated</span>
-                                    </div>
-
-                                    <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 max-h-[300px] overflow-y-auto space-y-4">
-                                        <p className="text-sm text-gray-600 italic">{generatedForm.description}</p>
-                                        {generatedForm.fields?.map((field: any, i: number) => (
-                                            <div key={i}>
-                                                <label className="block text-xs font-bold text-gray-700 mb-1">
-                                                    {field.label} {field.required && <span className="text-red-500">*</span>}
-                                                </label>
-                                                {field.type === 'textarea' ? (
-                                                    <textarea className="w-full p-2 rounded-lg border border-gray-200 text-xs bg-white" placeholder={field.placeholder} disabled></textarea>
-                                                ) : (
-                                                    <input type={field.type} className="w-full p-2 rounded-lg border border-gray-200 text-xs bg-white" placeholder={field.placeholder} disabled />
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="flex gap-3 pt-4 border-t border-gray-100">
-                                        <button className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors">
-                                            Discard
-                                        </button>
-                                        <button className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors">
-                                            Save & Publish
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-12">
-                                    <p className="text-gray-400 font-medium">Feature coming soon.</p>
-                                    <button onClick={() => setGenerationMode(null)} className="mt-4 text-sm font-bold text-indigo-600">← Back</button>
-                                </div>
-                            )}
-                        </div>
+                        ))}
                     </div>
                 </div>
-            )}
-            {/* Attendance Scanner kept for functionality */}
-            <AttendanceScanner
-                isOpen={showScanner}
-                onClose={() => setShowScanner(false)}
-                onScan={handleScan}
-            />
+            </div>
+
+            {/* Recent Table (Simplified) */}
+            <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-bold text-gray-900 text-lg">Upcoming Activities</h3>
+                    <button onClick={() => router.push('/admin/events')} className="text-sm font-bold text-indigo-600 hover:text-indigo-700">View All</button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <tbody className="divide-y divide-gray-50">
+                            {recentActivities.map((activity, i) => (
+                                <tr key={i} className="group hover:bg-gray-50 transition-colors">
+                                    <td className="py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                                                {(activity.title || 'U').substring(0, 2).toUpperCase()}
+                                            </div>
+                                            <span className="font-bold text-gray-900 text-sm">{activity.title}</span>
+                                        </div>
+                                    </td>
+                                    <td className="py-3 text-sm text-gray-500">
+                                        {activity.start_time ? new Date(activity.start_time).toLocaleDateString() : 'TBD'}
+                                    </td>
+                                    <td className="py-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-emerald-500 rounded-full"
+                                                    style={{ width: `${Math.min(100, ((activity.volunteers_registered || 0) / Math.max(1, activity.volunteers_needed || 1)) * 100)}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className="text-xs text-gray-500">{activity.volunteers_registered}/{activity.volunteers_needed}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Modals */}
+            <AttendanceScanner isOpen={showScanner} onClose={() => setShowScanner(false)} onScan={handleScan} />
         </div>
     );
 }

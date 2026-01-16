@@ -16,7 +16,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
     { name: 'Home', path: '/admin', icon: <Home size={20} /> },
     { name: 'Events', path: '/admin/events', icon: <LayoutGrid size={20} /> },
-    { name: 'Tasks', path: '/admin/schedule', icon: <CheckSquare size={20} /> },
+    { name: 'Calendar', path: '/admin/schedule', icon: <CheckSquare size={20} /> },
     { name: 'Team', path: '/admin/volunteers', icon: <Users size={20} /> },
     { name: 'Settings', path: '/admin/settings', icon: <Settings size={20} /> },
 ];

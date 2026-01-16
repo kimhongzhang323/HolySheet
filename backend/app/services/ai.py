@@ -20,8 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # but sticking to existing pattern for now (checking env var).
 api_key = os.getenv("GOOGLE_GENERATIVE_AI_API_KEY", "")
 admin_api_key = os.getenv("ADMIN_GOOGLE_GENERATIVE_AI_API_KEY", "")
-client = genai.Client(api_key=api_key) if api_key else None
-admin_client = genai.Client(api_key=admin_api_key) if admin_api_key else client
+client = genai.Client(api_key=api_key, http_options={'api_version': 'v1alpha'}) if api_key else None
+admin_client = genai.Client(api_key=admin_api_key, http_options={'api_version': 'v1alpha'}) if admin_api_key else client
 
 # --- Admin Copilot Functions (formerly ai_service.py) ---
 
@@ -45,7 +45,7 @@ Summary (one sentence):"""
     try:
         if not admin_client: return "AI Client not configured"
         response = admin_client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-3-flash",
             contents=prompt
         )
         return response.text.strip()
@@ -86,7 +86,7 @@ JSON:"""
     try:
         if not admin_client: return []
         response = admin_client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-3-flash-preview",
             contents=prompt
         )
         
@@ -131,7 +131,7 @@ Provide a concise, helpful answer based on the data context. If you cannot answe
     try:
         if not admin_client: return "AI Client not configured"
         response = admin_client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-3-flash-preview",
             contents=prompt
         )
         return response.text.strip()
@@ -164,7 +164,7 @@ async def generate_form(topic: str) -> Dict:
     try:
         if not admin_client: return {"error": "AI not configured"}
         response = admin_client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-3-flash-preview",
             contents=prompt,
             config={"response_mime_type": "application/json"}
         )
@@ -199,7 +199,7 @@ async def generate_field(prompt: str) -> Dict:
     try:
         if not admin_client: return {"error": "AI not configured"}
         response = admin_client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-3-flash-preview",
             contents=prompt,
             config={
                 "system_instruction": system_instruction,
@@ -253,7 +253,7 @@ Use the available tools when receiving specific requests.
     try:
         if not admin_client: return None
         response = admin_client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-3-flash-preview",
             contents=[message],
             tools=ADMIN_TOOLS,
             config={"system_instruction": system_instruction}
@@ -537,7 +537,7 @@ async def analyze_responses(responses: List[Dict], activity_context: Dict) -> Di
     try:
         if not admin_client: return {"error": "AI not configured"}
         response = admin_client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-3-flash-preview",
             contents=prompt,
             config={"response_mime_type": "application/json"}
         )

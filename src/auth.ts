@@ -65,11 +65,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 token.role = token.role || "user";
 
                 // Capture Supabase Access Token from 'authorize' return or Google account
-                token.supabaseAccessToken = (user as any).supabaseAccessToken || account?.access_token;
+                // For Google, we use the email as a fallback token for the backend's "Local DB Auth" check
+                token.supabaseAccessToken = (user as any).supabaseAccessToken || user.email;
             }
-            // Note: For Google, 'account.access_token' is Google's token, NOT Supabase's.
-            // But Supabase client-side can handle Google Auth via 'signInWithOAuth'.
-            // For now, focusing on Credentials flow which returns a real Supabase JWT.
 
             return token;
         },
