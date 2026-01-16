@@ -212,3 +212,36 @@ async def save_form_endpoint(
     await db.commit()
     
     return {"message": "Form saved successfully", "form": form_structure}
+
+
+@router.post("/admin/ai/analyze-responses")
+async def analyze_responses_endpoint(
+    activity_id: str = Body(..., embed=True),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database)
+):
+    if not is_admin_or_staff(current_user.role):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    try:
+        uuid_id = UUID(activity_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid activity ID")
+    
+    # Get Activity Context
+    act_result = await db.execute(select(ActivityDB).where(ActivityDB.id == uuid_id))
+    activity = act_result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    
+    # Get Responses
+    from ..models.form_response import FormResponseDB
+    resp_result = await db.execute(select(FormResponseDB).where(FormResponseDB.activity_id == uuid_id))
+    responses = resp_result.scalars().all()
+    
+    # Format for AI
+    resp_dicts = [{"responses": r.responses} for r in responses]
+    act_dict = {"title": activity.title, "description": activity.description}
+    
+    analysis = await ai_service.analyze_responses(resp_dicts, act_dict)
+    return analysis

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ARRAY, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ARRAY, JSON, Float
 from sqlalchemy.dialects.postgresql import UUID
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict
@@ -32,6 +32,8 @@ class ActivityDB(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     volunteer_form = Column(JSON, nullable=True) # JSON structure for custom application form
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
 
 
 # Pydantic Models for API
@@ -41,6 +43,8 @@ class ActivityBase(BaseModel):
     start_time: datetime
     end_time: datetime
     location: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     capacity: int = 20
     volunteers_needed: int = 5
     volunteers_registered: int = 0
@@ -56,6 +60,25 @@ class ActivityBase(BaseModel):
 
 class ActivityCreate(ActivityBase):
     pass
+
+
+class ActivityUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    location: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    capacity: Optional[int] = None
+    volunteers_needed: Optional[int] = None
+    needs_help: Optional[bool] = None
+    skills_required: Optional[List[str]] = None
+    image_url: Optional[str] = None
+    organiser: Optional[str] = None
+    activity_type: Optional[str] = None
+    status: Optional[str] = None
+    volunteer_form: Optional[Dict] = None
 
 
 class ActivityInDB(ActivityBase):

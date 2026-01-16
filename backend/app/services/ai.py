@@ -19,7 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Note: Client instantiation might be better handled in a dependency or singleton pattern
 # but sticking to existing pattern for now (checking env var).
 api_key = os.getenv("GOOGLE_GENERATIVE_AI_API_KEY", "")
+admin_api_key = os.getenv("ADMIN_GOOGLE_GENERATIVE_AI_API_KEY", "")
 client = genai.Client(api_key=api_key) if api_key else None
+admin_client = genai.Client(api_key=admin_api_key) if admin_api_key else client
 
 # --- Admin Copilot Functions (formerly ai_service.py) ---
 
@@ -41,8 +43,8 @@ Please summarize the following feedback entries into ONE concise sentence highli
 Summary (one sentence):"""
     
     try:
-        if not client: return "AI Client not configured"
-        response = client.models.generate_content(
+        if not admin_client: return "AI Client not configured"
+        response = admin_client.models.generate_content(
             model="gemini-2.0-flash-exp",
             contents=prompt
         )
@@ -82,8 +84,8 @@ Rank these volunteers by suitability (1-100 confidence score). Return ONLY a JSO
 JSON:"""
     
     try:
-        if not client: return []
-        response = client.models.generate_content(
+        if not admin_client: return []
+        response = admin_client.models.generate_content(
             model="gemini-2.0-flash-exp",
             contents=prompt
         )
@@ -127,8 +129,8 @@ User question: {query}
 Provide a concise, helpful answer based on the data context. If you cannot answer with the given data, say so."""
     
     try:
-        if not client: return "AI Client not configured"
-        response = client.models.generate_content(
+        if not admin_client: return "AI Client not configured"
+        response = admin_client.models.generate_content(
             model="gemini-2.0-flash-exp",
             contents=prompt
         )
@@ -160,8 +162,8 @@ async def generate_form(topic: str) -> Dict:
     JSON:"""
     
     try:
-        if not client: return {"error": "AI not configured"}
-        response = client.models.generate_content(
+        if not admin_client: return {"error": "AI not configured"}
+        response = admin_client.models.generate_content(
             model="gemini-2.0-flash-exp",
             contents=prompt,
             config={"response_mime_type": "application/json"}
@@ -195,8 +197,8 @@ async def generate_field(prompt: str) -> Dict:
     """
     
     try:
-        if not client: return {"error": "AI not configured"}
-        response = client.models.generate_content(
+        if not admin_client: return {"error": "AI not configured"}
+        response = admin_client.models.generate_content(
             model="gemini-2.0-flash-exp",
             contents=prompt,
             config={
@@ -249,8 +251,8 @@ You help staff with:
 Use the available tools when receiving specific requests.
 """
     try:
-        if not client: return None
-        response = client.models.generate_content(
+        if not admin_client: return None
+        response = admin_client.models.generate_content(
             model="gemini-2.0-flash-exp",
             contents=[message],
             tools=ADMIN_TOOLS,
@@ -471,3 +473,81 @@ async def execute_tool(tool_name: str, args: dict, db: AsyncSession, user_id: st
         return await get_user_bookings(db, user_id)
     else:
         return {"error": f"Unknown tool: {tool_name}"}
+
+
+async def analyze_responses(responses: List[Dict], activity_context: Dict) -> Dict:
+    """
+    Perform Exploratory Data Analysis (EDA) on form responses.
+    Generates a structured JSON for the frontend to render dynamic charts.
+    Does NOT provide advice, only explains the current situation.
+    """
+    if not responses:
+        return {
+            "summary": "No responses available for analysis.",
+            "charts": [],
+            "key_findings": []
+        }
+
+    # Prepare data for Gemini
+    cleaned_responses = []
+    for r in responses:
+        cleaned_responses.append(r.get("responses", {}))
+
+    prompt = f"""You are a Data Analyst Agent (A2A) specialized in Exploratory Data Analysis (EDA).
+    
+    CONTEXT:
+    Event: {activity_context.get('title')}
+    Description: {activity_context.get('description')}
+    
+    DATA:
+    {json.dumps(cleaned_responses, indent=2)}
+    
+    OBJECTIVE:
+    Analyze the form responses to identify trends, distributions, and key metrics.
+    
+    REQUIREMENTS:
+    1. Select the most appropriate chart types (bar, pie, area) based on the data.
+    2. Provide a detailed situational explanation of the data.
+    3. STRICT RULE: DO NOT provide advice, recommendations, or instructions on what to do next. Only explain what the data currently shows.
+    4. Return ONLY a JSON object.
+    
+    JSON STRUCTURE:
+    {{
+        "summary": "A detailed 2-3 sentence overview of the current response landscape.",
+        "charts": [
+            {{
+                "id": "unique-id",
+                "title": "Chart Title",
+                "type": "bar" | "pie" | "area",
+                "data": [
+                    {{"name": "Category A", "value": 10}},
+                    {{"name": "Category B", "value": 20}}
+                ],
+                "explanation": "What this specific chart reveals about the respondents."
+            }}
+        ],
+        "key_findings": [
+            "Specific significant finding 1",
+            "Specific significant finding 2"
+        ]
+    }}
+    
+    JSON:"""
+    
+    try:
+        if not admin_client: return {"error": "AI not configured"}
+        response = admin_client.models.generate_content(
+            model="gemini-2.0-flash-exp",
+            contents=prompt,
+            config={"response_mime_type": "application/json"}
+        )
+        
+        analysis = json.loads(response.text.strip())
+        return analysis
+    except Exception as e:
+        print(f"EDA Error: {e}")
+        return {
+            "summary": "Analytic generation failed.",
+            "charts": [],
+            "key_findings": [str(e)]
+        }

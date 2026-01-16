@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str | None = None
     GOOGLE_CLIENT_SECRET: str | None = None
     GOOGLE_GENERATIVE_AI_API_KEY: str | None = None
+    ADMIN_GOOGLE_GENERATIVE_AI_API_KEY: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE_PATH),

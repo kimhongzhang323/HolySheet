@@ -3,8 +3,10 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Calendar, MapPin, Users, Clock, ArrowLeft, CheckCircle2, XCircle, User, Loader2, Mail, Network, Type } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, ArrowLeft, CheckCircle2, XCircle, User, Loader2, Mail, Network, Type, Sparkles, Edit2 } from 'lucide-react';
 import Link from 'next/link';
+import AIResponseAnalysis from '@/components/admin/AIResponseAnalysis';
+import EditEventDialog from '@/components/admin/EditEventDialog';
 
 interface Activity {
     id: string;
@@ -13,10 +15,14 @@ interface Activity {
     start_time: string;
     end_time: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
+    capacity: number;
     volunteers_needed: number;
     volunteers_registered: number;
     activity_type: string;
     status: string;
+    volunteer_form?: any;
 }
 
 interface Volunteer {
@@ -48,7 +54,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const { data: session } = useSession();
     const router = useRouter();
 
-    const [activity, setActivity] = useState<any | null>(null);
+    const [activity, setActivity] = useState<Activity | null>(null);
     const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
     const [attendees, setAttendees] = useState<Attendee[]>([]);
     const [responses, setResponses] = useState<FormResponse[]>([]);
@@ -56,6 +62,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const [activeTab, setActiveTab] = useState<'volunteers' | 'attendance' | 'responses'>('volunteers');
     const [isGeneratingForm, setIsGeneratingForm] = useState(false);
     const [generatedForm, setGeneratedForm] = useState<any>(null);
+    const [isDynamicView, setIsDynamicView] = useState(false);
+    const [analysisData, setAnalysisData] = useState<any>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
     useEffect(() => {
         if (session?.accessToken && id) {
@@ -68,7 +78,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         try {
             const headers = { 'Authorization': `Bearer ${session?.accessToken || 'admin@holysheet.com'}` };
 
-            // Fetch everything in parallel
             const [actRes, volRes, attRes, respRes] = await Promise.all([
                 fetch(`/api/admin/activities/${id}`, { headers }),
                 fetch(`/api/admin/activities/${id}/volunteers`, { headers }),
@@ -125,7 +134,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 body: JSON.stringify({ activity_id: id, form_structure: generatedForm })
             });
             if (res.ok) {
-                setActivity({ ...activity, volunteer_form: generatedForm });
+                if (activity) setActivity({ ...activity, volunteer_form: generatedForm });
                 setGeneratedForm(null);
                 alert("Application form saved!");
             }
@@ -135,23 +144,55 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     };
 
     const handleCustomizeForm = async () => {
-        if (!generatedForm) return;
+        router.push(`/admin/events/${id}/form-editor`);
+    };
+
+    const handleAnalyzeResponses = async () => {
+        if (!id) return;
+        setIsAnalyzing(true);
         try {
-            const res = await fetch('/api/admin/ai/save-form', {
+            const res = await fetch('/api/admin/ai/analyze-responses', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session?.accessToken || 'admin@holysheet.com'}`
                 },
-                body: JSON.stringify({ activity_id: id, form_structure: generatedForm })
+                body: JSON.stringify({ activity_id: id })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setAnalysisData(data);
+                setIsDynamicView(true);
+            }
+        } catch (err) {
+            console.error("Analysis failed:", err);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    const handleSaveEvent = async (updatedData: any) => {
+        if (!id) return;
+        try {
+            const res = await fetch(`/api/admin/activities/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.accessToken || 'admin@holysheet.com'}`
+                },
+                body: JSON.stringify(updatedData)
             });
 
             if (res.ok) {
-                router.push(`/admin/events/${id}/form-editor`);
+                const updatedActivity = await res.json();
+                setActivity(updatedActivity);
+                setIsEditDialogOpen(false);
+            } else {
+                alert("Failed to update event");
             }
-        } catch (err) {
-            console.error("Failed to save draft form:", err);
-            router.push(`/admin/events/${id}/form-editor`);
+        } catch (error) {
+            console.error("Error updating event:", error);
+            alert("An error occurred while saving");
         }
     };
 
@@ -174,13 +215,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
     return (
         <div className="p-8 bg-gray-50/30 min-h-full">
-            {/* Breadcrumbs / Back */}
             <Link href="/admin/events" className="flex items-center gap-2 text-gray-400 hover:text-gray-900 mb-6 transition-colors w-fit">
                 <ArrowLeft size={16} />
                 <span className="text-sm font-medium">Back to Events</span>
             </Link>
 
-            {/* Event Header Card */}
             <div className="bg-white border border-gray-100 rounded-3xl p-8 mb-8 shadow-sm">
                 <div className="flex justify-between items-start mb-6">
                     <div>
@@ -200,14 +239,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => setActiveTab('responses')}
-                            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm flex items-center gap-2 ${activeTab === 'responses'
-                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-                                }`}
+                            onClick={() => setIsEditDialogOpen(true)}
+                            className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
                         >
-                            <Mail size={16} />
-                            Form Responses
+                            <Edit2 size={16} />
+                            Edit Event
                         </button>
                         <Link
                             href={`/admin/events/${id}/form-editor`}
@@ -258,13 +294,23 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Location</p>
-                            <p className="font-bold text-gray-900 line-clamp-1">{activity.location}</p>
+                            {activity.location ? (
+                                <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-bold text-indigo-600 hover:underline line-clamp-1"
+                                >
+                                    {activity.location}
+                                </a>
+                            ) : (
+                                <p className="text-gray-400 italic">No location set</p>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* AI Generated Form Preview */}
             {generatedForm && (
                 <div className="mb-8 bg-indigo-50 border border-indigo-100 rounded-3xl p-8 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm">
                     <div className="flex justify-between items-center mb-6">
@@ -315,39 +361,56 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
             )}
 
-            {/* Tabs & Content */}
             <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
                 <div className="flex border-b border-gray-50 px-8">
                     <button
                         onClick={() => setActiveTab('volunteers')}
-                        className={`py-5 px-4 text-sm font-bold transition-all relative ${activeTab === 'volunteers' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'
-                            }`}
+                        className={`py-5 px-4 text-sm font-bold transition-all relative ${activeTab === 'volunteers' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
                     >
                         Volunteers
-                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === 'volunteers' ? 'bg-indigo-50' : 'bg-gray-50'
-                            }`}>{volunteers.length}</span>
+                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === 'volunteers' ? 'bg-indigo-50' : 'bg-gray-50'}`}>{volunteers.length}</span>
                         {activeTab === 'volunteers' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full" />}
                     </button>
                     <button
                         onClick={() => setActiveTab('attendance')}
-                        className={`py-5 px-4 text-sm font-bold transition-all relative ${activeTab === 'attendance' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'
-                            }`}
+                        className={`py-5 px-4 text-sm font-bold transition-all relative ${activeTab === 'attendance' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
                     >
                         Attendance
-                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === 'attendance' ? 'bg-indigo-50' : 'bg-gray-50'
-                            }`}>{attendees.length}</span>
+                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === 'attendance' ? 'bg-indigo-50' : 'bg-gray-50'}`}>{attendees.length}</span>
                         {activeTab === 'attendance' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full" />}
                     </button>
                     <button
                         onClick={() => setActiveTab('responses')}
-                        className={`py-5 px-4 text-sm font-bold transition-all relative ${activeTab === 'responses' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'
-                            }`}
+                        className={`py-5 px-4 text-sm font-bold transition-all relative ${activeTab === 'responses' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
                     >
                         Form Responses
-                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === 'responses' ? 'bg-indigo-50' : 'bg-gray-50'
-                            }`}>{responses.length}</span>
+                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === 'responses' ? 'bg-indigo-50' : 'bg-gray-50'}`}>{responses.length}</span>
                         {activeTab === 'responses' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full" />}
                     </button>
+
+                    {activeTab === 'responses' && (
+                        <div className="ml-auto flex items-center pr-4">
+                            <div className="flex bg-gray-100 p-1 rounded-xl">
+                                <button
+                                    onClick={() => setIsDynamicView(false)}
+                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${!isDynamicView ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    Table View
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (analysisData) setIsDynamicView(true);
+                                        else handleAnalyzeResponses();
+                                    }}
+                                    disabled={isAnalyzing}
+                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${isDynamicView ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                    Dynamic View
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-0">
@@ -360,7 +423,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                                         <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Role</th>
                                         <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Time Applied</th>
                                         <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skills</th>
+                                        <th className="px-8 py-4 text-[10px) font-bold text-gray-400 uppercase tracking-wider">Skills</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
@@ -450,56 +513,68 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                             </table>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-gray-50/50">
-                                    <tr>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">User</th>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Submitted At</th>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Responses</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {responses.length === 0 ? (
+                        isDynamicView && analysisData ? (
+                            <AIResponseAnalysis data={analysisData} />
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-gray-50/50">
                                         <tr>
-                                            <td colSpan={3} className="px-8 py-12 text-center text-gray-400 text-sm">No form responses yet</td>
+                                            <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">User</th>
+                                            <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Submitted At</th>
+                                            <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Responses</th>
                                         </tr>
-                                    ) : responses.map((resp) => (
-                                        <tr key={resp.id} className="hover:bg-gray-50/50 transition-colors">
-                                            <td className="px-8 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                                                        <Mail size={14} />
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {responses.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={3} className="px-8 py-12 text-center text-gray-400 text-sm">No form responses yet</td>
+                                            </tr>
+                                        ) : responses.map((resp) => (
+                                            <tr key={resp.id} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="px-8 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                                                            <Mail size={14} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-gray-900">{resp.user_name}</p>
+                                                            <p className="text-xs text-gray-500">{resp.user_email}</p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm font-bold text-gray-900">{resp.user_name}</p>
-                                                        <p className="text-xs text-gray-500">{resp.user_email}</p>
+                                                </td>
+                                                <td className="px-8 py-4">
+                                                    <span className="text-sm text-gray-500">
+                                                        {new Date(resp.submitted_at).toLocaleString()}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-4">
+                                                    <div className="text-xs space-y-1">
+                                                        {Object.entries(resp.responses).slice(0, 2).map(([q, a], i) => (
+                                                            <p key={i} className="line-clamp-1"><span className="font-bold text-gray-400">{q}:</span> {String(a)}</p>
+                                                        ))}
+                                                        {Object.keys(resp.responses).length > 2 && (
+                                                            <button className="text-indigo-600 font-bold hover:underline">+{Object.keys(resp.responses).length - 2} more answers</button>
+                                                        )}
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-4">
-                                                <span className="text-sm text-gray-500">
-                                                    {new Date(resp.submitted_at).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-4">
-                                                <div className="text-xs space-y-1">
-                                                    {Object.entries(resp.responses).slice(0, 2).map(([q, a], i) => (
-                                                        <p key={i} className="line-clamp-1"><span className="font-bold text-gray-400">{q}:</span> {String(a)}</p>
-                                                    ))}
-                                                    {Object.keys(resp.responses).length > 2 && (
-                                                        <button className="text-indigo-600 font-bold hover:underline">+{Object.keys(resp.responses).length - 2} more answers</button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )
                     )}
                 </div>
             </div>
+            {activity && (
+                <EditEventDialog
+                    isOpen={isEditDialogOpen}
+                    onClose={() => setIsEditDialogOpen(false)}
+                    event={activity}
+                    onSave={handleSaveEvent}
+                />
+            )}
         </div>
     );
 }
