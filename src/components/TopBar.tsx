@@ -33,7 +33,7 @@ export default function TopBar() {
                     {/* Navigation Pills */}
                     <nav className="hidden md:flex items-center p-1.5 bg-gray-100/80 rounded-full border border-gray-200/50">
                         <Link
-                            href="/"
+                            href="/dashboard"
                             className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${pathname === '/'
                                 ? 'bg-gray-900 text-white shadow-md'
                                 : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
