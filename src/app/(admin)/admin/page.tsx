@@ -1,498 +1,429 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Scan, FileDown, TrendingUp, Users, AlertTriangle, CheckCircle, Bell, ExternalLink, Send } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { Sparkles, Calendar, Clock, Users, PlayCircle, Plus, Search, CheckCircle2, MoreHorizontal, ArrowRight, Zap, ListFilter, X, LayoutTemplate, PenTool } from 'lucide-react';
 import AttendanceScanner from '@/components/AttendanceScanner';
-import OpsCopilot from '@/components/OpsCopilot';
 
-interface DashboardStats {
-    volunteers_deployed: number;
-    volunteers_deployed_change: number;
-    fill_rate: number;
-    fill_rate_change: number;
-    upcoming_crises: number;
-    upcoming_crises_change: number;
-    pending_approvals: number;
-    pending_approvals_change: number;
-}
-
-interface CrisisActivity {
-    activity_id: string;
+interface Task {
+    id: string;
     title: string;
-    start_time: string;
-    location?: string;
-    volunteers_needed: number;
-    volunteers_registered: number;
-    shortage: number;
-    status: 'critical' | 'warning' | 'ok';
+    status: 'In progress' | 'On hold' | 'Done';
+    time: string;
+    icon_bg: string;
+    icon_text: string;
 }
 
-interface AIInsight {
-    type: 'volunteer_shortage' | 'feedback_summary' | 'suggestion';
-    message: string;
-    activities_count?: number;
-    actionable: boolean;
-}
-
-interface BlastTarget {
-    volunteer_id: string;
-    name: string;
-    phone: string;
-    skills: string[];
-    whatsapp_link: string;
-}
-
-const MOCK_CRISIS_ACTIVITIES: CrisisActivity[] = [
+const TASKS: Task[] = [
     {
-        activity_id: 'mock-1',
-        title: 'Urgent: Food Distribution',
-        start_time: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
-        location: 'Community Center A',
-        volunteers_needed: 10,
-        volunteers_registered: 2,
-        shortage: 8,
-        status: 'critical'
+        id: '1',
+        title: 'Product Review for UI8 Market',
+        status: 'In progress',
+        time: '4h',
+        icon_bg: 'bg-emerald-100',
+        icon_text: '⚡'
     },
     {
-        activity_id: 'mock-2',
-        title: 'Emergency Medical Support',
-        start_time: new Date(Date.now() + 26 * 3600 * 1000).toISOString(),
-        location: 'City Sports Complex',
-        volunteers_needed: 5,
-        volunteers_registered: 3,
-        shortage: 2,
-        status: 'warning'
+        id: '2',
+        title: 'UX Research for Product',
+        status: 'On hold',
+        time: '8h',
+        icon_bg: 'bg-orange-100',
+        icon_text: '🔍'
     },
     {
-        activity_id: 'mock-3',
-        title: 'Logistics Coordination',
-        start_time: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
-        location: 'Warehouse B',
-        volunteers_needed: 8,
-        volunteers_registered: 8,
-        shortage: 0,
-        status: 'ok'
+        id: '3',
+        title: 'App design and development',
+        status: 'Done',
+        time: '32h',
+        icon_bg: 'bg-blue-100',
+        icon_text: '📱'
     }
 ];
 
-const MOCK_BLAST_TARGETS: BlastTarget[] = [
-    {
-        volunteer_id: 'v1',
-        name: 'Sarah Chen',
-        phone: '+65 9123 4567',
-        skills: ['First Aid', 'Coordination'],
-        whatsapp_link: 'https://wa.me/6591234567?text=Hi%20Sarah,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
-    },
-    {
-        volunteer_id: 'v2',
-        name: 'Ahmad bin Yusef',
-        phone: '+65 9876 5432',
-        skills: ['Heavy Lifting', 'Driving'],
-        whatsapp_link: 'https://wa.me/6598765432?text=Hi%20Ahmad,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
-    },
-    {
-        volunteer_id: 'v3',
-        name: 'John Tan',
-        phone: '+65 8234 5678',
-        skills: ['Logistics'],
-        whatsapp_link: 'https://wa.me/6582345678?text=Hi%20John,%20we%20urgently%20need%20help%20at%20Community%20Center%20A!'
-    }
-];
 export default function AdminDashboard() {
-    const [showScanner, setShowScanner] = useState(false);
-    const [stats, setStats] = useState<DashboardStats>({
-        volunteers_deployed: 142,
-        volunteers_deployed_change: 12,
-        fill_rate: 88,
-        fill_rate_change: 5,
-        upcoming_crises: 5,
-        upcoming_crises_change: 2,
-        pending_approvals: 12,
-        pending_approvals_change: -3,
+    const { data: session } = useSession();
+    const router = useRouter(); // For navigation
+
+    // Data State
+    const [activities, setActivities] = useState<any[]>([]);
+    const [stats, setStats] = useState({
+        totalSignups: 0,
+        volunteersNeeded: 0,
+        activeEvents: 0,
+        fulfillmentRate: 0,
+        efficiencyRate: 0
     });
-    const [crisisActivities, setCrisisActivities] = useState<CrisisActivity[]>([]);
-    const [aiInsight, setAIInsight] = useState<AIInsight>({
-        type: 'volunteer_shortage',
-        message: "I've identified 3 activities with zero volunteers for this weekend. I've drafted urgent WhatsApp blasts targeting volunteers with relevant skills.",
-        activities_count: 3,
-        actionable: true
-    });
-    const [blastModal, setBlastModal] = useState<{ isOpen: boolean; activityId: string; targets: BlastTarget[] }>({
-        isOpen: false,
-        activityId: '',
-        targets: []
-    });
+    const [loading, setLoading] = useState(true);
+
+    // Form Generation State
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [generationMode, setGenerationMode] = useState<'ai' | 'partial' | 'manual' | 'preview' | null>(null);
+    const [topic, setTopic] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generatedForm, setGeneratedForm] = useState<any>(null);
 
     useEffect(() => {
-        fetchCrisisData();
+        fetchDashboardData();
     }, []);
 
-    const fetchCrisisData = async () => {
-        // Simulating API call with mock data
-        setCrisisActivities(MOCK_CRISIS_ACTIVITIES);
-    };
-
-    const handleScan = async (userId: string, activityId: string) => {
+    const fetchDashboardData = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
+            setLoading(true);
+            if (!session?.accessToken) return;
 
-            const response = await fetch('/api/admin/attendance/mark', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ user_id: userId, activity_id: activityId })
+            // Fetch Weekly Report Data
+            const res = await fetch('/api/admin/reports/weekly', {
+                headers: {
+                    'Authorization': `Bearer ${session.accessToken}`
+                }
             });
+            if (res.ok) {
+                const data = await res.json();
 
-            const data = await response.json();
-
-            return {
-                success: response.ok,
-                message: data.message || 'Failed to mark attendance',
-                userName: data.user_name
-            };
+                setActivities(data.activities.slice(0, 5)); // Top 5 activities
+                setStats({
+                    totalSignups: data.total_volunteers_registered,
+                    volunteersNeeded: data.total_volunteers_needed - data.total_volunteers_registered,
+                    activeEvents: data.total_activities,
+                    fulfillmentRate: data.volunteer_fulfillment_rate,
+                    efficiencyRate: data.avg_attendance_rate
+                });
+            }
         } catch (error) {
-            return {
-                success: false,
-                message: 'Network error occurred'
-            };
+            console.error("Failed to fetch dashboard data:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleBlast = async (activity: CrisisActivity) => {
-        setBlastModal({
-            isOpen: true,
-            activityId: activity.activity_id,
-            targets: MOCK_BLAST_TARGETS
-        });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [showScanner, setShowScanner] = useState(false); // Kept for AttendanceScanner component
+    const handleScan = async (result: string) => { // Kept for AttendanceScanner component
+        console.log('Scanned:', result);
+        return { success: true, message: 'Scan received' };
     };
 
-    const exportWeeklyReport = async () => {
+    const handleGenerateForm = async () => {
+        if (!topic) return;
+        setIsGenerating(true);
         try {
-            const token = localStorage.getItem('token');
-            const headers: Record<string, string> = {};
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
-            const response = await fetch('/api/admin/reports/volunteers/export', { headers });
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'weekly_report.xlsx';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+            const res = await fetch('/api/admin/ai/generate-form', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic })
+            });
+            const data = await res.json();
+            setGeneratedForm(data);
+            setGenerationMode('preview'); // Switch to preview
         } catch (error) {
-            console.error('Export failed:', error);
+            console.error(error);
+        } finally {
+            setIsGenerating(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="flex flex-col h-full bg-white relative p-8">
             {/* Header */}
-            <header className="border-b border-gray-200 bg-white px-8 py-6">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
-                    <div className="flex gap-3">
-                        <button
-                            onClick={exportWeeklyReport}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors border border-gray-300"
-                        >
-                            <FileDown size={18} />
-                            Export Weekly Report
+            <div className="flex justify-between items-end mb-10">
+                <div>
+                    <h1 className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+                        Hello, {session?.user?.name || 'Admin'} 👋
+                    </h1>
+                    <p className="text-gray-500 font-medium text-lg">Here's what's happening today.</p>
+                </div>
+                <div className="flex gap-3">
+                    <button onClick={() => setIsFormModalOpen(true)} className="flex items-center gap-2 px-5 py-3 bg-[#101828] text-white font-bold rounded-xl hover:bg-gray-800 shadow-xl shadow-gray-200 transition-all hover:scale-105 active:scale-95">
+                        <Sparkles size={18} className="text-yellow-400" />
+                        Create Registration Form
+                    </button>
+                    <button className="p-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 shadow-sm transition-all">
+                        <Search size={20} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Value Proposition Cards / Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                {/* Card 1: Efficiency / Total Signups */}
+                <div className="bg-[#F8F9FB] rounded-3xl p-8 border border-gray-100 flex flex-col justify-between h-[280px] hover:border-indigo-100 hover:shadow-lg transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
+                    <div>
+                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm mb-6 relative z-10">
+                            <Zap size={24} />
+                        </div>
+                        <h3 className="text-gray-900 font-bold text-3xl mb-1 relative z-10">{stats.efficiencyRate}%</h3>
+                        <p className="text-gray-500 font-medium relative z-10">Avg. Attendance Rate</p>
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 bg-indigo-50 w-fit px-3 py-1 rounded-full">
+                            <Users size={14} />
+                            <span>{stats.totalSignups} Signed Up</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+                            Across {stats.activeEvents} active events this week. Engagement is looking strong!
+                        </p>
+                    </div>
+                </div>
+
+                {/* Card 2: Volunteers Needed */}
+                <div className="bg-[#F8F9FB] rounded-3xl p-8 border border-gray-100 flex flex-col justify-between h-[280px] hover:border-emerald-100 hover:shadow-lg transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
+                    <div>
+                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm mb-6 relative z-10">
+                            <Users size={24} />
+                        </div>
+                        <h3 className="text-gray-900 font-bold text-3xl mb-1 relative z-10">{stats.volunteersNeeded}</h3>
+                        <p className="text-gray-500 font-medium relative z-10">Volunteers Needed</p>
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-50 w-fit px-3 py-1 rounded-full">
+                            <PlayCircle size={14} />
+                            <span>Urgent for 2 events</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+                            We need more hands on deck. Consider sending a blast message.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Card 3: AI Assistant / Smart Forms (Nav) */}
+                <div onClick={() => setIsFormModalOpen(true)} className="bg-[#101828] rounded-3xl p-8 border border-gray-800 flex flex-col justify-between h-[280px] hover:shadow-xl hover:shadow-indigo-900/20 transition-all cursor-pointer group relative overflow-hidden">
+                    {/* Abstract tech pattern */}
+                    <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500 blur-[60px] opacity-20 group-hover:opacity-40 transition-opacity"></div>
+
+                    <div>
+                        <div className="w-12 h-12 bg-gray-800 rounded-2xl flex items-center justify-center text-yellow-400 mb-6 relative z-10 border border-gray-700">
+                            <Sparkles size={24} />
+                        </div>
+                        <h3 className="text-white font-bold text-2xl mb-1 relative z-10">Smart Forms</h3>
+                        <p className="text-gray-400 font-medium relative z-10 text-sm">AI-Powered Generation</p>
+                    </div>
+                    <div className="relative z-10">
+                        <p className="text-gray-400 text-xs mb-4 leading-relaxed">
+                            Create complex registration forms in seconds using our Gemini-powered AI agent.
+                        </p>
+                        <button className="w-full py-3 bg-white text-[#101828] font-bold rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 text-sm">
+                            Try Generator
+                            <ArrowRight size={16} />
                         </button>
-                        <button
-                            onClick={() => setShowScanner(true)}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md"
-                        >
-                            <Scan size={18} />
-                            Launch Scanner Mode
-                        </button>
                     </div>
                 </div>
-            </header>
+            </div>
 
-            {/* Main Content */}
-            <div className="p-8 space-y-6">
-                {/* KPI Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Volunteers Deployed */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-blue-50 rounded-lg">
-                                <Users className="text-blue-600" size={24} />
-                            </div>
-                            <span className="text-sm font-semibold text-emerald-600">
-                                +{stats.volunteers_deployed_change}%
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">Volunteers Deployed</p>
-                        <p className="text-3xl font-bold text-gray-900">{stats.volunteers_deployed}</p>
-                    </div>
-
-                    {/* Fill Rate */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-purple-50 rounded-lg">
-                                <TrendingUp className="text-purple-600" size={24} />
-                            </div>
-                            <span className="text-sm font-semibold text-emerald-600">
-                                +{stats.fill_rate_change}%
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">Fill Rate</p>
-                        <p className="text-3xl font-bold text-gray-900">{stats.fill_rate}%</p>
-                    </div>
-
-                    {/* Upcoming Crises */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-red-50 rounded-lg">
-                                <AlertTriangle className="text-red-600" size={24} />
-                            </div>
-                            <span className="text-sm font-semibold text-red-600">
-                                +{stats.upcoming_crises_change} new
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">Upcoming Crises</p>
-                        <p className="text-3xl font-bold text-gray-900">{stats.upcoming_crises}</p>
-                    </div>
-
-                    {/* Pending Approvals */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-orange-50 rounded-lg">
-                                <Bell className="text-orange-600" size={24} />
-                            </div>
-                            <span className="text-sm font-semibold text-gray-500">
-                                {stats.pending_approvals_change}
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">Pending Approvals</p>
-                        <p className="text-3xl font-bold text-gray-900">{stats.pending_approvals}</p>
-                    </div>
+            {/* Active Activities List */}
+            <div className="flex-1 min-h-0 flex flex-col">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <PlayCircle className="text-indigo-600" size={24} />
+                        Upcoming Activities
+                    </h2>
+                    <button onClick={() => router.push('/admin/events')} className="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors">View All</button>
                 </div>
 
-                {/* AI Ops Copilot Insight */}
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
-                    <div className="flex items-start gap-4">
-                        <div className="p-3 bg-blue-600 rounded-xl shadow-lg">
-                            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                            </svg>
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                                <h3 className="text-lg font-bold text-gray-900">AI Ops Copilot</h3>
-                                <span className="px-2 py-0.5 bg-blue-600 text-white text-xs font-semibold rounded">
-                                    NEW INSIGHT
-                                </span>
-                            </div>
-                            <p className="text-gray-700 mb-4">{aiInsight.message}</p>
-                            <div className="flex gap-3">
-                                <button className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors border border-gray-300">
-                                    Dismiss
-                                </button>
-                                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md">
-                                    Review Drafts
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Crisis Monitor */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                        <div className="flex items-center gap-3">
-                            <AlertTriangle className="text-red-600" size={24} />
-                            <h2 className="text-xl font-bold text-gray-900">Crisis Monitor</h2>
-                        </div>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                placeholder="Search events..."
-                                className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                            />
-                            <button className="p-2 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors">
-                                <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Table */}
-                    <div className="overflow-x-auto">
+                <div className="bg-white border border-gray-100 rounded-3xl p-2 flex-1 overflow-auto shadow-sm">
+                    {loading ? (
+                        <div className="h-full flex items-center justify-center text-gray-400">Loading activities...</div>
+                    ) : (
                         <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Event Name
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Date / Time
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Location
-                                    </th>
-                                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Required PAX
-                                    </th>
-                                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Current Status
-                                    </th>
-                                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Action
-                                    </th>
+                            <thead>
+                                <tr className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-50">
+                                    <th className="pb-4 pl-6 pt-4">Activity Name</th>
+                                    <th className="pb-4 pt-4">Date</th>
+                                    <th className="pb-4 pt-4">Volunteers</th>
+                                    <th className="pb-4 pt-4">Status</th>
+                                    <th className="pb-4 pt-4 pr-6 text-right">Action</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
-                                {crisisActivities.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center">
-                                            <CheckCircle className="mx-auto text-emerald-500 mb-3" size={48} />
-                                            <p className="text-gray-600 font-medium">No volunteer shortages! 🎉</p>
-                                            <p className="text-sm text-gray-400 mt-1">All activities are properly staffed</p>
+                            <tbody className="divide-y divide-gray-50">
+                                {activities.map((activity, i) => (
+                                    <tr key={i} className="group hover:bg-gray-50 transition-colors">
+                                        <td className="py-4 pl-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                                                    {activity.title.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-gray-900 text-sm">{activity.title}</p>
+                                                    <p className="text-xs text-gray-400">{activity.location || 'Location Pending'}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 text-sm font-medium text-gray-600">
+                                            {activity.date}
+                                        </td>
+                                        <td className="py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-indigo-500 rounded-full"
+                                                        style={{ width: `${Math.min(100, ((activity.volunteers_registered || 0) / Math.max(1, activity.volunteers_needed || 1)) * 100)}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className="text-xs font-bold text-gray-700">{activity.volunteers_registered || 0}/{activity.volunteers_needed || 0}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4">
+                                            {((activity.volunteers_registered || 0) / Math.max(1, activity.volunteers_needed || 1)) >= 1 ? (
+                                                <span className="inline-flex px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-wide">
+                                                    Full
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wide">
+                                                    Open
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="py-4 pr-6 text-right">
+                                            <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+                                                <ArrowRight size={16} />
+                                            </button>
                                         </td>
                                     </tr>
-                                ) : (
-                                    crisisActivities.slice(0, 5).map((activity) => (
-                                        <tr key={activity.activity_id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <p className="font-semibold text-gray-900">{activity.title}</p>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm text-gray-700">
-                                                    {new Date(activity.start_time).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
-                                                </p>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm text-gray-700">{activity.location}</p>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="text-sm font-semibold text-gray-900">
-                                                    {activity.volunteers_needed}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${activity.status === 'critical'
-                                                    ? 'bg-red-100 text-red-700'
-                                                    : activity.status === 'warning'
-                                                        ? 'bg-orange-100 text-orange-700'
-                                                        : 'bg-emerald-100 text-emerald-700'
-                                                    }`}>
-                                                    {activity.status === 'critical' && '▶ '}
-                                                    {activity.volunteers_registered} / {activity.volunteers_needed}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                {activity.status === 'critical' || activity.status === 'warning' ? (
-                                                    <button
-                                                        onClick={() => handleBlast(activity)}
-                                                        className="inline-flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wide rounded shadow-md transition-all hover:scale-105"
-                                                    >
-                                                        📢 Blast WhatsApp
-                                                    </button>
-                                                ) : (
-                                                    <button className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors">
-                                                        Assign
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
+                                ))}
                             </tbody>
                         </table>
-                    </div>
-
-                    {crisisActivities.length > 5 && (
-                        <div className="px-6 py-4 border-t border-gray-200 text-center bg-gray-50">
-                            <button className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors">
-                                View All Activities →
-                            </button>
-                        </div>
                     )}
                 </div>
             </div>
 
-            {/* Scanner Modal */}
+            {/* Form Generation Modal */}
+            {isFormModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col">
+
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Create Registration Form</h3>
+                                <p className="text-sm text-gray-500">Choose how would you like to build your form</p>
+                            </div>
+                            <button onClick={() => { setIsFormModalOpen(false); setGenerationMode(null); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className="p-8 overflow-y-auto flex-1">
+                            {!generationMode ? (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <button
+                                        onClick={() => setGenerationMode('ai')}
+                                        className="flex flex-col items-center text-center p-6 border-2 border-indigo-50 hover:border-indigo-600 bg-indigo-50/30 hover:bg-indigo-50 rounded-2xl transition-all group"
+                                    >
+                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-indigo-600 mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                                            <Sparkles size={24} />
+                                        </div>
+                                        <h4 className="font-bold text-gray-900 mb-1">AI Generator</h4>
+                                        <p className="text-xs text-gray-500">Describe your needs and let AI build the structure.</p>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setGenerationMode('partial')}
+                                        className="flex flex-col items-center text-center p-6 border-2 border-gray-100 hover:border-gray-300 hover:bg-gray-50 rounded-2xl transition-all group"
+                                    >
+                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-gray-600 mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                                            <LayoutTemplate size={24} />
+                                        </div>
+                                        <h4 className="font-bold text-gray-900 mb-1">Cusom Template</h4>
+                                        <p className="text-xs text-gray-500">Start from a pre-made template and customize it.</p>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setGenerationMode('manual')}
+                                        className="flex flex-col items-center text-center p-6 border-2 border-gray-100 hover:border-gray-300 hover:bg-gray-50 rounded-2xl transition-all group"
+                                    >
+                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-gray-600 mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                                            <PenTool size={24} />
+                                        </div>
+                                        <h4 className="font-bold text-gray-900 mb-1">Manual</h4>
+                                        <p className="text-xs text-gray-500">Build from scratch, field by field.</p>
+                                    </button>
+                                </div>
+                            ) : generationMode === 'ai' ? (
+                                <div className="space-y-6">
+                                    <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                                        <label className="block text-sm font-bold text-gray-900 mb-2">
+                                            What is this form for?
+                                        </label>
+                                        <textarea
+                                            value={topic}
+                                            onChange={(e) => setTopic(e.target.value)}
+                                            placeholder="E.g., A registration form for a beach cleanup volunteer event, requiring name, age, dietary restrictions, and emergency contact."
+                                            className="w-full p-4 rounded-xl border-2 border-indigo-100 focus:border-indigo-600 focus:ring-0 text-sm h-32 resize-none transition-colors"
+                                        ></textarea>
+                                        <div className="mt-4 flex justify-end">
+                                            <button
+                                                onClick={handleGenerateForm}
+                                                disabled={!topic || isGenerating}
+                                                className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {isGenerating ? (
+                                                    <>Generating...</>
+                                                ) : (
+                                                    <>
+                                                        <Sparkles size={16} />
+                                                        Generate Form
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setGenerationMode(null)} className="text-sm font-bold text-gray-400 hover:text-gray-600">
+                                        ← Back
+                                    </button>
+                                </div>
+                            ) : generationMode === 'preview' ? (
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="font-bold text-lg text-gray-900">AI Suggestion</h4>
+                                        <span className="text-xs font-bold px-2 py-1 bg-green-100 text-green-700 rounded-md">Generated</span>
+                                    </div>
+
+                                    <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 max-h-[300px] overflow-y-auto space-y-4">
+                                        <p className="text-sm text-gray-600 italic">{generatedForm.description}</p>
+                                        {generatedForm.fields?.map((field: any, i: number) => (
+                                            <div key={i}>
+                                                <label className="block text-xs font-bold text-gray-700 mb-1">
+                                                    {field.label} {field.required && <span className="text-red-500">*</span>}
+                                                </label>
+                                                {field.type === 'textarea' ? (
+                                                    <textarea className="w-full p-2 rounded-lg border border-gray-200 text-xs bg-white" placeholder={field.placeholder} disabled></textarea>
+                                                ) : (
+                                                    <input type={field.type} className="w-full p-2 rounded-lg border border-gray-200 text-xs bg-white" placeholder={field.placeholder} disabled />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                        <button className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors">
+                                            Discard
+                                        </button>
+                                        <button className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors">
+                                            Save & Publish
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <p className="text-gray-400 font-medium">Feature coming soon.</p>
+                                    <button onClick={() => setGenerationMode(null)} className="mt-4 text-sm font-bold text-indigo-600">← Back</button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Attendance Scanner kept for functionality */}
             <AttendanceScanner
                 isOpen={showScanner}
                 onClose={() => setShowScanner(false)}
                 onScan={handleScan}
             />
-
-            {/* AI Ops Copilot Chatbot */}
-            <div className="fixed bottom-6 right-6 z-50">
-                <OpsCopilot />
-            </div>
-
-            {/* Blast Modal */}
-            {blastModal.isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
-                            <h3 className="text-xl font-bold text-gray-900">WhatsApp Volunteer Blast</h3>
-                            <p className="text-sm text-gray-500 mt-1">
-                                Found {blastModal.targets.length} matching volunteers
-                            </p>
-                        </div>
-
-                        <div className="p-6 space-y-3">
-                            {blastModal.targets.length === 0 ? (
-                                <p className="text-center text-gray-500 py-8">
-                                    No volunteers found with matching skills or phone numbers.
-                                </p>
-                            ) : (
-                                blastModal.targets.map((target) => (
-                                    <div key={target.volunteer_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                        <div>
-                                            <p className="font-semibold text-gray-900">{target.name}</p>
-                                            <p className="text-sm text-gray-600">{target.phone}</p>
-                                            <div className="flex gap-1 mt-1">
-                                                {target.skills.map(skill => (
-                                                    <span key={skill} className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                                        {skill}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <a
-                                            href={target.whatsapp_link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
-                                        >
-                                            <ExternalLink size={16} />
-                                            Send
-                                        </a>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-                        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-2xl">
-                            <button
-                                onClick={() => setBlastModal({ isOpen: false, activityId: '', targets: [] })}
-                                className="w-full px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

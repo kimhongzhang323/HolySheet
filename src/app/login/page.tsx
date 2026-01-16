@@ -1,36 +1,59 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff, Sparkles } from 'lucide-react';
 
 export default function LoginPage() {
     const router = useRouter();
+    const { data: session, status } = useSession();
     const [error, setError] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Handle Email/Password Login (Demo mode - no backend required)
+    // Redirect based on role if session exists
+    useEffect(() => {
+        if (status === 'authenticated' && session?.user) {
+            const role = session.user.role;
+            if (role === 'admin' || role === 'staff') {
+                router.push('/admin');
+            } else {
+                router.push('/dashboard');
+            }
+        }
+    }, [session, status, router]);
+
+    // Handle Email/Password Login
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
 
-        // Simulate login delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            const result = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
+            });
 
-        // Demo: Accept any email/password and redirect
-        localStorage.setItem('user', JSON.stringify({ email, name: email.split('@')[0] }));
-        router.push('/dashboard');
+            if (result?.error) {
+                setError('Invalid email or password');
+                setIsLoading(false);
+            }
+            // Transition is handled by useEffect on session change
+        } catch (err) {
+            setError('An error occurred during sign in');
+            setIsLoading(false);
+        }
     };
 
     // Handle Google Login via NextAuth
     const handleGoogleLogin = () => {
         setIsLoading(true);
-        signIn('google', { callbackUrl: '/dashboard' });
+        signIn('google');
     };
 
     return (

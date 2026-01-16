@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Calendar, MapPin, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface Activity {
-    _id: string;
+    id: string;
     title: string;
     description: string;
     start_time: string;
@@ -28,7 +28,7 @@ export default function ActivityCard({ activity }: { activity: Activity }) {
             const res = await fetch('/api/bookings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ activity_id: activity._id }),
+                body: JSON.stringify({ activity_id: activity.id }),
             });
 
             const data = await res.json();

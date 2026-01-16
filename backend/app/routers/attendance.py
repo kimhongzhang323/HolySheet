@@ -1,72 +1,86 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
-from bson import ObjectId
 from datetime import datetime
 import qrcode
 import io
 import base64
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from uuid import UUID
+
 from ..db import get_database
-from ..models.user import UserResponse, UserRole
+from ..models.user import UserDB, UserResponse
+from ..models.activity import ActivityDB
 from ..dependencies import get_current_user
 
 router = APIRouter()
+
+
+def is_admin_or_staff(role: str) -> bool:
+    return role in ["admin", "staff"]
+
 
 @router.post("/admin/attendance/mark")
 async def mark_attendance(
     activity_id: str,
     user_id: str,
     current_user: UserResponse = Depends(get_current_user),
-    db = Depends(get_database)
+    db: AsyncSession = Depends(get_database)
 ):
     """Mark a user as attended for an activity"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.STAFF]:
+    if not is_admin_or_staff(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin or staff can mark attendance"
         )
     
-    if not ObjectId.is_valid(activity_id):
+    try:
+        activity_uuid = UUID(activity_id)
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid activity ID")
     
-    activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+    result = await db.execute(select(ActivityDB).where(ActivityDB.id == activity_uuid))
+    activity = result.scalar_one_or_none()
+    
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     
     # Check if user exists
-    if ObjectId.is_valid(user_id):
-        user = await db.users.find_one({"_id": ObjectId(user_id)})
-    else:
-        user = await db.users.find_one({"email": user_id})
+    try:
+        user_uuid = UUID(user_id)
+        user_result = await db.execute(select(UserDB).where(UserDB.id == user_uuid))
+        user = user_result.scalar_one_or_none()
+    except ValueError:
+        # Try by email
+        user_result = await db.execute(select(UserDB).where(UserDB.email == user_id))
+        user = user_result.scalar_one_or_none()
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    user_id_str = str(user["_id"])
+    user_id_str = str(user.id)
+    attendees = activity.attendees or []
     
-    # Check if already attended
-    attendees = activity.get("attendees", [])
     if user_id_str in attendees:
         return {
             "message": "User already marked as attended",
-            "activity_id": str(activity["_id"]),
+            "activity_id": str(activity.id),
             "user_id": user_id_str,
-            "user_name": user.get("name"),
+            "user_name": user.name,
             "already_attended": True
         }
     
     # Add to attendees list
-    await db.activities.update_one(
-        {"_id": ObjectId(activity_id)},
-        {"$push": {"attendees": user_id_str}}
-    )
+    new_attendees = attendees + [user_id_str]
+    activity.attendees = new_attendees
+    await db.commit()
     
     return {
         "message": "Attendance marked successfully",
-        "activity_id": str(activity["_id"]),
+        "activity_id": str(activity.id),
         "user_id": user_id_str,
-        "user_name": user.get("name"),
+        "user_name": user.name,
         "already_attended": False,
-        "total_attended": len(attendees) + 1
+        "total_attended": len(new_attendees)
     }
 
 
@@ -74,40 +88,48 @@ async def mark_attendance(
 async def get_attendance(
     activity_id: str,
     current_user: UserResponse = Depends(get_current_user),
-    db = Depends(get_database)
+    db: AsyncSession = Depends(get_database)
 ):
     """Get live attendance count and list for an activity"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.STAFF]:
+    if not is_admin_or_staff(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin or staff can view attendance"
         )
     
-    if not ObjectId.is_valid(activity_id):
+    try:
+        activity_uuid = UUID(activity_id)
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid activity ID")
     
-    activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+    result = await db.execute(select(ActivityDB).where(ActivityDB.id == activity_uuid))
+    activity = result.scalar_one_or_none()
+    
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     
-    attendee_ids = activity.get("attendees", [])
-    capacity = activity.get("capacity", 0)
+    attendee_ids = activity.attendees or []
+    capacity = activity.capacity or 0
     
     # Get attendee details
     attendees = []
     for attendee_id in attendee_ids:
-        if ObjectId.is_valid(attendee_id):
-            user = await db.users.find_one({"_id": ObjectId(attendee_id)})
+        try:
+            user_uuid = UUID(attendee_id)
+            user_result = await db.execute(select(UserDB).where(UserDB.id == user_uuid))
+            user = user_result.scalar_one_or_none()
             if user:
                 attendees.append({
-                    "id": str(user["_id"]),
-                    "name": user.get("name"),
-                    "email": user.get("email")
+                    "id": str(user.id),
+                    "name": user.name,
+                    "email": user.email
                 })
+        except ValueError:
+            pass
     
     return {
-        "activity_id": str(activity["_id"]),
-        "title": activity["title"],
+        "activity_id": str(activity.id),
+        "title": activity.title,
         "total_attended": len(attendee_ids),
         "capacity": capacity,
         "attendance_percentage": int((len(attendee_ids) / capacity * 100)) if capacity > 0 else 0,
@@ -119,40 +141,41 @@ async def get_attendance(
 async def generate_qr_code(
     activity_id: str,
     current_user: UserResponse = Depends(get_current_user),
-    db = Depends(get_database)
+    db: AsyncSession = Depends(get_database)
 ):
     """Generate QR code for activity check-in"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.STAFF]:
+    if not is_admin_or_staff(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin or staff can generate QR codes"
         )
     
-    if not ObjectId.is_valid(activity_id):
+    try:
+        activity_uuid = UUID(activity_id)
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid activity ID")
     
-    activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+    result = await db.execute(select(ActivityDB).where(ActivityDB.id == activity_uuid))
+    activity = result.scalar_one_or_none()
+    
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     
-    # Create QR code data (simple format for demo - in production, use encryption)
     qr_data = f"HOLYSHEET:ACTIVITY:{activity_id}:{datetime.utcnow().isoformat()}"
     
-    # Generate QR code
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(qr_data)
     qr.make(fit=True)
     
     img = qr.make_image(fill_color="black", back_color="white")
     
-    # Convert to base64
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     img_base64 = base64.b64encode(buffer.getvalue()).decode()
     
     return {
-        "activity_id": str(activity["_id"]),
-        "title": activity["title"],
+        "activity_id": str(activity.id),
+        "title": activity.title,
         "qr_code": f"data:image/png;base64,{img_base64}",
         "qr_data": qr_data
     }

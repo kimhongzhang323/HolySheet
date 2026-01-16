@@ -1,26 +1,33 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from typing import Optional
-from bson import ObjectId
 from datetime import datetime, timedelta
 import io
 import csv
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
+from uuid import UUID
+
 from ..db import get_database
-from ..models.user import UserResponse, UserRole
+from ..models.user import UserDB, UserResponse
+from ..models.activity import ActivityDB
 from ..dependencies import get_current_user
 
 router = APIRouter()
+
+
+def is_admin_or_staff(role: str) -> bool:
+    return role in ["admin", "staff"]
+
 
 @router.get("/admin/reports/weekly")
 async def generate_weekly_report(
     start_date: Optional[str] = None,
     current_user: UserResponse = Depends(get_current_user),
-    db = Depends(get_database)
+    db: AsyncSession = Depends(get_database)
 ):
     """Generate weekly summary report"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.STAFF]:
+    if not is_admin_or_staff(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin or staff can generate reports"
@@ -33,28 +40,30 @@ async def generate_weekly_report(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     else:
-        # Get Monday of current week
         today = datetime.utcnow()
         week_start = today - timedelta(days=today.weekday())
     
     week_end = week_start + timedelta(days=7)
     
     # Get activities for the week
-    query = {
-        "start_time": {"$gte": week_start, "$lt": week_end}
-    }
+    query = select(ActivityDB).where(
+        and_(
+            ActivityDB.start_time >= week_start,
+            ActivityDB.start_time < week_end
+        )
+    ).order_by(ActivityDB.start_time)
     
-    cursor = db.activities.find(query).sort("start_time", 1)
-    activities = await cursor.to_list(length=500)
+    result = await db.execute(query)
+    activities = result.scalars().all()
     
     # Calculate stats
     total_activities = len(activities)
-    total_capacity = sum(act.get("capacity", 0) for act in activities)
-    total_attended = sum(len(act.get("attendees", [])) for act in activities)
+    total_capacity = sum(act.capacity or 0 for act in activities)
+    total_attended = sum(len(act.attendees or []) for act in activities)
     
     # Volunteer stats
-    total_volunteers_needed = sum(act.get("volunteers_needed", 0) for act in activities)
-    total_volunteers_registered = sum(act.get("volunteers_registered", 0) for act in activities)
+    total_volunteers_needed = sum(act.volunteers_needed or 0 for act in activities)
+    total_volunteers_registered = sum(act.volunteers_registered or 0 for act in activities)
     
     # Average attendance rate
     avg_attendance_rate = (total_attended / total_capacity * 100) if total_capacity > 0 else 0
@@ -74,13 +83,13 @@ async def generate_weekly_report(
         "volunteer_fulfillment_rate": round(volunteer_fulfillment_rate, 1),
         "activities": [
             {
-                "title": act["title"],
-                "date": act["start_time"].strftime("%Y-%m-%d %H:%M"),
-                "location": act.get("location"),
-                "capacity": act.get("capacity", 0),
-                "attended": len(act.get("attendees", [])),
-                "volunteers_needed": act.get("volunteers_needed", 0),
-                "volunteers_registered": act.get("volunteers_registered", 0)
+                "title": act.title,
+                "date": act.start_time.strftime("%Y-%m-%d %H:%M") if act.start_time else None,
+                "location": act.location,
+                "capacity": act.capacity or 0,
+                "attended": len(act.attendees or []),
+                "volunteers_needed": act.volunteers_needed or 0,
+                "volunteers_registered": act.volunteers_registered or 0
             }
             for act in activities
         ]
@@ -91,52 +100,57 @@ async def generate_weekly_report(
 async def export_activity_csv(
     activity_id: str,
     current_user: UserResponse = Depends(get_current_user),
-    db = Depends(get_database)
+    db: AsyncSession = Depends(get_database)
 ):
     """Export activity details as CSV"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.STAFF]:
+    if not is_admin_or_staff(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin or staff can export reports"
         )
     
-    if not ObjectId.is_valid(activity_id):
+    try:
+        uuid_id = UUID(activity_id)
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid activity ID")
     
-    activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+    result = await db.execute(select(ActivityDB).where(ActivityDB.id == uuid_id))
+    activity = result.scalar_one_or_none()
+    
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     
     # Get attendee details
-    attendee_ids = activity.get("attendees", [])
+    attendee_ids = activity.attendees or []
     attendees = []
     
     for attendee_id in attendee_ids:
-        if ObjectId.is_valid(attendee_id):
-            user = await db.users.find_one({"_id": ObjectId(attendee_id)})
+        try:
+            user_uuid = UUID(attendee_id)
+            user_result = await db.execute(select(UserDB).where(UserDB.id == user_uuid))
+            user = user_result.scalar_one_or_none()
             if user:
                 attendees.append({
-                    "name": user.get("name"),
-                    "email": user.get("email"),
-                    "phone": user.get("phoneNumber", "N/A")
+                    "name": user.name,
+                    "email": user.email,
+                    "phone": user.phone_number or "N/A"
                 })
+        except ValueError:
+            pass
     
     # Generate CSV
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Header
-    writer.writerow([f"Activity Report: {activity['title']}"])
-    writer.writerow([f"Date: {activity['start_time'].strftime('%Y-%m-%d %H:%M')}"])
-    writer.writerow([f"Location: {activity.get('location', 'N/A')}"])
+    writer.writerow([f"Activity Report: {activity.title}"])
+    writer.writerow([f"Date: {activity.start_time.strftime('%Y-%m-%d %H:%M') if activity.start_time else 'N/A'}"])
+    writer.writerow([f"Location: {activity.location or 'N/A'}"])
     writer.writerow([])
     writer.writerow(["Name", "Email", "Phone"])
     
-    # Attendees
     for attendee in attendees:
         writer.writerow([attendee["name"], attendee["email"], attendee["phone"]])
     
-    # Return as downloadable file
     output.seek(0)
     headers = {
         'Content-Disposition': f'attachment; filename="activity_{activity_id}.csv"'
@@ -152,67 +166,41 @@ async def export_activity_csv(
 @router.get("/admin/reports/volunteers/export")
 async def export_volunteers_excel(
     current_user: UserResponse = Depends(get_current_user),
-    db = Depends(get_database)
+    db: AsyncSession = Depends(get_database)
 ):
-    """Export volunteer roster as Excel"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.STAFF]:
+    """Export volunteer roster as CSV (simplified)"""
+    if not is_admin_or_staff(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin or staff can export reports"
         )
     
     # Get all volunteers
-    cursor = db.users.find({"role": {"$in": [UserRole.VOLUNTEER, "volunteer"]}})
-    volunteers = await cursor.to_list(length=1000)
+    result = await db.execute(select(UserDB).where(UserDB.role == "volunteer"))
+    volunteers = result.scalars().all()
     
-    # Create Excel workbook
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Volunteers"
+    # Generate CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
     
-    # Header styling
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(bold=True, color="FFFFFF")
+    writer.writerow(["Name", "Email", "Phone", "Skills", "Tier"])
     
-    # Headers
-    headers = ["Name", "Email", "Phone", "Skills", "Tier"]
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=header)
-        cell.fill = header_fill
-        cell.font = header_font
+    for vol in volunteers:
+        writer.writerow([
+            vol.name,
+            vol.email,
+            vol.phone_number or "",
+            ", ".join(vol.skills or []),
+            vol.tier or ""
+        ])
     
-    # Data
-    for row, vol in enumerate(volunteers, 2):
-        ws.cell(row=row, column=1, value=vol.get("name", ""))
-        ws.cell(row=row, column=2, value=vol.get("email", ""))
-        ws.cell(row=row, column=3, value=vol.get("phoneNumber", ""))
-        ws.cell(row=row, column=4, value=", ".join(vol.get("skills", [])))
-        ws.cell(row=row, column=5, value=vol.get("tier", ""))
-    
-    # Auto-adjust column widths
-    for column in ws.columns:
-        max_length = 0
-        column_letter = column[0].column_letter
-        for cell in column:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(cell.value)
-            except:
-                pass
-        adjusted_width = min(max_length + 2, 50)
-        ws.column_dimensions[column_letter].width = adjusted_width
-    
-    # Save to BytesIO
-    output = io.BytesIO()
-    wb.save(output)
     output.seek(0)
-    
     headers = {
-        'Content-Disposition': 'attachment; filename="volunteers_roster.xlsx"'
+        'Content-Disposition': 'attachment; filename="volunteers_roster.csv"'
     }
     
     return StreamingResponse(
-        output,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        iter([output.getvalue()]),
+        media_type="text/csv",
         headers=headers
     )

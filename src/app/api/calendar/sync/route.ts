@@ -4,7 +4,7 @@ import { NextResponse } from "next/server"
 export async function GET() {
     const session = await auth()
 
-    if (!session?.accessToken) {
+    if (!session?.googleAccessToken) {
         return NextResponse.json({ error: "Not authenticated or missing access token" }, { status: 401 })
     }
 
@@ -13,7 +13,7 @@ export async function GET() {
             "https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=" + new Date().toISOString(),
             {
                 headers: {
-                    Authorization: `Bearer ${session.accessToken}`,
+                    Authorization: `Bearer ${session.googleAccessToken}`,
                 },
             }
         )
