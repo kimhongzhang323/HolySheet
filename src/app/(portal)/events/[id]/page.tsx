@@ -9,284 +9,369 @@ import {
     X, AlertCircle, FileText, Send
 } from 'lucide-react';
 
-// This would normally come from an API/database
-const MOCK_EVENTS = [
+// Volunteer Activities - matches the main events page
+const VOLUNTEER_ACTIVITIES = [
     {
         _id: 'VOL001',
-        title: 'BEACH',
-        type: 'CLEANUP',
-        eventType: 'Environment',
-        category: 'volunteer',
-        artists: 'Green Earth Foundation',
-        artistLabel: 'Organizer',
-        description: 'Join us for a beach cleanup initiative! Help preserve marine life and keep our beaches beautiful. All cleaning supplies provided.',
-        fullDescription: `Join us for a meaningful beach cleanup initiative at Sentosa Beach! 
+        title: 'CARE CIRCLE',
+        type: 'VOLUNTEER',
+        activityType: 'Care Circle',
+        category: 'befriending',
+        engagementFrequency: 'once_week',
+        organizer: 'MINDS Care Circle Programme',
+        organizerLabel: 'Programme',
+        description: 'Be a friend to persons with intellectual disabilities (PWIDs). Build meaningful relationships through regular befriending sessions, activities, and community outings.',
+        fullDescription: `Be a friend to persons with intellectual disabilities (PWIDs) through our Care Circle Programme!
 
 **What to expect:**
-- All cleaning supplies (gloves, bags, pickers) will be provided
-- Light refreshments after the cleanup
-- Certificate of participation for volunteers
-- Group photo session
+- One-on-one or group befriending sessions
+- Engaging activities including arts, games, and music
+- Community outings and excursions
+- Building lasting, meaningful friendships
 
-**What to bring:**
-- Comfortable clothes you don't mind getting dirty
-- Sunscreen and hat
-- Reusable water bottle
-- Positive attitude!
+**Training provided:**
+- Orientation on working with PWIDs
+- Communication techniques
+- Safety and emergency procedures
 
-This is a family-friendly event. Children under 12 must be accompanied by an adult.`,
-        location: 'Sentosa Beach, Singapore',
-        country: 'Singapore',
-        start_time: '08:00',
-        end_time: '12:00',
+**Commitment:**
+- Minimum 6-month commitment
+- Weekly sessions on Saturdays`,
+        location: 'MINDS Hub (Clementi)',
+        schedule: 'Every Saturday, 10:00 AM - 1:00 PM',
+        start_time: '10:00',
+        end_time: '13:00',
         date: '18',
         month: 'JANUARY',
         year: '2026',
-        tags: ['VOLUNTEER', 'ENVIRONMENT', 'OUTDOOR'],
-        attendees: 45,
-        spotsLeft: 15,
-        image: 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=800&h=600&fit=crop',
-        requirements: ['Must be 12 years or older', 'Comfortable walking on sand', 'Basic English communication'],
+        tags: ['BEFRIENDING', 'PWID', 'COMMUNITY'],
+        spotsLeft: 8,
+        image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800&h=600&fit=crop',
+        requirements: ['18 years and above', 'Commit for at least 6 months', 'Attend orientation session'],
     },
     {
-        _id: 'TKY20394823',
-        title: 'MUSIC',
-        type: 'FESTIVAL',
-        eventType: 'Music',
-        category: 'conference',
-        artists: 'DJ Nova, LUNA',
-        description: 'An electrifying night of music featuring top DJs and live performances. Experience the best beats and immersive visuals.',
-        fullDescription: `Get ready for the most electrifying music festival of the year!
+        _id: 'VOL002',
+        title: 'WEEKDAY HUB',
+        type: 'VOLUNTEER',
+        activityType: 'Hub Support',
+        category: 'hub',
+        engagementFrequency: 'three_plus_week',
+        organizer: 'MINDS Community Hub',
+        organizerLabel: 'Centre',
+        description: 'Support Training Officers during daily programmes and activities. Assist with arts & crafts, music sessions, sports activities, and life skills training for PWIDs.',
+        fullDescription: `Join our team of dedicated volunteers at MINDS Community Hub!
 
-**Lineup:**
-- DJ Nova (Headliner)
-- LUNA
-- Special Guest Performers
-- Local Opening Acts
+**Your role includes:**
+- Assisting Training Officers with daily programmes
+- Helping with arts & crafts activities
+- Supporting music and movement sessions
+- Guiding sports and recreational activities
+- Assisting with life skills training
 
-**Experience:**
-- State-of-the-art sound system
-- Immersive LED visuals
-- VIP lounge area
-- Food trucks and beverages
-
-**Ticket Tiers:**
-- General Admission
-- VIP Access (includes lounge access)
-- Premium (front row + meet & greet)`,
-        location: 'Tokyo Dome, Japan',
-        country: 'Japan',
-        start_time: '17:00',
-        end_time: '23:00',
-        date: '27',
-        month: 'AUGUST',
-        year: '2025',
-        tags: ['MUSIC', 'DJ', 'ENTERTAINMENT'],
-        attendees: 5000,
-        image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&h=600&fit=crop',
-        ticketPrice: '$85',
-    },
-    {
-        _id: 'MTU002',
-        title: 'TECH',
-        type: 'MEETUP',
-        eventType: 'Tech',
-        category: 'meetup',
-        artists: 'Local Developers',
-        artistLabel: 'Community',
-        description: 'Monthly tech meetup for developers. Share knowledge, network, and learn about the latest in web development.',
-        fullDescription: `Join our monthly developer meetup!
-
-**This Month's Topics:**
-- Introduction to Next.js 16
-- Building with AI APIs
-- Lightning talks (5 min each)
-
-**Schedule:**
-- 7:00 PM - Networking & Snacks
-- 7:30 PM - Main Presentations
-- 8:30 PM - Q&A
-- 9:00 PM - Open networking
-
-Free pizza and drinks provided!`,
-        location: 'WeWork Orchard, Singapore',
-        country: 'Singapore',
-        start_time: '19:00',
-        end_time: '21:30',
-        date: '22',
+**Benefits:**
+- Flexible volunteering hours
+- Direct impact on PWIDs' daily lives
+- Skill development opportunities
+- Certificate of appreciation`,
+        location: 'MINDS Hub (Ang Mo Kio)',
+        schedule: 'Mon-Fri, 9:00 AM - 4:00 PM (Flexible)',
+        start_time: '09:00',
+        end_time: '16:00',
+        date: '20',
         month: 'JANUARY',
         year: '2026',
-        tags: ['TECH', 'NETWORKING', 'DEVELOPERS'],
-        attendees: 35,
-        spotsLeft: 25,
-        image: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&h=600&fit=crop',
+        tags: ['HUB', 'TRAINING', 'ACTIVITIES'],
+        spotsLeft: 5,
+        image: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=800&h=600&fit=crop',
+        requirements: ['Weekday availability', 'Patient and caring nature', 'Able to commit at least 3 hours per session'],
     },
     {
         _id: 'VOL003',
-        title: 'FOOD',
-        type: 'DRIVE',
-        eventType: 'Food',
-        category: 'volunteer',
-        artists: 'Community Kitchen',
-        artistLabel: 'Organizer',
-        description: 'Help distribute meals to the elderly and less privileged families in the neighborhood.',
-        fullDescription: `Make a difference in your community!
+        title: 'WEEKEND MYG',
+        type: 'BEFRIENDER',
+        activityType: 'Befriending',
+        category: 'befriending',
+        engagementFrequency: 'once_week',
+        organizer: 'MINDS Youth Group',
+        organizerLabel: 'Programme',
+        description: 'Join the MINDS Youth Group as a weekend befriender! Engage young adults with intellectual disabilities through fun recreational activities, games, and social outings.',
+        fullDescription: `Be part of the MINDS Youth Group (MYG) as a weekend befriender!
 
-**Your Role:**
-- Help pack meal boxes
-- Distribute meals door-to-door
-- Spend time chatting with elderly residents
+**Activities include:**
+- Sports and games sessions
+- Arts and crafts workshops
+- Community outings (movies, parks, etc.)
+- Social skill building activities
+- Special events and celebrations
 
-**What We Provide:**
-- Volunteer T-shirt
-- Lunch for all volunteers
-- Transportation to distribution points
-
-No experience needed - just a kind heart!`,
-        location: 'Tampines Community Center, Singapore',
-        country: 'Singapore',
-        start_time: '10:00',
-        end_time: '14:00',
+**Why join MYG:**
+- Connect with young adults with intellectual disabilities
+- Build meaningful friendships
+- Develop leadership skills
+- Be part of a vibrant volunteer community`,
+        location: 'Various Locations',
+        schedule: 'Saturdays OR Sundays, 2:00 PM - 5:00 PM',
+        start_time: '14:00',
+        end_time: '17:00',
         date: '25',
         month: 'JANUARY',
         year: '2026',
-        tags: ['VOLUNTEER', 'COMMUNITY', 'FOOD'],
-        attendees: 20,
-        spotsLeft: 10,
-        image: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&h=600&fit=crop',
-        requirements: ['Must be 16 years or older', 'Able to carry up to 5kg'],
+        tags: ['YOUTH', 'BEFRIENDING', 'RECREATION'],
+        spotsLeft: 12,
+        image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&h=600&fit=crop',
+        requirements: ['Weekend availability', 'Age 18-35 preferred', 'Commit for at least 6 months'],
     },
     {
-        _id: 'SGP99482101',
-        title: 'STARTUP',
-        type: 'SUMMIT',
-        eventType: 'Business',
-        category: 'conference',
-        artists: 'Industry Leaders',
-        artistLabel: 'Speakers',
-        description: 'Connect with investors, mentors, and fellow entrepreneurs.',
-        fullDescription: `The premier startup event of Southeast Asia!
+        _id: 'VOL004',
+        title: 'HOME',
+        type: 'BEFRIENDER',
+        activityType: 'Befriending',
+        category: 'befriending',
+        engagementFrequency: 'once_week',
+        organizer: 'Me Too! Club',
+        organizerLabel: 'Programme',
+        description: 'Visit PWIDs at their homes and build a lasting friendship. Engage in conversations, simple activities, and provide companionship to those who may have limited social interactions.',
+        fullDescription: `Make a difference through home befriending visits!
 
-**Featured Sessions:**
-- Keynote: Future of AI Startups
-- Panel: Fundraising in 2026
-- Workshop: Pitch Perfect
-- Networking Lunch
+**Your role:**
+- Visit PWIDs at their homes weekly
+- Engage in conversations and simple activities
+- Provide companionship and emotional support
+- Help with basic social skill building
+- Report progress to programme coordinators
 
-**Speakers Include:**
-- CEOs from top unicorns
-- Venture capital partners
-- Industry thought leaders`,
-        location: 'Marina Bay Sands, Singapore',
-        country: 'Singapore',
-        start_time: '09:00',
-        end_time: '18:00',
-        date: '15',
-        month: 'FEBRUARY',
-        year: '2026',
-        tags: ['BUSINESS', 'STARTUP', 'INVESTMENT'],
-        attendees: 450,
-        image: 'https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=800&h=600&fit=crop',
-        ticketPrice: '$150',
-    },
-    {
-        _id: 'MTU004',
-        title: 'BOOK',
-        type: 'CLUB',
-        eventType: 'Education',
-        category: 'meetup',
-        artists: 'Reading Society',
-        artistLabel: 'Host',
-        description: 'Monthly book club meeting. This month: "Atomic Habits". New members welcome!',
-        fullDescription: `Join our cozy book club discussion!
-
-**This Month's Book:** Atomic Habits by James Clear
-
-**Discussion Points:**
-- Key takeaways from the book
-- Implementing habits in daily life
-- Sharing personal experiences
-
-Tea and snacks provided. Bring your copy of the book!`,
-        location: 'To Be Confirmed',
-        country: 'Singapore',
-        start_time: '15:00',
-        end_time: '17:00',
-        date: '28',
+**What we provide:**
+- Comprehensive training before starting
+- Ongoing support from staff
+- Regular volunteer gatherings
+- Recognition and appreciation`,
+        location: 'Client Homes (Islandwide)',
+        schedule: 'Flexible - 2 hours per week',
+        start_time: '10:00',
+        end_time: '12:00',
+        date: '22',
         month: 'JANUARY',
         year: '2026',
-        tags: ['BOOKS', 'SOCIAL', 'DISCUSSION'],
-        attendees: 12,
-        spotsLeft: 8,
-        image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=600&fit=crop',
+        tags: ['HOME VISIT', 'BEFRIENDING', 'COMPANIONSHIP'],
+        spotsLeft: 15,
+        image: 'https://picsum.photos/seed/home-befriend/400/600',
+        requirements: ['Commit for at least 1 year', 'Background check required', 'Attend mandatory training'],
     },
     {
         _id: 'VOL005',
-        title: 'TEACHING',
-        type: 'WORKSHOP',
-        eventType: 'Education',
-        category: 'volunteer',
-        artists: 'CodeForGood',
-        artistLabel: 'Program',
-        description: 'Teach basic coding skills to underprivileged youth.',
-        fullDescription: `Share your knowledge and inspire the next generation!
+        title: 'ME TOO! CLUB',
+        type: 'ACTIVITY',
+        activityType: 'Hub Support',
+        category: 'hub',
+        engagementFrequency: 'twice_week',
+        organizer: 'Me Too! Club',
+        organizerLabel: 'Centre',
+        description: 'Support rehabilitative activities at Me Too! Club. Help facilitate arts, music therapy, exercise sessions, and social skills programmes for PWIDs.',
+        fullDescription: `Join the Me Too! Club volunteer team!
 
-**What You'll Do:**
-- Teach basic HTML/CSS to students aged 12-16
-- Guide hands-on coding exercises
-- Mentor and encourage learning
+**Activities you'll support:**
+- Art therapy sessions
+- Music and movement therapy
+- Exercise and wellness programmes
+- Social skills training
+- Meal preparation activities
 
-**Requirements:**
-- Basic web development knowledge
-- Patience and enthusiasm
-- No teaching experience needed!
-
-Training session provided before the workshop.`,
-        location: 'Community Library, Jurong East, Singapore',
-        country: 'Singapore',
+**Schedule:**
+- Tuesday and Thursday sessions
+- Flexible timing within 2-5 PM
+- Minimum twice weekly commitment`,
+        location: 'Me Too! Club',
+        schedule: 'Tue & Thu, 2:00 PM - 5:00 PM',
         start_time: '14:00',
         end_time: '17:00',
+        date: '21',
+        month: 'JANUARY',
+        year: '2026',
+        tags: ['REHABILITATION', 'ACTIVITIES', 'THERAPY'],
+        spotsLeft: 6,
+        image: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&h=600&fit=crop',
+        requirements: ['Twice weekly commitment', 'Interest in therapeutic activities', 'Patient and empathetic'],
+    },
+    {
+        _id: 'VOL006',
+        title: 'GRAPHIC',
+        type: 'DESIGNER',
+        activityType: 'Creative',
+        category: 'skills',
+        engagementFrequency: 'adhoc',
+        organizer: 'MINDS Communications',
+        organizerLabel: 'Department',
+        description: 'Use your creative skills to design marketing materials, event posters, social media graphics, and newsletters for MINDS. Work remotely on project basis.',
+        fullDescription: `Contribute your design skills to MINDS!
+
+**Projects include:**
+- Event posters and banners
+- Social media graphics
+- Newsletter layouts
+- Marketing brochures
+- Digital assets
+
+**Requirements:**
+- Proficiency in Adobe Creative Suite or Canva
+- Understanding of brand guidelines
+- Portfolio of previous work
+
+**Perks:**
+- Flexible remote work
+- Portfolio building opportunity
+- Work with a social impact organisation`,
+        location: 'Remote',
+        schedule: 'Flexible - Project Based',
+        start_time: 'Flexible',
+        end_time: 'Flexible',
         date: '01',
         month: 'FEBRUARY',
         year: '2026',
-        tags: ['VOLUNTEER', 'EDUCATION', 'CODING'],
-        attendees: 8,
-        spotsLeft: 4,
-        image: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&h=600&fit=crop',
-        requirements: ['Basic HTML/CSS knowledge', 'Good communication skills'],
+        tags: ['DESIGN', 'CREATIVE', 'REMOTE'],
+        spotsLeft: 3,
+        image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=600&fit=crop',
+        requirements: ['Proficiency in design software', 'Portfolio required', 'Responsive communication'],
     },
     {
-        _id: 'NYC88723456',
-        title: 'ART',
-        type: 'EXHIBITION',
-        eventType: 'Art',
-        category: 'conference',
-        artists: 'Various Artists',
-        artistLabel: 'Featured',
-        description: 'A curated collection of contemporary art from emerging and established artists.',
-        fullDescription: `Experience contemporary art at its finest!
+        _id: 'VOL007',
+        title: 'PHOTO',
+        type: 'VOLUNTEER',
+        activityType: 'Creative',
+        category: 'skills',
+        engagementFrequency: 'adhoc',
+        organizer: 'MINDS Communications',
+        organizerLabel: 'Department',
+        description: 'Capture meaningful moments at MINDS events and activities. Help document the journey of PWIDs and create lasting memories through photography.',
+        fullDescription: `Capture the moments that matter!
 
-**Exhibition Highlights:**
-- 50+ artworks from international artists
-- Interactive installations
-- Guided tours available
-- Artist meet & greet sessions
+**Coverage includes:**
+- Annual events and celebrations
+- Daily activity highlights
+- Special programmes
+- Graduation ceremonies
+- Outings and excursions
 
-**Special Events:**
-- Opening night gala
-- Artist talks every weekend
-- Workshops for all ages`,
-        location: 'National Gallery, Singapore',
-        country: 'Singapore',
-        start_time: '10:00',
-        end_time: '20:00',
-        date: '03',
+**What to bring:**
+- Your own camera equipment
+- Memory cards and batteries
+- Creative eye and patience`,
+        location: 'Various Locations',
+        schedule: 'Event-based',
+        start_time: '09:00',
+        end_time: '17:00',
+        date: '15',
+        month: 'FEBRUARY',
+        year: '2026',
+        tags: ['PHOTOGRAPHY', 'EVENTS', 'DOCUMENTATION'],
+        spotsLeft: 4,
+        image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&h=600&fit=crop',
+        requirements: ['Own camera equipment', 'Event photography experience', 'Comfortable working with PWIDs'],
+    },
+    {
+        _id: 'VOL008',
+        title: 'VIDEO',
+        type: 'EDITOR',
+        activityType: 'Creative',
+        category: 'skills',
+        engagementFrequency: 'adhoc',
+        organizer: 'MINDS Communications',
+        organizerLabel: 'Department',
+        description: 'Create compelling video content for MINDS. Edit event highlights, testimonial videos, and promotional content to raise awareness about PWIDs.',
+        fullDescription: `Create videos that tell our story!
+
+**Video types:**
+- Event highlight reels
+- Testimonial interviews
+- Promotional videos
+- Social media content
+- Documentary-style features
+
+**Software:**
+- Adobe Premiere Pro / Final Cut Pro
+- After Effects for motion graphics
+- Basic color grading skills`,
+        location: 'Remote',
+        schedule: 'Flexible - Project Based',
+        start_time: 'Flexible',
+        end_time: 'Flexible',
+        date: '01',
         month: 'MARCH',
         year: '2026',
-        tags: ['ART', 'CULTURE', 'EXHIBITION'],
-        attendees: 890,
-        image: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=800&h=600&fit=crop',
-        ticketPrice: '$25',
+        tags: ['VIDEO', 'EDITING', 'CONTENT'],
+        spotsLeft: 2,
+        image: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&h=600&fit=crop',
+        requirements: ['Video editing software proficiency', 'Showreel required', 'Meet project deadlines'],
+    },
+    {
+        _id: 'VOL009',
+        title: 'GROUP',
+        type: 'OUTING',
+        activityType: 'Excursion',
+        category: 'outings',
+        engagementFrequency: 'adhoc',
+        organizer: 'MINDS Community Outreach',
+        organizerLabel: 'Programme',
+        description: 'Accompany PWIDs on exciting community outings! Visit parks, museums, shopping malls, and recreational venues. Help create joyful experiences outside the hub.',
+        fullDescription: `Join us for community outings!
+
+**Destinations include:**
+- Parks and nature reserves
+- Museums and exhibitions
+- Shopping malls
+- Recreational venues
+- Special event locations
+
+**Your role:**
+- Accompany and assist PWIDs
+- Ensure safety during outings
+- Facilitate social interactions
+- Create joyful experiences`,
+        location: 'Various Locations',
+        schedule: 'Monthly - Weekends',
+        start_time: '09:00',
+        end_time: '16:00',
+        date: '08',
+        month: 'FEBRUARY',
+        year: '2026',
+        tags: ['OUTING', 'RECREATION', 'COMMUNITY'],
+        spotsLeft: 20,
+        image: 'https://images.unsplash.com/photo-1506869640319-fe1a24fd76dc?w=800&h=600&fit=crop',
+        requirements: ['Physical fitness for walking', 'Patience and adaptability', 'Available for full-day outings'],
+    },
+    {
+        _id: 'VOL010',
+        title: 'SATELLITE',
+        type: 'HUB',
+        activityType: 'Hub Support',
+        category: 'hub',
+        engagementFrequency: 'twice_week',
+        organizer: 'MINDS Satellite Hub',
+        organizerLabel: 'Centre',
+        description: 'Support activities at MINDS Satellite Hub. Help with daily programmes, meal times, and recreational activities in a smaller, more intimate setting.',
+        fullDescription: `Be part of our Satellite Hub family!
+
+**Daily activities:**
+- Morning exercises and warm-ups
+- Skills training sessions
+- Meal time assistance
+- Recreational activities
+- Afternoon programmes
+
+**Setting:**
+- Smaller, community-based hub
+- More intimate environment
+- Close-knit volunteer team`,
+        location: 'Satellite Hubs',
+        schedule: 'Wed & Fri, 10:00 AM - 3:00 PM',
+        start_time: '10:00',
+        end_time: '15:00',
+        date: '22',
+        month: 'JANUARY',
+        year: '2026',
+        tags: ['SATELLITE', 'HUB', 'SUPPORT'],
+        spotsLeft: 8,
+        image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=800&h=600&fit=crop',
+        requirements: ['Twice weekly commitment', 'Basic first aid knowledge preferred', 'Patience and empathy'],
     },
 ];
 
@@ -304,35 +389,34 @@ const getApplicationStatus = (eventId: string) => {
     return mockStatuses[eventId] || null;
 };
 
-interface Event {
+interface VolunteerActivity {
     _id: string;
     title: string;
     type: string;
-    eventType: string;
+    activityType: string;
     category: string;
-    artists: string;
-    artistLabel?: string;
+    engagementFrequency: string;
+    organizer: string;
+    organizerLabel?: string;
     description: string;
     fullDescription?: string;
     location: string;
-    country: string;
+    schedule: string;
     start_time: string;
     end_time: string;
     date: string;
     month: string;
     year: string;
     tags: string[];
-    attendees?: number;
     spotsLeft?: number;
     image: string;
     requirements?: string[];
-    ticketPrice?: string;
 }
 
 export default function EventDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const [event, setEvent] = useState<Event | null>(null);
+    const [activity, setActivity] = useState<VolunteerActivity | null>(null);
     const [isRegistered, setIsRegistered] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showApplicationModal, setShowApplicationModal] = useState(false);
@@ -342,12 +426,12 @@ export default function EventDetailPage() {
 
     useEffect(() => {
         // In a real app, fetch from API
-        const foundEvent = MOCK_EVENTS.find(e => e._id === params.id);
-        setEvent(foundEvent || null);
+        const foundActivity = VOLUNTEER_ACTIVITIES.find((a: VolunteerActivity) => a._id === params.id);
+        setActivity(foundActivity || null);
 
-        // Check application status for volunteer events
-        if (foundEvent?.category === 'volunteer') {
-            setApplicationStatus(getApplicationStatus(foundEvent._id));
+        // Check application status for volunteer activities
+        if (foundActivity) {
+            setApplicationStatus(getApplicationStatus(foundActivity._id));
         }
 
         setIsLoading(false);
@@ -355,9 +439,10 @@ export default function EventDetailPage() {
 
     const getCategoryColor = (category: string) => {
         switch (category) {
-            case 'volunteer': return 'bg-green-100 text-green-700 border-green-200';
-            case 'meetup': return 'bg-blue-100 text-blue-700 border-blue-200';
-            case 'conference': return 'bg-purple-100 text-purple-700 border-purple-200';
+            case 'befriending': return 'bg-pink-100 text-pink-700 border-pink-200';
+            case 'hub': return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'skills': return 'bg-purple-100 text-purple-700 border-purple-200';
+            case 'outings': return 'bg-green-100 text-green-700 border-green-200';
             default: return 'bg-gray-100 text-gray-700 border-gray-200';
         }
     };
@@ -436,16 +521,16 @@ export default function EventDetailPage() {
         );
     }
 
-    if (!event) {
+    if (!activity) {
         return (
             <div className="text-center py-20">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Event Not Found</h1>
-                <p className="text-gray-500 mb-6">The event you&apos;re looking for doesn&apos;t exist.</p>
+                <h1 className="text-2xl font-bold text-gray-900 mb-4">Activity Not Found</h1>
+                <p className="text-gray-500 mb-6">The volunteer activity you&apos;re looking for doesn&apos;t exist.</p>
                 <button
                     onClick={() => router.push('/events')}
                     className="px-6 py-3 bg-gray-900 text-white rounded-full font-medium hover:bg-gray-800 transition-colors"
                 >
-                    Back to Events
+                    Back to Volunteer Activities
                 </button>
             </div>
         );
@@ -482,13 +567,13 @@ export default function EventDetailPage() {
                                 </button>
                             </div>
 
-                            {/* Event Summary */}
+                            {/* Activity Summary */}
                             <div className="bg-gray-50 rounded-2xl p-4 mb-6">
                                 <h3 className="font-semibold text-gray-900 mb-1">
-                                    {event.title} {event.type}
+                                    {activity.title} {activity.type}
                                 </h3>
                                 <p className="text-sm text-gray-500">
-                                    {event.date} {event.month} {event.year} • {event.start_time} - {event.end_time}
+                                    {activity.schedule}
                                 </p>
                             </div>
 
@@ -556,7 +641,7 @@ export default function EventDetailPage() {
                 className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 md:mb-6 group px-4 md:px-0"
             >
                 <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-                <span>Back to Events</span>
+                <span>Back to Volunteer Activities</span>
             </motion.button>
 
             {/* Hero Image */}
@@ -567,24 +652,24 @@ export default function EventDetailPage() {
             >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                    src={event.image}
-                    alt={event.title}
+                    src={activity.image}
+                    alt={activity.title}
                     className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
 
                 {/* Category Badge */}
-                <div className={`absolute top-4 left-4 md:top-6 md:left-6 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-bold uppercase tracking-wider border ${getCategoryColor(event.category)}`}>
-                    {event.category}
+                <div className={`absolute top-4 left-4 md:top-6 md:left-6 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-bold uppercase tracking-wider border ${getCategoryColor(activity.category)}`}>
+                    {activity.category}
                 </div>
 
                 {/* Date Overlay */}
                 <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6 text-white">
                     <span className="block text-5xl md:text-8xl font-bold leading-none drop-shadow-lg">
-                        {event.date}
+                        {activity.date}
                     </span>
                     <span className="text-base md:text-lg font-medium tracking-widest opacity-90">
-                        {event.month} {event.year}
+                        {activity.month} {activity.year}
                     </span>
                 </div>
 
@@ -605,11 +690,11 @@ export default function EventDetailPage() {
                         transition={{ delay: 0.1 }}
                     >
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                            <span className="text-blue-600">{event.title}</span>{' '}
-                            <span className="text-gray-400 font-normal">{event.type}</span>
+                            <span className="text-green-600">{activity.title}</span>{' '}
+                            <span className="text-gray-400 font-normal">{activity.type}</span>
                         </h1>
                         <p className="text-lg text-gray-600">
-                            {event.artistLabel || 'Organizer'}: <span className="font-semibold text-gray-900">{event.artists}</span>
+                            {activity.organizerLabel || 'Programme'}: <span className="font-semibold text-gray-900">{activity.organizer}</span>
                         </p>
                     </motion.div>
 
@@ -620,18 +705,43 @@ export default function EventDetailPage() {
                         transition={{ delay: 0.2 }}
                         className="bg-white rounded-2xl p-6 border border-gray-100"
                     >
-                        <h2 className="text-lg font-bold text-gray-900 mb-4">About This Event</h2>
+                        <h2 className="text-lg font-bold text-gray-900 mb-4">About This Activity</h2>
                         <div className="prose prose-gray max-w-none">
-                            {(event.fullDescription || event.description).split('\n').map((paragraph, i) => (
-                                <p key={i} className="text-gray-600 mb-3 whitespace-pre-wrap">
-                                    {paragraph}
-                                </p>
-                            ))}
+                            {(activity.fullDescription || activity.description).split('\n').map((line: string, i: number) => {
+                                // Check if line is a section header (starts with **)
+                                const headerMatch = line.match(/^\*\*(.+?)\*\*$/);
+                                if (headerMatch) {
+                                    return (
+                                        <h3 key={i} className="text-base font-bold text-gray-900 mt-4 mb-2">
+                                            {headerMatch[1]}
+                                        </h3>
+                                    );
+                                }
+                                // Check if line starts with a dash (list item)
+                                if (line.trim().startsWith('-')) {
+                                    return (
+                                        <p key={i} className="text-gray-600 mb-1 pl-2 flex items-start gap-2">
+                                            <span className="text-green-500 mt-1">•</span>
+                                            <span>{line.trim().substring(1).trim()}</span>
+                                        </p>
+                                    );
+                                }
+                                // Empty lines
+                                if (line.trim() === '') {
+                                    return <div key={i} className="h-2" />;
+                                }
+                                // Regular paragraph
+                                return (
+                                    <p key={i} className="text-gray-600 mb-3">
+                                        {line}
+                                    </p>
+                                );
+                            })}
                         </div>
                     </motion.div>
 
-                    {/* Requirements (for volunteer events) */}
-                    {event.requirements && event.requirements.length > 0 && (
+                    {/* Requirements */}
+                    {activity.requirements && activity.requirements.length > 0 && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -640,7 +750,7 @@ export default function EventDetailPage() {
                         >
                             <h2 className="text-lg font-bold text-gray-900 mb-4">Requirements</h2>
                             <ul className="space-y-2">
-                                {event.requirements.map((req, i) => (
+                                {activity.requirements.map((req: string, i: number) => (
                                     <li key={i} className="flex items-start gap-3 text-gray-600">
                                         <CheckCircle size={18} className="text-green-500 mt-0.5 shrink-0" />
                                         {req}
@@ -657,7 +767,7 @@ export default function EventDetailPage() {
                         transition={{ delay: 0.4 }}
                         className="flex flex-wrap gap-2"
                     >
-                        {event.tags.map(tag => (
+                        {activity.tags.map((tag: string) => (
                             <span
                                 key={tag}
                                 className="px-4 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-600"
@@ -675,16 +785,16 @@ export default function EventDetailPage() {
                     transition={{ delay: 0.2 }}
                     className="space-y-6"
                 >
-                    {/* Event Details Card */}
+                    {/* Activity Details Card */}
                     <div className="bg-white rounded-2xl p-6 border border-gray-100 space-y-4">
-                        <h2 className="text-lg font-bold text-gray-900">Event Details</h2>
+                        <h2 className="text-lg font-bold text-gray-900">Activity Details</h2>
 
-                        {/* Date & Time */}
+                        {/* Schedule */}
                         <div className="flex items-start gap-3">
                             <Calendar size={20} className="text-gray-400 mt-0.5" />
                             <div>
-                                <p className="font-medium text-gray-900">{event.date} {event.month} {event.year}</p>
-                                <p className="text-sm text-gray-500">{event.start_time} - {event.end_time}</p>
+                                <p className="font-medium text-gray-900">{activity.schedule}</p>
+                                <p className="text-sm text-gray-500">{activity.date} {activity.month} {activity.year}</p>
                             </div>
                         </div>
 
@@ -692,43 +802,32 @@ export default function EventDetailPage() {
                         <div className="flex items-start gap-3">
                             <MapPin size={20} className="text-gray-400 mt-0.5" />
                             <div>
-                                <p className={`font-medium ${event.location === 'To Be Confirmed' ? 'italic text-gray-400' : 'text-gray-900'}`}>
-                                    {event.location}
+                                <p className={`font-medium ${activity.location === 'To Be Confirmed' ? 'italic text-gray-400' : 'text-gray-900'}`}>
+                                    {activity.location}
                                 </p>
                             </div>
                         </div>
 
-                        {/* Attendees */}
+                        {/* Spots Left */}
                         <div className="flex items-start gap-3">
                             <Users size={20} className="text-gray-400 mt-0.5" />
                             <div>
-                                <p className="font-medium text-gray-900">{event.attendees} attending</p>
-                                {event.spotsLeft !== undefined && (
-                                    <p className="text-sm text-orange-500 font-medium">{event.spotsLeft} spots left</p>
+                                {activity.spotsLeft !== undefined && (
+                                    <p className="text-sm text-green-600 font-medium">{activity.spotsLeft} spots left</p>
                                 )}
                             </div>
                         </div>
 
-                        {/* Price */}
-                        {event.ticketPrice && (
-                            <div className="pt-4 border-t border-gray-100">
-                                <p className="text-sm text-gray-500">Starting from</p>
-                                <p className="text-3xl font-bold text-gray-900">{event.ticketPrice}</p>
-                            </div>
-                        )}
-
-                        {/* Free Badge for volunteer */}
-                        {event.category === 'volunteer' && (
-                            <div className="pt-4 border-t border-gray-100">
-                                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold">
-                                    FREE TO VOLUNTEER
-                                </span>
-                            </div>
-                        )}
+                        {/* Free Badge */}
+                        <div className="pt-4 border-t border-gray-100">
+                            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold">
+                                FREE TO VOLUNTEER
+                            </span>
+                        </div>
                     </div>
 
-                    {/* Application Status (for volunteer events) */}
-                    {event.category === 'volunteer' && statusDisplay && (
+                    {/* Application Status */}
+                    {statusDisplay && (
                         <div className={`rounded-2xl p-6 border text-center ${statusDisplay.color}`}>
                             <statusDisplay.icon size={48} className={`mx-auto mb-3 ${statusDisplay.iconColor}`} />
                             <h3 className="text-lg font-bold text-gray-900 mb-1">{statusDisplay.title}</h3>
@@ -747,38 +846,20 @@ export default function EventDetailPage() {
                     )}
 
                     {/* CTA Button */}
-                    {event.category === 'volunteer' ? (
-                        // Volunteer event - show application button or status
-                        !applicationStatus && (
-                            <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={handleVolunteerClick}
-                                className="w-full py-4 font-bold tracking-wider rounded-2xl transition-colors flex items-center justify-center gap-3 bg-green-600 text-white hover:bg-green-700"
-                            >
-                                <Heart size={20} />
-                                APPLY TO VOLUNTEER
-                            </motion.button>
-                        )
-                    ) : isRegistered ? (
-                        <div className="bg-green-50 rounded-2xl p-6 border border-green-200 text-center">
-                            <CheckCircle size={48} className="text-green-500 mx-auto mb-3" />
-                            <h3 className="te text-lg font-bold text-gray-900 mb-1">You&apos;re Registered!</h3>
-                            <p className="text-sm text-gray-600">Check your email for confirmation details.</p>
-                        </div>
-                    ) : (
+                    {!applicationStatus && (
                         <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={handleRegister}
-                            className="w-full py-4 font-bold tracking-wider rounded-2xl transition-colors flex items-center justify-center gap-3 bg-gray-900 text-white hover:bg-gray-800"
+                            onClick={handleVolunteerClick}
+                            className="w-full py-4 font-bold tracking-wider rounded-2xl transition-colors flex items-center justify-center gap-3 bg-green-600 text-white hover:bg-green-700"
                         >
-                            {event.category === 'meetup' ? 'RSVP NOW' : 'GET TICKETS'}
+                            <Heart size={20} />
+                            APPLY TO VOLUNTEER
                         </motion.button>
                     )}
 
-                    {/* Resume Hint for volunteer events without application */}
-                    {event.category === 'volunteer' && !applicationStatus && !MOCK_HAS_RESUME && (
+                    {/* Resume Hint */}
+                    {!applicationStatus && !MOCK_HAS_RESUME && (
                         <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100 flex items-start gap-3">
                             <AlertCircle size={20} className="text-orange-500 mt-0.5 shrink-0" />
                             <div>
@@ -798,3 +879,4 @@ export default function EventDetailPage() {
         </div>
     );
 }
+
