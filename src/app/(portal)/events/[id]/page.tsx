@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     MapPin, ArrowLeft, Calendar, Clock, Users, Share2, Heart, CheckCircle,
-    X, AlertCircle, FileText, Send
+    X, AlertCircle, FileText, Send, Phone, Mail, User, ToggleRight
 } from 'lucide-react';
 
 // Volunteer Activities - matches the main events page
@@ -424,6 +424,37 @@ export default function EventDetailPage() {
     const [applicationNote, setApplicationNote] = useState('');
     const [applicationStatus, setApplicationStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
 
+    // Form fields for volunteer application
+    const [formName, setFormName] = useState('');
+    const [formEmail, setFormEmail] = useState('');
+    const [formPhone, setFormPhone] = useState('');
+    const [formEmergencyContact, setFormEmergencyContact] = useState('');
+    const [formAvailability, setFormAvailability] = useState('');
+    const [autofillEnabled, setAutofillEnabled] = useState(false);
+
+    // Mock user profile data (in real app, this would come from session/API)
+    const MOCK_USER_PROFILE = {
+        name: 'Kim Hong Zhang',
+        email: 'kimhongzhang@example.com',
+        phone: '+65 9123 4567',
+    };
+
+    // Handle autofill toggle
+    const handleAutofillToggle = () => {
+        if (!autofillEnabled) {
+            // Fill in data from profile
+            setFormName(MOCK_USER_PROFILE.name);
+            setFormEmail(MOCK_USER_PROFILE.email);
+            setFormPhone(MOCK_USER_PROFILE.phone);
+        } else {
+            // Clear autofilled data
+            setFormName('');
+            setFormEmail('');
+            setFormPhone('');
+        }
+        setAutofillEnabled(!autofillEnabled);
+    };
+
     useEffect(() => {
         // In a real app, fetch from API
         const foundActivity = VOLUNTEER_ACTIVITIES.find((a: VolunteerActivity) => a._id === params.id);
@@ -568,7 +599,7 @@ export default function EventDetailPage() {
                             </div>
 
                             {/* Activity Summary */}
-                            <div className="bg-gray-50 rounded-2xl p-4 mb-6">
+                            <div className="bg-gray-50 rounded-2xl p-4 mb-4">
                                 <h3 className="font-semibold text-gray-900 mb-1">
                                     {activity.title} {activity.type}
                                 </h3>
@@ -577,40 +608,142 @@ export default function EventDetailPage() {
                                 </p>
                             </div>
 
-                            {/* Resume Info */}
-                            <div className="bg-green-50 rounded-2xl p-4 mb-6 flex items-start gap-3">
-                                <FileText size={20} className="text-green-600 mt-0.5" />
-                                <div>
-                                    <p className="font-medium text-gray-900">Your Volunteer Resume</p>
-                                    <p className="text-sm text-gray-600">Your skills and interests will be shared with the organizer.</p>
-                                    <Link
-                                        href="/profile/volunteer-resume"
-                                        className="text-sm text-green-600 font-medium hover:underline"
-                                    >
-                                        View/Edit Resume →
-                                    </Link>
+                            {/* Autofill Toggle */}
+                            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-2xl mb-4 border border-blue-100">
+                                <div className="flex items-center gap-3">
+                                    <ToggleRight size={20} className="text-blue-600" />
+                                    <div>
+                                        <p className="font-medium text-gray-900 text-sm">Autofill from Profile</p>
+                                        <p className="text-xs text-gray-500">Use your saved profile information</p>
+                                    </div>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={handleAutofillToggle}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autofillEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                >
+                                    <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${autofillEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                                    />
+                                </button>
                             </div>
 
-                            {/* Application Note */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Why do you want to volunteer? (Optional)
-                                </label>
-                                <textarea
-                                    value={applicationNote}
-                                    onChange={(e) => setApplicationNote(e.target.value)}
-                                    rows={3}
-                                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all resize-none"
-                                    placeholder="Tell the organizer why you're interested..."
-                                />
+                            {/* Form Fields - Scrollable */}
+                            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                                {/* Full Name */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+                                        <User size={14} />
+                                        Full Name <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formName}
+                                        onChange={(e) => setFormName(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all text-sm"
+                                        placeholder="Enter your full name"
+                                    />
+                                </div>
+
+                                {/* Email */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+                                        <Mail size={14} />
+                                        Email Address <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={formEmail}
+                                        onChange={(e) => setFormEmail(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all text-sm"
+                                        placeholder="Enter your email"
+                                    />
+                                </div>
+
+                                {/* Phone */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+                                        <Phone size={14} />
+                                        Phone Number <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={formPhone}
+                                        onChange={(e) => setFormPhone(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all text-sm"
+                                        placeholder="Enter your phone number"
+                                    />
+                                </div>
+
+                                {/* Emergency Contact */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+                                        <Phone size={14} />
+                                        Emergency Contact <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={formEmergencyContact}
+                                        onChange={(e) => setFormEmergencyContact(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all text-sm"
+                                        placeholder="Emergency contact number"
+                                    />
+                                </div>
+
+                                {/* Availability */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+                                        <Calendar size={14} />
+                                        Availability for this activity <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        value={formAvailability}
+                                        onChange={(e) => setFormAvailability(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all text-sm"
+                                    >
+                                        <option value="">Select your availability</option>
+                                        <option value="all">All scheduled sessions</option>
+                                        <option value="most">Most scheduled sessions</option>
+                                        <option value="some">Some sessions (please specify)</option>
+                                        <option value="trial">Trial session first</option>
+                                    </select>
+                                </div>
+
+                                {/* Why volunteer */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Why do you want to volunteer? <span className="text-gray-400 font-normal">(Optional)</span>
+                                    </label>
+                                    <textarea
+                                        value={applicationNote}
+                                        onChange={(e) => setApplicationNote(e.target.value)}
+                                        rows={3}
+                                        className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all resize-none text-sm"
+                                        placeholder="Tell the organizer why you're interested..."
+                                    />
+                                </div>
+
+                                {/* Resume Info */}
+                                <div className="bg-green-50 rounded-xl p-3 flex items-start gap-3 border border-green-100">
+                                    <FileText size={18} className="text-green-600 mt-0.5" />
+                                    <div>
+                                        <p className="font-medium text-gray-900 text-sm">Your Volunteer Resume</p>
+                                        <p className="text-xs text-gray-600">Your skills and interests will be shared with the organizer.</p>
+                                        <Link
+                                            href="/profile/volunteer-resume"
+                                            className="text-xs text-green-600 font-medium hover:underline"
+                                        >
+                                            View/Edit Resume →
+                                        </Link>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Submit Button */}
                             <button
                                 onClick={handleSubmitApplication}
-                                disabled={isSubmitting}
-                                className="w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                disabled={isSubmitting || !formName || !formEmail || !formPhone || !formEmergencyContact || !formAvailability}
+                                className="w-full py-3 mt-4 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSubmitting ? (
                                     <>
@@ -625,7 +758,7 @@ export default function EventDetailPage() {
                                 )}
                             </button>
 
-                            <p className="text-xs text-gray-500 text-center mt-4">
+                            <p className="text-xs text-gray-500 text-center mt-3">
                                 The organizer will review your application and notify you via email.
                             </p>
                         </motion.div>
