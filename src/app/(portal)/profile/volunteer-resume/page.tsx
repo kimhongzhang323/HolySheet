@@ -57,6 +57,16 @@ interface VolunteerEvent {
     };
 }
 
+// Portfolio item interface
+interface PortfolioItem {
+    id: string;
+    title: string;
+    description?: string;
+    type: 'link' | 'pdf' | 'image';
+    url: string; // URL or File URL
+    fileName?: string; // For files
+}
+
 // Mock past volunteer events (would come from API)
 const INITIAL_VOLUNTEER_EVENTS: VolunteerEvent[] = [
     {
@@ -105,6 +115,23 @@ const INITIAL_RESUME = {
     skills: ['communication', 'teamwork', 'teaching'],
     interests: ['environment', 'education', 'community'],
     availability: 'weekends',
+    portfolio: [
+        {
+            id: 'p1',
+            title: 'Community Center Rebrand',
+            description: 'Full branding package for local community center.',
+            type: 'image',
+            url: 'https://images.unsplash.com/photo-1572044162444-ad60f128bde2?w=800&q=80',
+            fileName: 'branding_preview.jpg'
+        },
+        {
+            id: 'p2',
+            title: 'Volunteer Match Dashboard',
+            description: 'UI/UX design for a non-profit dashboard.',
+            type: 'link',
+            url: 'https://behance.net/portfolio/vmatch',
+        }
+    ]
 };
 
 export default function VolunteerResumePage() {
@@ -122,6 +149,18 @@ export default function VolunteerResumePage() {
     const [volunteerEvents, setVolunteerEvents] = useState<VolunteerEvent[]>(INITIAL_VOLUNTEER_EVENTS);
     const [showEventModal, setShowEventModal] = useState(false);
     const [editingEvent, setEditingEvent] = useState<VolunteerEvent | null>(null);
+
+    // Portfolio state
+    const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(INITIAL_RESUME.portfolio as PortfolioItem[]);
+    const [showPortfolioModal, setShowPortfolioModal] = useState(false);
+    const [editingPortfolio, setEditingPortfolio] = useState<PortfolioItem | null>(null);
+
+    // Portfolio modal state
+    const [portfolioTitle, setPortfolioTitle] = useState('');
+    const [portfolioDescription, setPortfolioDescription] = useState('');
+    const [portfolioType, setPortfolioType] = useState<'link' | 'pdf' | 'image'>('link');
+    const [portfolioUrl, setPortfolioUrl] = useState('');
+    const [portfolioFile, setPortfolioFile] = useState<{ fileName: string; fileType: 'pdf' | 'image'; fileUrl: string } | null>(null);
 
     // Modal form state
     const [eventTitle, setEventTitle] = useState('');
@@ -285,6 +324,86 @@ export default function VolunteerResumePage() {
         }
 
         setShowEventModal(false);
+    };
+
+    // Portfolio Handlers
+    const handlePortfolioFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const fileType = file.type.startsWith('image/') ? 'image' : 'pdf';
+        const fileUrl = URL.createObjectURL(file);
+
+        setPortfolioFile({
+            fileName: file.name,
+            fileType: fileType as 'pdf' | 'image',
+            fileUrl
+        });
+        setPortfolioUrl(fileUrl);
+    };
+
+    const handleAddPortfolio = () => {
+        setEditingPortfolio(null);
+        setPortfolioTitle('');
+        setPortfolioDescription('');
+        setPortfolioType('link');
+        setPortfolioUrl('');
+        setPortfolioFile(null);
+        setShowPortfolioModal(true);
+    };
+
+    const handleEditPortfolio = (item: PortfolioItem) => {
+        setEditingPortfolio(item);
+        setPortfolioTitle(item.title);
+        setPortfolioDescription(item.description || '');
+        setPortfolioType(item.type);
+        setPortfolioUrl(item.url);
+        if (item.type !== 'link') {
+            setPortfolioFile({
+                fileName: item.fileName || 'file',
+                fileType: item.type as 'pdf' | 'image',
+                fileUrl: item.url
+            });
+        } else {
+            setPortfolioFile(null);
+        }
+        setShowPortfolioModal(true);
+    };
+
+    const handleDeletePortfolio = (id: string) => {
+        setPortfolioItems(prev => prev.filter(item => item.id !== id));
+    };
+
+    const handleSavePortfolio = () => {
+        if (!portfolioTitle) return;
+
+        if (editingPortfolio) {
+            setPortfolioItems(prev =>
+                prev.map(item =>
+                    item.id === editingPortfolio.id
+                        ? {
+                            ...item,
+                            title: portfolioTitle,
+                            description: portfolioDescription,
+                            type: portfolioType,
+                            url: portfolioUrl,
+                            fileName: portfolioFile?.fileName
+                        }
+                        : item
+                )
+            );
+        } else {
+            const newItem: PortfolioItem = {
+                id: Date.now().toString(),
+                title: portfolioTitle,
+                description: portfolioDescription,
+                type: portfolioType,
+                url: portfolioUrl,
+                fileName: portfolioFile?.fileName
+            };
+            setPortfolioItems(prev => [newItem, ...prev]);
+        }
+        setShowPortfolioModal(false);
     };
 
     const totalHours = volunteerEvents.reduce((sum: number, e: VolunteerEvent) => sum + e.hours, 0);
@@ -513,6 +632,161 @@ export default function VolunteerResumePage() {
                                     className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {editingEvent ? 'Save Changes' : 'Add Experience'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* Add/Edit Portfolio Modal */}
+                {showPortfolioModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowPortfolioModal(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    {editingPortfolio ? 'Edit Portfolio Item' : 'Add Portfolio Item'}
+                                </h2>
+                                <button
+                                    onClick={() => setShowPortfolioModal(false)}
+                                    className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                                >
+                                    <X size={20} className="text-gray-500" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Title *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={portfolioTitle}
+                                        onChange={(e) => setPortfolioTitle(e.target.value)}
+                                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all"
+                                        placeholder="e.g., Graphic Design Samples"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Description <span className="text-gray-400 font-normal">(optional)</span>
+                                    </label>
+                                    <textarea
+                                        value={portfolioDescription}
+                                        onChange={(e) => setPortfolioDescription(e.target.value)}
+                                        rows={2}
+                                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all resize-none"
+                                        placeholder="Briefly describe what this represents..."
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Item Type
+                                    </label>
+                                    <div className="flex bg-gray-100 rounded-xl p-1">
+                                        {[
+                                            { id: 'link', label: '🔗 Link' },
+                                            { id: 'image', label: '🖼️ Image' },
+                                            { id: 'pdf', label: '📄 PDF' }
+                                        ].map((t) => (
+                                            <button
+                                                key={t.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setPortfolioType(t.id as any);
+                                                    if (t.id === 'link') setPortfolioFile(null);
+                                                }}
+                                                className={`flex-1 py-2 px-2 rounded-lg text-sm font-medium transition-all ${portfolioType === t.id
+                                                    ? 'bg-white text-gray-900 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                                    }`}
+                                            >
+                                                {t.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {portfolioType === 'link' ? (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Portfolio URL *
+                                        </label>
+                                        <input
+                                            type="url"
+                                            value={portfolioUrl}
+                                            onChange={(e) => setPortfolioUrl(e.target.value)}
+                                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-green-400 focus:bg-white transition-all"
+                                            placeholder="https://behance.net/..."
+                                        />
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Upload {portfolioType.toUpperCase()} *
+                                        </label>
+                                        {portfolioFile ? (
+                                            <div className="flex items-center gap-3 p-3 bg-green-50 border-2 border-green-200 rounded-xl">
+                                                {portfolioFile.fileType === 'image' ? (
+                                                    <Image size={20} className="text-green-600" />
+                                                ) : (
+                                                    <FileText size={20} className="text-green-600" />
+                                                )}
+                                                <span className="flex-1 text-sm text-gray-700 truncate">{portfolioFile.fileName}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setPortfolioFile(null);
+                                                        setPortfolioUrl('');
+                                                    }}
+                                                    className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <label className="flex flex-col items-center justify-center gap-2 p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-100 hover:border-gray-400 transition-all">
+                                                <Upload size={24} className="text-gray-400" />
+                                                <span className="text-sm text-gray-500">Select Portfolio {portfolioType.toUpperCase()}</span>
+                                                <input
+                                                    type="file"
+                                                    accept={portfolioType === 'image' ? "image/*" : ".pdf"}
+                                                    onChange={handlePortfolioFileUpload}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex gap-3 mt-8">
+                                <button
+                                    onClick={() => setShowPortfolioModal(false)}
+                                    className="flex-1 py-3 text-gray-600 font-medium rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSavePortfolio}
+                                    disabled={!portfolioTitle || (portfolioType === 'link' ? !portfolioUrl : !portfolioFile)}
+                                    className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {editingPortfolio ? 'Save Changes' : 'Add to Portfolio'}
                                 </button>
                             </div>
                         </motion.div>
@@ -774,6 +1048,85 @@ export default function VolunteerResumePage() {
                         })}
                     </div>
                 </div>
+            </motion.div>
+
+            {/* Portfolio */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.28 }}
+                className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm"
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-900">Portfolio & Work Samples</h2>
+                        <p className="text-sm text-gray-500">Showcase your skills through links or files</p>
+                    </div>
+                    <button
+                        onClick={handleAddPortfolio}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
+                    >
+                        <Plus size={16} />
+                        Add Item
+                    </button>
+                </div>
+
+                {portfolioItems.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {portfolioItems.map((item) => (
+                            <div
+                                key={item.id}
+                                className="group relative flex flex-col p-4 border border-gray-100 rounded-2xl bg-gray-50 hover:bg-white hover:border-blue-200 transition-all shadow-sm hover:shadow-md"
+                            >
+                                <div className="flex items-start justify-between mb-2">
+                                    <div className={`p-2 rounded-lg ${item.type === 'link' ? 'bg-indigo-100 text-indigo-600' :
+                                        item.type === 'image' ? 'bg-green-100 text-green-600' :
+                                            'bg-blue-100 text-blue-600'
+                                        }`}>
+                                        {item.type === 'link' ? <Palette size={18} /> :
+                                            item.type === 'image' ? <Image size={18} /> :
+                                                <FileText size={18} />}
+                                    </div>
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={() => handleEditPortfolio(item)}
+                                            className="p-1.5 text-gray-400 hover:text-blue-600 bg-white rounded-lg border border-gray-100 shadow-sm"
+                                        >
+                                            <Pencil size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeletePortfolio(item.id)}
+                                            className="p-1.5 text-gray-400 hover:text-red-600 bg-white rounded-lg border border-gray-100 shadow-sm"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-gray-900 truncate mb-1">{item.title}</h3>
+                                    {item.description && (
+                                        <p className="text-xs text-gray-500 mb-3 line-clamp-2">{item.description}</p>
+                                    )}
+                                </div>
+
+                                <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-2 inline-flex items-center justify-center w-full py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors gap-1.5"
+                                >
+                                    {item.type === 'link' ? 'Visit Link ↗' : `View ${item.type.toUpperCase()}`}
+                                </a>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-100 rounded-2xl">
+                        <Palette size={32} className="mx-auto mb-2 opacity-20" />
+                        <p className="text-sm">No portfolio items yet</p>
+                    </div>
+                )}
             </motion.div>
 
             {/* Past Volunteer Experience */}

@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     MapPin, ArrowLeft, Calendar, Clock, Users, Share2, Heart, CheckCircle,
-    X, AlertCircle, FileText, Send, Phone, Mail, User, ToggleRight
+    X, AlertCircle, FileText, Send, Phone, Mail, User, ToggleRight,
+    Upload, Image
 } from 'lucide-react';
 
 // Volunteer Activities - matches the main events page
@@ -231,6 +232,7 @@ const VOLUNTEER_ACTIVITIES = [
         spotsLeft: 3,
         image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=600&fit=crop',
         requirements: ['Proficiency in design software', 'Portfolio required', 'Responsive communication'],
+        requiresPortfolio: true,
     },
     {
         _id: 'VOL007',
@@ -266,6 +268,7 @@ const VOLUNTEER_ACTIVITIES = [
         spotsLeft: 4,
         image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&h=600&fit=crop',
         requirements: ['Own camera equipment', 'Event photography experience', 'Comfortable working with PWIDs'],
+        requiresPortfolio: true,
     },
     {
         _id: 'VOL008',
@@ -301,6 +304,7 @@ const VOLUNTEER_ACTIVITIES = [
         spotsLeft: 2,
         image: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&h=600&fit=crop',
         requirements: ['Video editing software proficiency', 'Showreel required', 'Meet project deadlines'],
+        requiresPortfolio: true,
     },
     {
         _id: 'VOL009',
@@ -411,6 +415,7 @@ interface VolunteerActivity {
     spotsLeft?: number;
     image: string;
     requirements?: string[];
+    requiresPortfolio?: boolean;
 }
 
 export default function EventDetailPage() {
@@ -431,12 +436,46 @@ export default function EventDetailPage() {
     const [formEmergencyContact, setFormEmergencyContact] = useState('');
     const [formAvailability, setFormAvailability] = useState('');
     const [autofillEnabled, setAutofillEnabled] = useState(false);
+    const [portfolioFile, setPortfolioFile] = useState<{ fileName: string; fileType: 'pdf' | 'image'; fileUrl: string } | null>(null);
+    const [showPortfolioPicker, setShowPortfolioPicker] = useState(false);
+
+    // Handle portfolio upload
+    const handlePortfolioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // In a real app, this would upload to S3/Firebase Storage
+            setPortfolioFile({
+                fileName: file.name,
+                fileType: file.type.includes('pdf') ? 'pdf' : 'image',
+                fileUrl: URL.createObjectURL(file)
+            });
+        }
+    };
 
     // Mock user profile data (in real app, this would come from session/API)
     const MOCK_USER_PROFILE = {
         name: 'Kim Hong Zhang',
         email: 'kimhongzhang@example.com',
         phone: '+65 9123 4567',
+    };
+
+    const MOCK_USER_RESUME = {
+        portfolio: [
+            {
+                id: 'p1',
+                title: 'Community Center Rebrand',
+                type: 'image',
+                url: 'https://images.unsplash.com/photo-1572044162444-ad60f128bde2?w=800&q=80',
+                fileName: 'branding_preview.jpg'
+            },
+            {
+                id: 'p2',
+                title: 'Graphics Design Showcase',
+                type: 'pdf',
+                url: '#',
+                fileName: 'portfolio_2025.pdf'
+            }
+        ]
     };
 
     // Handle autofill toggle
@@ -484,6 +523,8 @@ export default function EventDetailPage() {
             router.push('/profile/volunteer-resume');
             return;
         }
+        setPortfolioFile(null);
+        setShowPortfolioPicker(false);
         setShowApplicationModal(true);
     };
 
@@ -709,6 +750,93 @@ export default function EventDetailPage() {
                                     </select>
                                 </div>
 
+                                {/* Portfolio Submission (Conditional) */}
+                                {activity.requiresPortfolio && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                                <Upload size={14} />
+                                                Portfolio Submission <span className="text-red-500">*</span>
+                                            </label>
+                                            {!portfolioFile && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPortfolioPicker(!showPortfolioPicker)}
+                                                    className="text-xs font-semibold text-green-600 hover:text-green-700 underline decoration-green-200 underline-offset-4"
+                                                >
+                                                    {showPortfolioPicker ? 'Cancel' : 'Select from Resume'}
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="relative group">
+                                            {!portfolioFile ? (
+                                                showPortfolioPicker ? (
+                                                    <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-3 space-y-2">
+                                                        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">Your saved items</p>
+                                                        {MOCK_USER_RESUME.portfolio.map((item) => (
+                                                            <button
+                                                                key={item.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setPortfolioFile({
+                                                                        fileName: item.fileName,
+                                                                        fileType: item.type as 'pdf' | 'image',
+                                                                        fileUrl: item.url
+                                                                    });
+                                                                    setShowPortfolioPicker(false);
+                                                                }}
+                                                                className="w-full flex items-center justify-between p-2.5 bg-white border border-gray-100 rounded-lg text-left hover:border-green-400 hover:shadow-sm transition-all group/item"
+                                                            >
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    {item.type === 'pdf' ? <FileText size={16} className="text-blue-500" /> : <Image size={16} className="text-green-500" />}
+                                                                    <span className="text-sm font-medium text-gray-700 truncate">{item.title}</span>
+                                                                </div>
+                                                                <span className="text-[10px] bg-gray-50 text-gray-400 px-1.5 py-0.5 rounded group-hover/item:bg-green-50 group-hover/item:text-green-600 uppercase font-bold">Select</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center gap-2 bg-gray-50 group-hover:bg-white group-hover:border-green-400 transition-all cursor-pointer">
+                                                        <div className="p-3 bg-white rounded-full shadow-sm">
+                                                            <Upload size={20} className="text-gray-400 group-hover:text-green-500 transition-colors" />
+                                                        </div>
+                                                        <div className="text-center text-xs text-gray-500">
+                                                            <p className="font-medium text-gray-700">Click to upload portfolio</p>
+                                                            <p>PDF or Image files accepted</p>
+                                                        </div>
+                                                        <input
+                                                            type="file"
+                                                            onChange={handlePortfolioUpload}
+                                                            accept="image/*,.pdf"
+                                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                                        />
+                                                    </div>
+                                                )
+                                            ) : (
+                                                <div className="flex items-center justify-between p-4 bg-gray-50 border-2 border-green-200 rounded-xl">
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className="flex-shrink-0 p-2 bg-white rounded-lg">
+                                                            {portfolioFile.fileType === 'pdf' ? <FileText size={20} className="text-blue-500" /> : <Image size={20} className="text-green-500" />}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-medium text-gray-900 truncate">{portfolioFile.fileName}</p>
+                                                            <p className="text-xs text-gray-500 uppercase">{portfolioFile.fileType}</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPortfolioFile(null)}
+                                                        className="p-1.5 hover:bg-white hover:text-red-500 rounded-lg transition-all text-gray-400"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Why volunteer */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -742,7 +870,15 @@ export default function EventDetailPage() {
                             {/* Submit Button */}
                             <button
                                 onClick={handleSubmitApplication}
-                                disabled={isSubmitting || !formName || !formEmail || !formPhone || !formEmergencyContact || !formAvailability}
+                                disabled={
+                                    isSubmitting ||
+                                    !formName ||
+                                    !formEmail ||
+                                    !formPhone ||
+                                    !formEmergencyContact ||
+                                    !formAvailability ||
+                                    (activity.requiresPortfolio && !portfolioFile)
+                                }
                                 className="w-full py-3 mt-4 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSubmitting ? (
