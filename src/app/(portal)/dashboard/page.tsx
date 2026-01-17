@@ -299,15 +299,18 @@ export default function PortalPage() {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {activities.slice(0, 2).map((activity, i) => (
-                                    <ActivityCard
-                                        key={activity.id}
-                                        activity={{
-                                            ...activity,
-                                            matchReason: i === 0 ? "98% Match - Design" : "92% Match - Local"
-                                        }}
-                                    />
-                                ))}
+                                {activities
+                                    .filter(act => !(act as any).isEnrolled)
+                                    .slice(0, 2)
+                                    .map((activity, i) => (
+                                        <ActivityCard
+                                            key={activity.id}
+                                            activity={{
+                                                ...activity,
+                                                matchReason: i === 0 ? "98% Match - Design" : "92% Match - Local"
+                                            }}
+                                        />
+                                    ))}
                                 {activities.length === 0 && (
                                     <div className="col-span-full py-16 text-center text-gray-400 bg-gray-50 border-2 border-dashed border-gray-100 rounded-[30px]">
                                         <Sparkles className="mx-auto mb-3 opacity-20" size={32} />
@@ -471,11 +474,13 @@ export default function PortalPage() {
                                 </div>
 
                                 <InfiniteMenu
-                                    items={activities.map(act => ({
-                                        link: '#',
-                                        title: act.title,
-                                        image: act.image_url || (act as any).image || 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=400&fit=crop'
-                                    }))}
+                                    items={activities
+                                        .filter(act => !(act as any).isEnrolled)
+                                        .map(act => ({
+                                            link: '#',
+                                            title: act.title,
+                                            image: act.image_url || (act as any).image || 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=400&fit=crop'
+                                        }))}
                                 />
 
                                 <div className="mt-8 pt-4 border-t border-gray-50 flex justify-between items-center">
