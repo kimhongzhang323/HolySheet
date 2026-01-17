@@ -44,7 +44,7 @@ const MOCK_EVENT_HISTORY = [
         checkOut: '17:15',
         category: 'volunteer',
         type: 'Environment',
-        image: 'https://images.unsplash.com/photo-1618477461853-5f8dd68aa272?w=800&q=80',
+        image: 'https://images.unsplash.com/photo-1621451537084-482c73073a0f?w=800&q=80',
     },
     {
         id: '2',
@@ -125,21 +125,37 @@ export default function ProfilePage() {
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 6;
+    const totalPages = Math.max(1, Math.ceil(MOCK_EVENT_HISTORY.length / ITEMS_PER_PAGE));
+    const paginatedHistory = MOCK_EVENT_HISTORY.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     useEffect(() => {
         const fetchProfile = async () => {
-            if (session?.user) {
-                try {
-                    const res = await fetch('http://localhost:8000/user/profile', {});
-                } catch (e) {
-                    // ignore
-                }
-
+            // Load from localStorage
+            const savedData = localStorage.getItem('user_profile');
+            if (savedData) {
+                const parsed = JSON.parse(savedData);
+                setProfile(prev => ({
+                    ...prev,
+                    ...parsed
+                }));
+            } else if (session?.user) {
                 setProfile(prev => ({
                     ...prev,
                     name: session.user?.name || prev.name,
                     email: session.user?.email || prev.email,
                     avatar: session.user?.image || prev.avatar,
                 }));
+            }
+
+            if (session?.user) {
+                try {
+                    const res = await fetch('http://localhost:8000/user/profile', {});
+                } catch (e) {
+                    // ignore
+                }
             }
         };
         fetchProfile();
@@ -468,7 +484,7 @@ export default function ProfilePage() {
 
                                 {/* History Grid */}
                                 <div className={`grid gap-4 ${isHistoryOpen ? '' : 'hidden md:grid'} ${historyView === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                                    {MOCK_EVENT_HISTORY.map((event) => (
+                                    {paginatedHistory.map((event) => (
                                         <div
                                             key={event.id}
                                             className="relative bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all group flex flex-col h-full border border-gray-100"
@@ -542,18 +558,22 @@ export default function ProfilePage() {
                                 </div>
 
                                 {/* Pagination */}
-                                <div className={`flex justify-center items-center gap-2 mt-8 ${isHistoryOpen ? '' : 'hidden md:flex'}`}>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-900 text-white text-sm font-bold shadow-sm">1</button>
-                                    {[2, 3, 4].map(page => (
-                                        <button key={page} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">
-                                            {page}
-                                        </button>
-                                    ))}
-                                    <span className="text-gray-400 text-xs">...</span>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">8</button>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">9</button>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">10</button>
-                                </div>
+                                {totalPages > 0 && (
+                                    <div className={`flex justify-center items-center gap-2 mt-8 ${isHistoryOpen ? '' : 'hidden md:flex'}`}>
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                            <button
+                                                key={page}
+                                                onClick={() => setCurrentPage(page)}
+                                                className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-all shadow-sm ${currentPage === page
+                                                    ? 'bg-gray-900 text-white'
+                                                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 
