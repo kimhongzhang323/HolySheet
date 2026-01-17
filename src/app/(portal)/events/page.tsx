@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, X, ArrowUpRight, QrCode, Users, Heart, Sparkles, SlidersHorizontal, ChevronDown, Building2, Palette, Clock } from 'lucide-react';
+import { Search, MapPin, X, ArrowUpRight, QrCode, Users, Heart, Sparkles, SlidersHorizontal, ChevronDown, Building2, Palette, Clock, CheckCircle2 } from 'lucide-react';
+import QRCodeSVG from 'react-qr-code';
 
 // Volunteer Category definitions
 const CATEGORIES = [
@@ -303,6 +304,21 @@ export default function EventsPage() {
     const [selectedActivityType, setSelectedActivityType] = useState('All Types');
     const [selectedLocation, setSelectedLocation] = useState('All Locations');
     const [selectedEngagement, setSelectedEngagement] = useState('All Engagements');
+    const [showQRModal, setShowQRModal] = useState(false);
+    const [qrEventData, setQrEventData] = useState<VolunteerActivity | null>(null);
+
+    // Events user has enrolled in (Care Circle VOL001)
+    const enrolledEventIds = ['VOL001'];
+
+    // Check if user is enrolled in an event
+    const isEnrolled = (eventId: string) => enrolledEventIds.includes(eventId);
+
+    // Handle QR code click for enrolled events
+    const handleQRClick = (activity: VolunteerActivity, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setQrEventData(activity);
+        setShowQRModal(true);
+    };
 
     // Map engagement frequency to display label
     const getEngagementLabel = (frequency: string) => {
@@ -614,14 +630,31 @@ export default function EventsPage() {
                                 </div>
                             </div>
 
-                            {/* Right: QR Code */}
-                            <div className="w-20 md:w-24 shrink-0 border-l border-dashed border-gray-200 flex flex-col items-center justify-center p-3 bg-gray-50/50">
-                                <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-lg border border-gray-200 flex items-center justify-center shadow-sm">
-                                    <QrCode className="w-8 h-8 md:w-10 md:h-10 text-gray-700" />
-                                </div>
-                                <span className="text-[10px] text-gray-400 mt-2 text-center">
-                                    Join
-                                </span>
+                            {/* Right: QR Code / Join */}
+                            <div
+                                className={`w-20 md:w-24 shrink-0 border-l border-dashed border-gray-200 flex flex-col items-center justify-center p-3 ${isEnrolled(activity._id) ? 'bg-emerald-50/50 cursor-pointer hover:bg-emerald-100/50 transition-colors' : 'bg-gray-50/50'}`}
+                                onClick={isEnrolled(activity._id) ? (e) => handleQRClick(activity, e) : undefined}
+                            >
+                                {isEnrolled(activity._id) ? (
+                                    <>
+                                        <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-lg border-2 border-emerald-200 flex items-center justify-center shadow-sm">
+                                            <QrCode className="w-8 h-8 md:w-10 md:h-10 text-emerald-600" />
+                                        </div>
+                                        <span className="text-[10px] text-emerald-600 mt-2 text-center font-semibold flex items-center gap-0.5">
+                                            <CheckCircle2 size={10} />
+                                            Enrolled
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-lg border border-gray-200 flex items-center justify-center shadow-sm">
+                                            <QrCode className="w-8 h-8 md:w-10 md:h-10 text-gray-700" />
+                                        </div>
+                                        <span className="text-[10px] text-gray-400 mt-2 text-center">
+                                            Join
+                                        </span>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </motion.div>
@@ -815,18 +848,122 @@ export default function EventsPage() {
                                 </motion.div>
 
                                 {/* CTA Button */}
-                                <motion.button
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.6 }}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => router.push(`/events/${selectedActivity._id}`)}
-                                    className="w-full lg:w-auto px-8 py-4 font-bold tracking-wider rounded-full transition-colors flex items-center justify-center gap-3 bg-green-600 text-white hover:bg-green-700"
-                                >
-                                    VOLUNTEER NOW
-                                    <ArrowUpRight size={20} />
-                                </motion.button>
+                                {isEnrolled(selectedActivity._id) ? (
+                                    <motion.button
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.6 }}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => {
+                                            setSelectedActivity(null);
+                                            setQrEventData(selectedActivity);
+                                            setShowQRModal(true);
+                                        }}
+                                        className="w-full lg:w-auto px-8 py-4 font-bold tracking-wider rounded-full transition-colors flex items-center justify-center gap-3 bg-emerald-500 text-white hover:bg-emerald-600"
+                                    >
+                                        <CheckCircle2 size={20} />
+                                        ALREADY ENROLLED - SHOW QR
+                                    </motion.button>
+                                ) : (
+                                    <motion.button
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.6 }}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => router.push(`/events/${selectedActivity._id}`)}
+                                        className="w-full lg:w-auto px-8 py-4 font-bold tracking-wider rounded-full transition-colors flex items-center justify-center gap-3 bg-green-600 text-white hover:bg-green-700"
+                                    >
+                                        <Heart size={20} />
+                                        APPLY TO VOLUNTEER
+                                        <ArrowUpRight size={20} />
+                                    </motion.button>
+                                )}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* QR Code Attendance Modal */}
+            <AnimatePresence>
+                {showQRModal && qrEventData && (
+                    <>
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowQRModal(false)}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                        />
+
+                        {/* Modal */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden">
+                                {/* Modal Header */}
+                                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-6 text-white relative">
+                                    <button
+                                        onClick={() => setShowQRModal(false)}
+                                        className="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <CheckCircle2 size={18} />
+                                        <span className="text-sm font-medium opacity-90">You&apos;re Enrolled!</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold">Attendance QR Code</h3>
+                                    <p className="text-white/80 text-sm mt-1">Show this to the admin for check-in</p>
+                                </div>
+
+                                {/* QR Code */}
+                                <div className="p-8 flex flex-col items-center">
+                                    <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-100">
+                                        <QRCodeSVG
+                                            value={JSON.stringify({
+                                                eventId: qrEventData._id,
+                                                eventName: qrEventData.title,
+                                                location: qrEventData.location,
+                                                date: `${qrEventData.date} ${qrEventData.month} ${qrEventData.year}`,
+                                                time: `${qrEventData.start_time} - ${qrEventData.end_time}`,
+                                                timestamp: Date.now()
+                                            })}
+                                            size={200}
+                                            level="H"
+                                        />
+                                    </div>
+
+                                    {/* Event Details */}
+                                    <div className="mt-6 text-center">
+                                        <h4 className="font-bold text-gray-900 text-lg">{qrEventData.title}</h4>
+                                        <p className="text-gray-500 text-sm flex items-center justify-center gap-1 mt-1">
+                                            <MapPin size={12} />
+                                            {qrEventData.location}
+                                        </p>
+                                        <div className="flex items-center justify-center gap-4 mt-3 text-sm text-gray-600">
+                                            <span className="flex items-center gap-1">
+                                                <Clock size={14} className="text-emerald-500" />
+                                                {qrEventData.date} {qrEventData.month}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <Clock size={14} className="text-blue-500" />
+                                                {qrEventData.start_time} - {qrEventData.end_time}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* ID */}
+                                    <div className="mt-6 px-4 py-2 bg-emerald-50 rounded-full">
+                                        <span className="text-xs text-emerald-600 font-medium">✓ Enrolled & Ready for Check-in</span>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </>
