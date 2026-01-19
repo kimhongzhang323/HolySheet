@@ -10,7 +10,7 @@ import DatyAssistant from '@/components/DatyAssistant';
 import { MOCK_TICKETS, CALENDAR_DAYS, VOLUNTEER_ACTIVITIES } from '@/lib/mockData';
 import { Sparkles, ChevronLeft, ChevronRight, User, Heart, Shield, GraduationCap, Leaf, Coffee, Briefcase, Info, X } from 'lucide-react';
 import ImpactHeader from '@/components/ImpactHeader';
-import InfiniteMenu from '@/components/InfiniteMenu';
+import Link from 'next/link';
 
 interface Activity {
     id: string;
@@ -28,7 +28,6 @@ export default function PortalPage() {
     const { data: session } = useSession();
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showMatchmaker, setShowMatchmaker] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedCauses, setSelectedCauses] = useState<string[]>(['Environment', 'Community', 'Education']);
     const [originalCauses, setOriginalCauses] = useState<string[]>(['Environment', 'Community', 'Education']);
@@ -281,13 +280,13 @@ export default function PortalPage() {
                                 </p>
                             </div>
                             <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => setShowMatchmaker(true)}
+                                <Link
+                                    href="/explore"
                                     className="group flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 text-purple-700 border border-purple-100 hover:border-purple-200 transition-all text-sm font-semibold shadow-sm hover:shadow-md"
                                 >
                                     <Sparkles size={16} className="text-purple-500 group-hover:rotate-12 transition-transform" />
-                                    Not sure? Explore All
-                                </button>
+                                    Explore 3D Menu
+                                </Link>
                             </div>
                         </div>
 
@@ -441,56 +440,6 @@ export default function PortalPage() {
             </div>
             {/* Floating Assistant */}
             <DatyAssistant />
-
-            {/* Matchmaker Discovery Modal */}
-            <AnimatePresence>
-                {showMatchmaker && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowMatchmaker(false)}
-                            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl overflow-hidden border border-gray-100"
-                        >
-                            <div className="p-8 pb-4">
-                                <div className="flex justify-between items-center mb-6">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-gray-900 leading-tight">Explore Missions</h2>
-                                        <p className="text-sm text-gray-500">Discover all available volunteer opportunities.</p>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowMatchmaker(false)}
-                                        className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors"
-                                    >
-                                        <X size={20} />
-                                    </button>
-                                </div>
-
-                                <InfiniteMenu
-                                    items={activities
-                                        .filter(act => !(act as any).isEnrolled)
-                                        .map(act => ({
-                                            link: '#',
-                                            title: act.title,
-                                            image: act.image_url || (act as any).image || 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=400&fit=crop'
-                                        }))}
-                                />
-
-                                <div className="mt-8 pt-4 border-t border-gray-50 flex justify-between items-center">
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center flex-1">Scroll to explore • Click to select</p>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }
