@@ -1,12 +1,15 @@
+
 'use client';
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Calendar, MapPin, Users, Clock, ArrowLeft, CheckCircle2, XCircle, User, Loader2, Mail, Network, Type, Sparkles, Edit2 } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, ArrowLeft, CheckCircle2, XCircle, User, Loader2, Mail, Network, Type, Sparkles, Edit2, ArrowUpDown, Megaphone } from 'lucide-react';
 import Link from 'next/link';
 import AIResponseAnalysis from '@/components/admin/AIResponseAnalysis';
 import EditEventDialog from '@/components/admin/EditEventDialog';
+import BroadcastDialog from '@/components/admin/BroadcastDialog';
+
 
 interface Activity {
     id: string;
@@ -66,6 +69,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const [analysisData, setAnalysisData] = useState<any>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
+    const [broadcastQR, setBroadcastQR] = useState<string | null>(null);
+
+    // Sorting State
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Volunteer | 'user', direction: 'asc' | 'desc' }>({ key: 'applied_at', direction: 'desc' });
 
     useEffect(() => {
         if (session?.accessToken && id) {
@@ -98,6 +106,29 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             setLoading(false);
         }
     };
+
+    const handleSort = (key: keyof Volunteer | 'user') => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedVolunteers = [...volunteers].sort((a, b) => {
+        const { key, direction } = sortConfig;
+        let valA: any = a[key as keyof Volunteer];
+        let valB: any = b[key as keyof Volunteer];
+
+        if (key === 'user') {
+            valA = a.name;
+            valB = b.name;
+        }
+
+        if (valA < valB) return direction === 'asc' ? -1 : 1;
+        if (valA > valB) return direction === 'asc' ? 1 : -1;
+        return 0;
+    });
 
     const handleGenerateAIForm = async () => {
         if (!activity) return;
@@ -196,6 +227,40 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         }
     };
 
+    const handleBroadcast = async (message: string, filter: string, testNumber?: string) => {
+        try {
+            const res = await fetch('/api/admin/communications/broadcast', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.accessToken}`
+                },
+                body: JSON.stringify({
+                    message,
+                    activityId: id,
+                    targetFilter: filter,
+                    testNumber
+                })
+            });
+
+            const data = await res.json();
+
+            if (data.needsAuth && data.qr) {
+                setBroadcastQR(data.qr);
+                // Do not alert error, just show the QR
+            } else if (res.ok) {
+                alert(data.message);
+                setIsBroadcastOpen(false); // Close on success
+                setBroadcastQR(null);
+            } else {
+                alert(`Error: ${data.error || 'Unknown error'}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Failed to send broadcast");
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -252,6 +317,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                             <Type size={16} />
                             Manage Form
                         </Link>
+                        <button
+                            onClick={() => setIsBroadcastOpen(true)}
+                            className="bg-rose-50 border border-rose-100 text-rose-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-rose-100 transition-all shadow-sm flex items-center gap-2 flex-1 md:flex-none justify-center"
+                        >
+                            <Megaphone size={16} />
+                            Recruit Volunteers
+                        </button>
                         <button
                             onClick={handleGenerateAIForm}
                             disabled={isGeneratingForm}
@@ -419,19 +491,51 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50/50">
                                     <tr>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">User</th>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Role</th>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Time Applied</th>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                                        <th className="px-8 py-4 text-[10px) font-bold text-gray-400 uppercase tracking-wider">Skills</th>
+                                        <th
+                                            onClick={() => handleSort('user')}
+                                            className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors group"
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                User
+                                                <ArrowUpDown size={12} className={`opacity-0 group-hover:opacity-100 ${sortConfig.key === 'user' ? 'opacity-100 text-indigo-600' : ''}`} />
+                                            </div>
+                                        </th>
+                                        <th
+                                            onClick={() => handleSort('role')}
+                                            className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors group"
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Role
+                                                <ArrowUpDown size={12} className={`opacity-0 group-hover:opacity-100 ${sortConfig.key === 'role' ? 'opacity-100 text-indigo-600' : ''}`} />
+                                            </div>
+                                        </th>
+                                        <th
+                                            onClick={() => handleSort('applied_at')}
+                                            className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors group"
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Time Applied
+                                                <ArrowUpDown size={12} className={`opacity-0 group-hover:opacity-100 ${sortConfig.key === 'applied_at' ? 'opacity-100 text-indigo-600' : ''}`} />
+                                            </div>
+                                        </th>
+                                        <th
+                                            onClick={() => handleSort('status')}
+                                            className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors group"
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Status
+                                                <ArrowUpDown size={12} className={`opacity-0 group-hover:opacity-100 ${sortConfig.key === 'status' ? 'opacity-100 text-indigo-600' : ''}`} />
+                                            </div>
+                                        </th>
+                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skills</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
-                                    {volunteers.length === 0 ? (
+                                    {sortedVolunteers.length === 0 ? (
                                         <tr>
                                             <td colSpan={5} className="px-8 py-12 text-center text-gray-400 text-sm">No volunteers registered yet</td>
                                         </tr>
-                                    ) : volunteers.map((vol) => (
+                                    ) : sortedVolunteers.map((vol) => (
                                         <tr key={vol.id} className="hover:bg-gray-50/50 transition-colors">
                                             <td className="px-8 py-4">
                                                 <div className="flex items-center gap-3">
@@ -573,6 +677,19 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     onClose={() => setIsEditDialogOpen(false)}
                     event={activity}
                     onSave={handleSaveEvent}
+                />
+            )}
+
+            {activity && (
+                <BroadcastDialog
+                    isOpen={isBroadcastOpen}
+                    onClose={() => {
+                        setIsBroadcastOpen(false);
+                        setBroadcastQR(null);
+                    }}
+                    activityTitle={activity?.title || ''}
+                    onSend={handleBroadcast}
+                    qrCode={broadcastQR}
                 />
             )}
         </div>

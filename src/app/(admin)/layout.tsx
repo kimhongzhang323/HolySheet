@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import AiChatSidebar from '@/components/AiChatSidebar';
 
 interface NavItem {
     name: string;
@@ -25,7 +24,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const pathname = usePathname();
     const router = useRouter();
     const { data: session, status } = useSession();
-    const [isChatOpen, setIsChatOpen] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
@@ -119,7 +117,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
             </aside>
 
-            {/* Main Content (Middle View) */}
+            {/* Main Content (Middle View) - Expanded to Full Width */}
             <main className="flex-1 overflow-auto bg-white relative z-10 scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] flex flex-col">
                 {/* Mobile Header */}
                 <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between">
@@ -140,34 +138,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="flex-1">
                     {children}
                 </div>
-
-                {/* AI Chat Toggle Button (Visible when closed) */}
-                {!isChatOpen && (
-                    <button
-                        onClick={() => setIsChatOpen(true)}
-                        className="fixed right-6 bottom-6 z-50 bg-indigo-600 text-white p-4 rounded-full shadow-xl hover:bg-indigo-700 transition-all hover:scale-110 flex items-center justify-center group"
-                    >
-                        <Network className="w-6 h-6 group-hover:animate-pulse" />
-                    </button>
-                )}
             </main>
-
-            {/* Right Panel (AI Chat) - Responsive */}
-            <aside className={`bg-white border-l border-gray-100 shrink-0 z-50 fixed inset-y-0 right-0 md:static transition-all duration-300 ease-in-out shadow-2xl md:shadow-none ${isChatOpen
-                ? 'translate-x-0 w-full md:w-[380px]'
-                : 'translate-x-full w-0 md:translate-x-0 md:border-none md:overflow-hidden'
-                }`}>
-                <div className="h-full relative w-full border-l border-gray-100">
-                    {/* Close Button (Absolute inside sidebar) */}
-                    <button
-                        onClick={() => setIsChatOpen(false)}
-                        className="absolute right-4 top-4 z-50 text-gray-400 hover:text-gray-900 bg-white/50 backdrop-blur-sm p-1 rounded-lg hover:bg-gray-100 transition-all"
-                    >
-                        <PanelRightClose size={18} />
-                    </button>
-                    <AiChatSidebar />
-                </div>
-            </aside>
         </div>
     );
 }
