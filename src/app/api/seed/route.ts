@@ -1,127 +1,169 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
-import dbConnect from '@/lib/mongoose';
-import User from '@/models/User';
-import Activity from '@/models/Activity';
-import Booking from '@/models/Booking';
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabaseClient';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
-        await dbConnect();
-        const session = await auth();
+        const searchParams = req.nextUrl.searchParams;
+        const targetEmail = searchParams.get('email') || 'volunteer20@holysheet.com';
 
-        // 1. Seed Activities
-        const activities = [
-            {
-                title: 'Beach Cleanup @ East Coast',
-                description: 'Join us for a morning of cleaning up our beautiful shores.',
-                start_time: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-                end_time: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000), // 4 hours duration
-                location: 'East Coast Park',
-                capacity: 50,
-                volunteers_needed: 10,
-                needs_help: false,
-                allowed_tiers: ['ad-hoc', 'once-a-week'] as const
-            },
-            {
-                title: 'Food Distribution Phase 1',
-                description: 'Distributing food packs to the elderly in Clementi.',
-                start_time: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-                end_time: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000), // 3 hours
-                location: 'Clementi CC',
+        console.log(`Starting Supabase Seed for ${targetEmail}...`);
+
+        // 1. Get or Create User
+        let { data: user, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', targetEmail)
+            .single();
+
+        if (!user) {
+            console.log("User not found, creating...");
+            const { data: newUser, error: createError } = await supabase
+                .from('users')
+                .insert({
+                    email: targetEmail,
+                    name: 'Elizabeth Taylor',
+                    role: 'user',
+                    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elizabeth',
+                    hours_volunteered: 0,
+                    missions_completed: 0,
+                    bio: 'Passionate senior volunteer with a focus on community art and youth education.',
+                    location: 'Singapore, North',
+                    phone_number: '+65 8765 4321',
+                    skills: ['Art Direction', 'Teaching', 'Event Planning'],
+                    interests: ['Community', 'Education', 'Arts'],
+                    achievements: [
+                        { name: 'Community Pillar', description: 'Completed 10 community missions.', icon: 'Award', color: 'text-emerald-500' },
+                        { name: 'Helper of the Month', description: 'Most hours in January.', icon: 'Star', color: 'text-amber-500' }
+                    ],
+                    resume_json: {
+                        summary: 'Experienced community lead and dedicated volunteer with over 5 years of service in education and environmental outreach.',
+                        experience: [
+                            { role: 'Volunteer Coordinator', organization: 'Green Singapore', period: '2021 - Present' },
+                            { role: 'Teaching Assistant', organization: 'Vibrant Minds', period: '2019 - 2021' }
+                        ],
+                        education: 'Bachelor of Social Work, National University of Singapore'
+                    },
+                    password: 'hashed_password123'
+                })
+                .select()
+                .single();
+
+            if (createError) throw new Error(`Failed to create user: ${createError.message}`);
+            user = newUser;
+        }
+
+        // 2. Clear existing data for this user
+        if (user) {
+            await supabase.from('event_volunteers').delete().eq('user_id', user.id);
+            await supabase.from('applications').delete().eq('user_id', user.id); // Clear applications too
+        }
+
+        // 3. Create/Ensure Activities (Past, Future, Pending)
+        const locations = ['MINDS Clementi', 'MINDS Ang Mo Kio', 'East Coast Park', 'Bedok CC', 'Jurong Library'];
+        const titles = ['Art Therapy', 'Beach Cleanup', 'Food Distribution', 'Tech Workshop', 'Reading Session'];
+
+        const activities = [];
+        const now = Date.now();
+        const DAY = 24 * 60 * 60 * 1000;
+
+        // i from -3 to 5 to get a mix
+        for (let i = -3; i <= 5; i++) {
+            if (i === 0) continue;
+            const rndTitle = titles[Math.floor(Math.random() * titles.length)];
+            const rndLoc = locations[Math.floor(Math.random() * locations.length)];
+
+            activities.push({
+                title: `${rndTitle} ${Math.abs(i)}`,
+                description: `Join us for ${rndTitle} at ${rndLoc}. A great opportunity to give back.`,
+                start_time: new Date(now + (i * 3 * DAY)).toISOString(),
+                end_time: new Date(now + (i * 3 * DAY) + (4 * 3600 * 1000)).toISOString(),
+                location: rndLoc,
                 capacity: 20,
-                volunteers_needed: 5,
-                needs_help: true,
-                allowed_tiers: ['once-a-week'] as const
-            },
-            {
-                title: 'MINDS Tampines Activity Day',
-                description: 'Facilitating games and activities for beneficiaries.',
-                start_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days future
-                end_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000),
-                location: 'MINDS Tampines',
-                capacity: 15,
-                volunteers_needed: 3,
-                needs_help: false,
-                allowed_tiers: ['ad-hoc'] as const
-            },
-            {
-                title: 'Tech Workshop for Seniors',
-                description: 'Teaching digital literacy skills.',
-                start_time: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-                end_time: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
-                location: 'Ang Mo Kio Library',
-                capacity: 10,
-                volunteers_needed: 2,
-                needs_help: false,
-                allowed_tiers: ['twice-a-week'] as const
-            }
-        ];
+                volunteers_needed: 10,
+                image_url: `https://picsum.photos/seed/${rndTitle}${i}/400/300`,
+                allowed_tiers: ['ad-hoc', 'once-a-week'],
+                category: i % 2 === 0 ? 'Community' : 'Education'
+            });
+        }
 
         // Upsert activities
-        const activityDocs = [];
+        const createdActivities = [];
         for (const act of activities) {
-            const doc = await Activity.findOneAndUpdate(
-                { title: act.title },
-                act,
-                { upsert: true, new: true }
-            );
-            activityDocs.push(doc);
-        }
+            const { data: existing } = await supabase.from('activities').select('id').eq('title', act.title).single();
 
-        let message = 'Activities seeded. ';
-
-        // 2. Seed User Data & Bookings (if logged in)
-        if (session?.user?.email) {
-            const user = await User.findOne({ email: session.user.email });
-            if (user) {
-                // Ensure user has some skills
-                if (!user.skills || user.skills.length === 0) {
-                    user.skills = ['First Aid', 'Teaching', 'Logistics'];
-                    await user.save();
-                }
-
-                // Create Bookings
-                // Past activities -> 'attended'
-                const pastActivities = activityDocs.filter(a => new Date(a.end_time) < new Date());
-                for (const act of pastActivities) {
-                    await Booking.findOneAndUpdate(
-                        { user_id: user._id, activity_id: act._id },
-                        {
-                            user_id: user._id,
-                            activity_id: act._id,
-                            status: 'attended',
-                            timestamp: new Date()
-                        },
-                        { upsert: true }
-                    );
-                }
-
-                // Future activities -> 'confirmed'
-                const futureActivities = activityDocs.filter(a => new Date(a.start_time) > new Date());
-                for (const act of futureActivities) {
-                    await Booking.findOneAndUpdate(
-                        { user_id: user._id, activity_id: act._id },
-                        {
-                            user_id: user._id,
-                            activity_id: act._id,
-                            status: 'confirmed',
-                            timestamp: new Date()
-                        },
-                        { upsert: true }
-                    );
-                }
-
-                message += `Updated bookings/skills for user ${user.email}.`;
+            if (existing) {
+                const { data: updated } = await supabase.from('activities').update(act).eq('id', existing.id).select().single();
+                if (updated) createdActivities.push(updated);
+            } else {
+                const { data: inserted, error: insError } = await supabase.from('activities').insert(act).select().single();
+                if (inserted) createdActivities.push(inserted);
+                else console.error(`Failed to insert activity ${act.title}:`, insError?.message);
             }
-        } else {
-            message += 'No user logged in, skipped booking generation.';
         }
 
-        return NextResponse.json({ success: true, message });
+        // 4. Create Bookings (event_volunteers) and Applications
+        let hours = 0;
+        let missions = 0;
+
+        const bookings = [];
+        const applications = [];
+
+        for (let idx = 0; idx < createdActivities.length; idx++) {
+            const act = createdActivities[idx];
+            if (!act || !act.end_time) continue;
+
+            const actDate = new Date(act.end_time);
+            const isPast = actDate < new Date();
+
+            // Assign statuses: past -> attended, some future -> confirmed, some future -> pending
+            let status = 'confirmed';
+            if (isPast) {
+                status = 'attended';
+            } else if (idx % 3 === 0) { // Some future ones are pending
+                status = 'pending';
+            }
+
+            bookings.push({
+                user_id: user.id,
+                activity_id: act.id,
+                status: status,
+                joined_at: new Date().toISOString()
+            });
+
+            applications.push({
+                user_id: user.id,
+                activity_id: act.id,
+                status: status === 'attended' ? 'approved' : status, // Applications are 'approved' if attended, otherwise mirror booking status
+                applied_at: new Date().toISOString()
+            });
+
+            if (status === 'attended') {
+                missions++;
+                const duration = (new Date(act.end_time).getTime() - new Date(act.start_time).getTime()) / (1000 * 3600);
+                hours += duration;
+            }
+        }
+
+        const { error: bookingError } = await supabase.from('event_volunteers').insert(bookings);
+        if (bookingError) throw new Error(`Failed to insert bookings: ${bookingError.message}`);
+
+        const { error: appError } = await supabase.from('applications').insert(applications);
+        if (appError) console.warn('Applications table insert failed (maybe table not created yet):', appError.message);
+
+
+        // 5. Update User Stats
+        await supabase.from('users').update({
+            hours_volunteered: Math.round(hours),
+            missions_completed: missions
+        }).eq('id', user.id);
+
+        return NextResponse.json({
+            success: true,
+            message: `Seeded Supabase for ${user.email}. Created ${createdActivities.length} activities. Stats: ${missions} missions, ${hours} hours.`
+        });
 
     } catch (error: any) {
-        console.error('Seeding error:', error);
+        console.error('Seed Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

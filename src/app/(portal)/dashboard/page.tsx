@@ -7,9 +7,8 @@ import ActivityCard from '@/components/ActivityCard';
 import TicketCard from '@/components/TicketCard';
 import MiniCalendar from '@/components/MiniCalendar';
 import DatyAssistant from '@/components/DatyAssistant';
-import { MOCK_TICKETS, CALENDAR_DAYS, VOLUNTEER_ACTIVITIES } from '@/lib/mockData';
-import { Sparkles, ChevronLeft, ChevronRight, User, Heart, Shield, GraduationCap, Leaf, Coffee, Briefcase, Info, X } from 'lucide-react';
-import ImpactHeader from '@/components/ImpactHeader';
+import { VOLUNTEER_ACTIVITIES } from '@/lib/mockData';
+import { Sparkles, User, Heart, Shield, GraduationCap, Leaf, Coffee, Briefcase, MapPin, Clock, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import DashboardMap from '@/components/DashboardMap';
 
@@ -28,6 +27,8 @@ interface Activity {
 export default function PortalPage() {
     const { data: session } = useSession();
     const [activities, setActivities] = useState<Activity[]>([]);
+    const [assignments, setAssignments] = useState<any[]>([]);
+    const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedCauses, setSelectedCauses] = useState<string[]>([]);
@@ -97,61 +98,46 @@ export default function PortalPage() {
     useEffect(() => {
         async function fetchFeed() {
             try {
-                // Wait for session to be available if needed, or proceed
-                const token = (session as any)?.accessToken;
-                const headers: HeadersInit = token
-                    ? { 'Authorization': `Bearer ${token}` }
-                    : {};
-
-                const res = await fetch('/api/activities/feed', { headers });
-                let rawData = [];
+                const res = await fetch('/api/activities/feed');
                 if (res.ok) {
                     const data = await res.json();
-                    rawData = Array.isArray(data) ? data : (data?.activities || []);
+                    const rawData = data.activities || [];
+                    setActivities(rawData as Activity[]);
                 }
-
-                // If empty or failed, use mock EVENTS
-                if (rawData.length === 0) {
-                    rawData = [
-                        {
-                            _id: 'VOL001',
-                            title: 'Care Circle Volunteer',
-                            location: 'MINDS Hub (Clementi)',
-                            start_time: '2026-01-18T10:00:00',
-                            end_time: '2026-01-18T13:00:00',
-                            month: 'Jan',
-                            date: '18',
-                            image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=600&fit=crop',
-                            isEnrolled: true
-                        },
-                        ...VOLUNTEER_ACTIVITIES
-                    ];
-                }
-
-                // Normalize data for the UI
-                const normalized = rawData.map((act: any) => ({
-                    ...act,
-                    id: act.id || act._id,
-                    image_url: act.image_url || act.image,
-                    // If start_time is just HH:mm, use today + that time for display if it's mock
-                    start_time: (act.start_time.includes('T') || act.start_time.includes('-'))
-                        ? act.start_time
-                        : `${act.year || 2026}-${act.month || 'JANUARY'}-${act.date || '01'} ${act.start_time}`
-                }));
-
-                setActivities(normalized as Activity[]);
             } catch (error) {
                 console.error('Failed to fetch feed', error);
-                // Last resort fallback - use volunteer activities
-                setActivities(VOLUNTEER_ACTIVITIES.map((act: any) => ({
-                    ...act,
-                    id: act._id,
-                    image_url: act.image,
-                    start_time: act.start_time
-                })) as Activity[]);
-                setLoading(false);
             } finally {
                 setLoading(false);
+            }
+        }
+
+        async function fetchAssignments() {
+            try {
+                const res = await fetch('/api/user/activities?type=upcoming');
+                if (res.ok) {
+                    const data = await res.json();
+                    const upcoming = (data.activities || []).map((item: any) => ({
+                        id: item.id || item.activity_id,
+                        category: item.activity?.category || 'Volunteer',
+                        title: `${item.activity?.title || 'Mission'} • ${item.activity?.location || 'TBD'}`,
+                        date: item.activity?.start_time ? new Date(item.activity.start_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD',
+                        time: item.activity?.start_time ? new Date(item.activity.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '09:00',
+                        image: item.activity?.image_url || 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=600&fit=crop',
+                        status: item.status
+                    }));
+
+                    setAssignments(upcoming.filter((a: any) => a.status === 'confirmed' || a.status === 'approved'));
+                    setApplications(upcoming.filter((a: any) => a.status === 'pending').map((a: any) => ({
+                        id: a.id,
+                        title: a.title.split(' • ')[0],
+                        date: `Applied ${a.date}`,
+                        status: 'Pending',
+                        color: 'text-amber-600',
+                        bg: 'bg-amber-50'
+                    })));
+                }
+            } catch (error) {
+                console.error('Failed to fetch assignments', error);
             }
         }
 
@@ -172,6 +158,7 @@ export default function PortalPage() {
 
         if (session) {
             fetchFeed();
+            fetchAssignments();
             fetchInterests();
         }
     }, [session]);
@@ -189,9 +176,15 @@ export default function PortalPage() {
                             <h2 className="text-lg font-bold text-gray-900">Your Assignments</h2>
                             <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-wider italic">Active</span>
                         </div>
-                        {MOCK_TICKETS.map((ticket, idx) => (
-                            <TicketCard key={idx} {...ticket} />
-                        ))}
+                        {assignments.length > 0 ? (
+                            assignments.map((ticket, idx) => (
+                                <TicketCard key={ticket.id || idx} {...ticket} />
+                            ))
+                        ) : (
+                            <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center text-gray-400">
+                                <p className="text-sm font-medium">No active assignments</p>
+                            </div>
+                        )}
                     </section>
 
                     {/* Applications Tracker */}
@@ -201,22 +194,28 @@ export default function PortalPage() {
                             <button className="text-xs font-semibold text-emerald-600 hover:underline">View All</button>
                         </div>
                         <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm p-4 space-y-3">
-                            {APPLICATIONS.map((app) => (
-                                <div key={app.id} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:border-emerald-200 transition-colors cursor-pointer group">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 ${app.bg} rounded-xl flex items-center justify-center`}>
-                                            <Shield size={18} className={app.color} />
+                            {applications.length > 0 ? (
+                                applications.map((app) => (
+                                    <div key={app.id} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:border-emerald-200 transition-colors cursor-pointer group">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 ${app.bg} rounded-xl flex items-center justify-center`}>
+                                                <Shield size={18} className={app.color} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">{app.title}</p>
+                                                <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">{app.date}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">{app.title}</p>
-                                            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">{app.date}</p>
-                                        </div>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${app.bg} ${app.color} uppercase`}>
+                                            {app.status}
+                                        </span>
                                     </div>
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${app.bg} ${app.color} uppercase`}>
-                                        {app.status}
-                                    </span>
+                                ))
+                            ) : (
+                                <div className="py-8 text-center text-gray-400 text-sm">
+                                    No application activity
                                 </div>
-                            ))}
+                            )}
                         </div>
                     </section>
 
@@ -401,7 +400,10 @@ export default function PortalPage() {
                             <div className="mb-5">
                                 <h2 className="text-xl font-bold text-gray-900 uppercase tracking-tighter italic opacity-20">Impact Calendar</h2>
                             </div>
-                            <MiniCalendar activities={activities} enrolledEventIds={['VOL001']} />
+                            <MiniCalendar
+                                activities={activities}
+                                enrolledEventIds={assignments.map(a => a.id)}
+                            />
                         </section >
                     </div >
                 </div >

@@ -27,6 +27,7 @@ const ActivitySchema: Schema = new Schema({
         type: String,
         enum: ['ad-hoc', 'once-a-week', 'twice-a-week', 'three-plus-a-week']
     }],
+    image_url: { type: String }
 });
 
 const Activity: Model<IActivity> = mongoose.models.Activity || mongoose.model<IActivity>('Activity', ActivitySchema);

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import dbConnect from '@/lib/mongoose';
-import User from '@/models/User';
+import { supabase } from '@/lib/supabaseClient';
 
 export async function GET() {
     try {
@@ -11,10 +10,14 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        await dbConnect();
+        // Fetch interests from Supabase
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('interests')
+            .eq('email', session.user.email)
+            .single();
 
-        const user = await User.findOne({ email: session.user.email });
-        if (!user) {
+        if (error || !user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
@@ -41,17 +44,18 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
         }
 
-        await dbConnect();
+        // Update interests in Supabase
+        const { error } = await supabase
+            .from('users')
+            .update({ interests: interests })
+            .eq('email', session.user.email);
 
-        const user = await User.findOne({ email: session.user.email });
-        if (!user) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        if (error) {
+            console.error('Supabase update error:', error);
+            return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
         }
 
-        user.interests = interests;
-        await user.save();
-
-        return NextResponse.json({ success: true, interests: user.interests });
+        return NextResponse.json({ success: true, interests: interests });
 
     } catch (error) {
         console.error('Error updating user interests:', error);
