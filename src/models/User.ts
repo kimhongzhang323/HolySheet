@@ -18,6 +18,7 @@ const UserSchema: Schema = new Schema({
         default: 'ad-hoc'
     },
     skills: { type: [String] },
+    interests: { type: [String], default: [] }, // User selected interests
     password: { type: String, select: false }, // Password for Credentials auth
     phoneNumber: { type: String },
     otp: { type: String, select: false },
@@ -45,6 +46,7 @@ export interface IUser extends Document {
     role: 'user' | 'volunteer' | 'staff' | 'admin';
     tier?: 'ad-hoc' | 'once-a-week' | 'twice-a-week' | 'three-plus-a-week';
     skills?: string[];
+    interests?: string[];
     password?: string;
     phoneNumber?: string;
     otp?: string;

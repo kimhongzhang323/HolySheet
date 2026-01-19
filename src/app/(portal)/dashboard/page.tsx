@@ -29,8 +29,8 @@ export default function PortalPage() {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [selectedCauses, setSelectedCauses] = useState<string[]>(['Environment', 'Community', 'Education']);
-    const [originalCauses, setOriginalCauses] = useState<string[]>(['Environment', 'Community', 'Education']);
+    const [selectedCauses, setSelectedCauses] = useState<string[]>([]);
+    const [originalCauses, setOriginalCauses] = useState<string[]>([]);
     const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
     // Check if causes have changed
@@ -46,10 +46,22 @@ export default function PortalPage() {
     };
 
     // Save causes
-    const saveCauses = () => {
-        setOriginalCauses([...selectedCauses]);
-        setShowSaveSuccess(true);
-        setTimeout(() => setShowSaveSuccess(false), 3000);
+    const saveCauses = async () => {
+        try {
+            const res = await fetch('/api/user/interests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ interests: selectedCauses }),
+            });
+
+            if (res.ok) {
+                setOriginalCauses([...selectedCauses]);
+                setShowSaveSuccess(true);
+                setTimeout(() => setShowSaveSuccess(false), 3000);
+            }
+        } catch (error) {
+            console.error('Failed to save interests', error);
+        }
     };
 
     // Reset causes
@@ -136,12 +148,28 @@ export default function PortalPage() {
                     image_url: act.image,
                     start_time: act.start_time
                 })) as Activity[]);
-            } finally {
                 setLoading(false);
             }
         }
+
+        async function fetchInterests() {
+            try {
+                const res = await fetch('/api/user/interests');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.interests) {
+                        setSelectedCauses(data.interests);
+                        setOriginalCauses(data.interests);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch interests', error);
+            }
+        }
+
         if (session) {
             fetchFeed();
+            fetchInterests();
         }
     }, [session]);
 
@@ -200,7 +228,7 @@ export default function PortalPage() {
                                 allowFullScreen
                                 loading="lazy"
                                 referrerPolicy="no-referrer-when-downgrade"
-                                className="rounded-[18px] grayscale hover:grayscale-0 transition-all duration-700"
+                                className="rounded-[18px] transition-all duration-700"
                             ></iframe>
 
                             {/* Map Label */}
