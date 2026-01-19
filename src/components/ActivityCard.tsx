@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, MapPin, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, Clock, AlertCircle, CheckCircle, Sparkles } from 'lucide-react';
 
 interface Activity {
     id: string;
@@ -13,6 +13,7 @@ interface Activity {
     location: string;
     needs_help?: boolean;
     image_url?: string;
+    matchReason?: string; // e.g., "98% Match - Design"
 }
 
 export default function ActivityCard({ activity }: { activity: Activity }) {
@@ -96,10 +97,18 @@ export default function ActivityCard({ activity }: { activity: Activity }) {
             </div>
 
             <div className="p-5 flex flex-col flex-1">
-                {/* Title */}
-                <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2 leading-tight">
-                    {activity.title}
-                </h3>
+                {/* Title and Match Reason */}
+                <div>
+                    {activity.matchReason && (
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 mb-2">
+                            <Sparkles size={10} className="fill-emerald-500" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">{activity.matchReason}</span>
+                        </div>
+                    )}
+                    <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2 leading-tight">
+                        {activity.title}
+                    </h3>
+                </div>
 
                 {/* Meta Details */}
                 <div className="space-y-2 mb-6">

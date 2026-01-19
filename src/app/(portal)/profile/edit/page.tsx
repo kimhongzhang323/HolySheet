@@ -29,7 +29,11 @@ export default function EditProfilePage() {
     const [formData, setFormData] = useState(INITIAL_USER_DATA);
 
     useEffect(() => {
-        if (session?.user) {
+        // Load from localStorage first
+        const savedData = localStorage.getItem('user_profile');
+        if (savedData) {
+            setFormData(JSON.parse(savedData));
+        } else if (session?.user) {
             setFormData(prev => ({
                 ...prev,
                 name: session.user?.name || prev.name,
@@ -49,6 +53,9 @@ export default function EditProfilePage() {
 
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Save to localStorage
+        localStorage.setItem('user_profile', JSON.stringify(formData));
 
         setIsSaving(false);
         setShowSuccess(true);

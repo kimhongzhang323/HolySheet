@@ -24,16 +24,13 @@ const DEFAULT_USER = {
 
 // Mock stats
 const MOCK_STATS = {
-    totalEvents: 15,
     volunteerEvents: 8,
-    meetups: 4,
-    conferences: 3,
     totalHours: 48,
     upcomingEvents: 5,
     pendingApplications: 2,
 };
 
-// Mock event history - ALL types
+// Mock event history - Volunteer only
 const MOCK_EVENT_HISTORY = [
     {
         id: '1',
@@ -42,43 +39,15 @@ const MOCK_EVENT_HISTORY = [
         location: 'East Coast Park, Area B',
         date: 'March 08 2023',
         hours: 4,
-        status: 'On Time', // On Time, Late, Absent
+        status: 'On Time',
         checkIn: '08:53',
         checkOut: '17:15',
         category: 'volunteer',
         type: 'Environment',
-        image: 'https://images.unsplash.com/photo-1618477461853-5f8dd68aa272?w=800&q=80',
+        image: 'https://images.unsplash.com/photo-1621451537084-482c73073a0f?w=800&q=80',
     },
     {
         id: '2',
-        title: 'Tech Meetup',
-        organization: 'Singapore Dev Community',
-        location: 'Suntec Convention Centre',
-        date: 'March 07 2023',
-        hours: 3,
-        status: 'Late',
-        checkIn: '08:27',
-        checkOut: '17:09',
-        category: 'meetup',
-        type: 'Tech',
-        image: 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800&q=80',
-    },
-    {
-        id: '3',
-        title: 'Music Festival',
-        organization: 'Live Nation',
-        location: 'Marina Bay Sands',
-        date: 'March 06 2023',
-        hours: 6,
-        status: 'Absent',
-        checkIn: '-',
-        checkOut: '-',
-        category: 'conference',
-        type: 'Music',
-        image: 'https://images.unsplash.com/photo-1459749411177-3e2886ca85a7?w=800&q=80',
-    },
-    {
-        id: '4',
         title: 'Food Distribution',
         organization: 'Community Kitchen',
         location: 'Bedok Community Centre',
@@ -90,34 +59,6 @@ const MOCK_EVENT_HISTORY = [
         category: 'volunteer',
         type: 'Community',
         image: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&q=80',
-    },
-    {
-        id: '5',
-        title: 'Startup Summit',
-        organization: 'TechCrunch',
-        location: 'Expo Hall 5',
-        date: 'March 04 2023',
-        hours: 8,
-        status: 'On Time',
-        checkIn: '08:58',
-        checkOut: '17:06',
-        category: 'conference',
-        type: 'Business',
-        image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800&q=80',
-    },
-    {
-        id: '6',
-        title: 'Book Club',
-        organization: 'Reading Society',
-        location: 'National Library',
-        date: 'March 03 2023',
-        hours: 2,
-        status: 'Late',
-        checkIn: '08:40',
-        checkOut: '17:02',
-        category: 'meetup',
-        type: 'Education',
-        image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80',
     },
 ];
 
@@ -132,13 +73,6 @@ const MOCK_UPCOMING = [
     },
     {
         id: '2',
-        title: 'React Developers Meetup',
-        date: '22 Jan 2026',
-        status: 'registered',
-        category: 'meetup',
-    },
-    {
-        id: '3',
         title: 'Community Food Drive',
         date: '25 Jan 2026',
         status: 'pending',
@@ -178,16 +112,6 @@ const MOCK_BADGES = [
         max: 50,
         description: 'Accumulate volunteer hours'
     },
-    {
-        id: '4',
-        name: 'Social Butterfly',
-        image: '/images/badges/social.png',
-        color: 'bg-purple-500',
-        bg: 'bg-purple-50',
-        progress: 4,
-        max: 10,
-        description: 'Attend networking meetups'
-    },
 ];
 
 export default function ProfilePage() {
@@ -201,21 +125,37 @@ export default function ProfilePage() {
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 6;
+    const totalPages = Math.max(1, Math.ceil(MOCK_EVENT_HISTORY.length / ITEMS_PER_PAGE));
+    const paginatedHistory = MOCK_EVENT_HISTORY.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     useEffect(() => {
         const fetchProfile = async () => {
-            if (session?.user) {
-                try {
-                    const res = await fetch('http://localhost:8000/user/profile', {});
-                } catch (e) {
-                    // ignore
-                }
-
+            // Load from localStorage
+            const savedData = localStorage.getItem('user_profile');
+            if (savedData) {
+                const parsed = JSON.parse(savedData);
+                setProfile(prev => ({
+                    ...prev,
+                    ...parsed
+                }));
+            } else if (session?.user) {
                 setProfile(prev => ({
                     ...prev,
                     name: session.user?.name || prev.name,
                     email: session.user?.email || prev.email,
                     avatar: session.user?.image || prev.avatar,
                 }));
+            }
+
+            if (session?.user) {
+                try {
+                    const res = await fetch('http://localhost:8000/user/profile', {});
+                } catch (e) {
+                    // ignore
+                }
             }
         };
         fetchProfile();
@@ -234,21 +174,11 @@ export default function ProfilePage() {
     };
 
     const getCategoryIcon = (category: string) => {
-        switch (category) {
-            case 'volunteer': return Heart;
-            case 'meetup': return Users;
-            case 'conference': return Ticket;
-            default: return Calendar;
-        }
+        return Heart;
     };
 
     const getCategoryColor = (category: string) => {
-        switch (category) {
-            case 'volunteer': return 'bg-green-100 text-green-600';
-            case 'meetup': return 'bg-blue-100 text-blue-600';
-            case 'conference': return 'bg-purple-100 text-purple-600';
-            default: return 'bg-gray-100 text-gray-600';
-        }
+        return 'bg-green-100 text-green-600';
     };
 
     return (
@@ -262,6 +192,13 @@ export default function ProfilePage() {
                         <h2 className="text-2xl font-bold tracking-tight text-gray-900">Volunteer Details</h2>
                     </div>
                     <div className="flex items-center gap-3">
+                        <Link
+                            href="/profile/edit"
+                            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-bold transition-all border border-gray-200 shadow-sm"
+                        >
+                            <Edit3 size={16} />
+                            Edit Profile
+                        </Link>
                         <button
                             onClick={() => signOut({ callbackUrl: "/login" })}
                             className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-bold transition-all border border-red-200"
@@ -332,19 +269,8 @@ export default function ProfilePage() {
                         <h3 className="text-lg font-bold text-gray-900">Overview Stats</h3>
                         <ChevronRight size={20} className={`text-gray-400 transition-transform duration-200 ${isStatsOpen ? 'rotate-90' : ''}`} />
                     </div>
-                    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ${isStatsOpen ? '' : 'hidden md:grid'}`}>
-                        {/* Stat 1: Total Events */}
-                        <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
-                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                                <Calendar size={20} className="text-blue-600" />
-                            </div>
-                            <div>
-                                <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.totalEvents}</h4>
-                                <p className="text-xs text-gray-500 font-medium">Total Events</p>
-                            </div>
-                        </div>
-
-                        {/* Stat 2: Volunteer */}
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${isStatsOpen ? '' : 'hidden md:grid'}`}>
+                        {/* Stat 1: Volunteer */}
                         <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
                             <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                                 <Heart size={20} className="text-green-600" />
@@ -355,18 +281,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* Stat 3: Meetups */}
-                        <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
-                            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                                <Users size={20} className="text-purple-600" />
-                            </div>
-                            <div>
-                                <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.meetups}</h4>
-                                <p className="text-xs text-gray-500 font-medium">Meetups</p>
-                            </div>
-                        </div>
-
-                        {/* Stat 4: Volunteer Hrs */}
+                        {/* Stat 2: Volunteer Hrs */}
                         <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
                             <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
                                 <Clock size={20} className="text-orange-600" />
@@ -569,7 +484,7 @@ export default function ProfilePage() {
 
                                 {/* History Grid */}
                                 <div className={`grid gap-4 ${isHistoryOpen ? '' : 'hidden md:grid'} ${historyView === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                                    {MOCK_EVENT_HISTORY.map((event) => (
+                                    {paginatedHistory.map((event) => (
                                         <div
                                             key={event.id}
                                             className="relative bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all group flex flex-col h-full border border-gray-100"
@@ -643,18 +558,22 @@ export default function ProfilePage() {
                                 </div>
 
                                 {/* Pagination */}
-                                <div className={`flex justify-center items-center gap-2 mt-8 ${isHistoryOpen ? '' : 'hidden md:flex'}`}>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-900 text-white text-sm font-bold shadow-sm">1</button>
-                                    {[2, 3, 4].map(page => (
-                                        <button key={page} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">
-                                            {page}
-                                        </button>
-                                    ))}
-                                    <span className="text-gray-400 text-xs">...</span>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">8</button>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">9</button>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">10</button>
-                                </div>
+                                {totalPages > 0 && (
+                                    <div className={`flex justify-center items-center gap-2 mt-8 ${isHistoryOpen ? '' : 'hidden md:flex'}`}>
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                            <button
+                                                key={page}
+                                                onClick={() => setCurrentPage(page)}
+                                                className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-all shadow-sm ${currentPage === page
+                                                    ? 'bg-gray-900 text-white'
+                                                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 
