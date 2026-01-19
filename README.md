@@ -1,15 +1,17 @@
 <p align="center">
-  <h1 align="center">🌟 MINDS Activity Hub</h1>
-  <p align="center">
-    <strong>A comprehensive volunteer management platform for the Movement for the Intellectually Disabled of Singapore</strong>
-  </p>
-  <p align="center">
-    <a href="#features">Features</a> •
-    <a href="#tech-stack">Tech Stack</a> •
-    <a href="#getting-started">Getting Started</a> •
-    <a href="#api-documentation">API Docs</a> •
-    <a href="#project-structure">Structure</a>
-  </p>
+  <img src="public/logo.png" alt="JomCare Logo" width="180" />
+</p>
+
+<h1 align="center">JomCare</h1>
+<p align="center">
+  <strong>A comprehensive volunteer management platform for community service organizations</strong>
+</p>
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#tech-stack">Tech Stack</a> •
+  <a href="#getting-started">Getting Started</a> •
+  <a href="#api-documentation">API Docs</a> •
+  <a href="#project-structure">Structure</a>
 </p>
 
 ---

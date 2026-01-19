@@ -26,10 +26,8 @@ export default function TopBar() {
                 <div className="flex items-center gap-12">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg shadow-black/20 group-hover:scale-105 transition-transform">
-                            <span className="text-white font-bold text-xl">H</span>
-                        </div>
-                        <span className="font-bold text-xl tracking-tight text-gray-900 hidden sm:block">HolySheet</span>
+                        <img src="/logo.png" alt="JomCare" className="w-10 h-10 group-hover:scale-105 transition-transform" />
+                        <span className="font-bold text-xl tracking-tight text-gray-900 hidden sm:block">JomCare</span>
                     </Link>
 
                     {/* Desktop Navigation Pills */}

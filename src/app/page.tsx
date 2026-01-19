@@ -51,11 +51,12 @@ export default function LandingPage() {
 
             <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none">
                 <div className="text-center space-y-6">
+                    <img src="/logo.png" alt="JomCare" className="w-32 h-32 mx-auto mb-4 drop-shadow-2xl" />
                     <h1 className="text-7xl md:text-9xl font-bold text-white tracking-tighter opacity-90 drop-shadow-2xl">
-                        MINDS
+                        JomCare
                     </h1>
                     <p className="text-gray-400 text-lg md:text-xl font-light tracking-widest uppercase">
-                        Empowering every individual with special needs and their families
+                        Empowering communities through volunteering
                     </p>
 
                     <div className="pt-8 flex flex-col md:flex-row items-center justify-center gap-6">

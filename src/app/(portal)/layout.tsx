@@ -3,8 +3,8 @@ import '../globals.css';
 import TopBar from '@/components/TopBar';
 
 export const metadata: Metadata = {
-    title: 'Dashboard - MINDS Activity Hub',
-    description: 'Manage your activities and bookings.',
+    title: 'Dashboard - JomCare',
+    description: 'Manage your volunteer activities and bookings.',
 };
 
 export default function PortalLayout({

@@ -65,10 +65,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {/* Header/Logo */}
                 <div className="p-6 md:p-8 pb-4 flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
-                            <Network className="text-white w-6 h-6" />
-                        </div>
-                        <span className="font-bold text-xl tracking-tight">holysheet</span>
+                        <img src="/logo.png" alt="JomCare" className="w-10 h-10" />
+                        <span className="font-bold text-xl tracking-tight">JomCare</span>
                     </div>
                     {/* Mobile Close Button */}
                     <button
@@ -130,9 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </button>
                         <span className="font-bold text-lg">Admin</span>
                     </div>
-                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                        <Network className="text-white w-4 h-4" />
-                    </div>
+                    <img src="/logo.png" alt="JomCare" className="w-8 h-8" />
                 </div>
 
                 <div className="flex-1">
