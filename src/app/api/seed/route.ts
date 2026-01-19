@@ -155,6 +155,118 @@ export async function GET(req: NextRequest) {
 
         logs.push(`Generated ${volunteerRecords.length} attendance records distributed by tier.`);
 
+        // 5.5 Seed Form Responses for Beach Cleanup activities
+        const beachCleanupActivities = insertedActivities.filter(a => a.title === 'Beach Cleanup');
+
+        // Create sample users first
+        const formUsers = [
+            { email: 'sarah.lim@example.com', name: 'Sarah Lim' },
+            { email: 'john.tan@example.com', name: 'John Tan' },
+            { email: 'amanda.chen@example.com', name: 'Amanda Chen' },
+            { email: 'david.wong@example.com', name: 'David Wong' },
+            { email: 'michelle.goh@example.com', name: 'Michelle Goh' }
+        ];
+
+        const userIds: Record<string, string> = {};
+        for (const u of formUsers) {
+            const { data } = await supabase.from('users').upsert({
+                email: u.email,
+                name: u.name,
+                role: 'user',
+                image: `https://ui-avatars.com/api/?name=${u.name.replace(' ', '+')}&background=random`
+            }, { onConflict: 'email' }).select().single();
+            if (data) userIds[u.email] = data.id;
+        }
+
+        const sampleFormData = [
+            {
+                email: 'sarah.lim@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'None',
+                    'Commitment Preference': 'Just this session',
+                    'T-Shirt Size': 'Medium',
+                    'Emergency Contact': '+65 9123 4567',
+                    'How did you hear about us?': 'Social media'
+                }
+            },
+            {
+                email: 'john.tan@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Vegetarian',
+                    'Commitment Preference': 'Regular (Monthly)',
+                    'T-Shirt Size': 'Large',
+                    'Emergency Contact': '+65 9876 5432',
+                    'How did you hear about us?': 'Friend referral',
+                    'Previous Experience': '2 years of volunteering at various beach cleanups'
+                }
+            },
+            {
+                email: 'amanda.chen@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Halal',
+                    'Commitment Preference': 'Weekly',
+                    'T-Shirt Size': 'Small',
+                    'Emergency Contact': '+65 8765 4321',
+                    'How did you hear about us?': 'Website',
+                    'Previous Experience': 'First time volunteer',
+                    'Special Skills': 'Photography, Social Media Management'
+                }
+            },
+            {
+                email: 'david.wong@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Gluten-free',
+                    'Commitment Preference': 'Flexible',
+                    'T-Shirt Size': 'XL',
+                    'Emergency Contact': '+65 9012 3456',
+                    'How did you hear about us?': 'School/University',
+                    'Previous Experience': 'Organized environmental campaigns at NUS',
+                    'Special Skills': 'Event coordination, First Aid',
+                    'Why do you want to volunteer?': 'I am passionate about marine conservation and want to make a tangible impact on our local beaches.'
+                }
+            },
+            {
+                email: 'michelle.goh@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'None',
+                    'Commitment Preference': 'Ad-hoc',
+                    'T-Shirt Size': 'Medium',
+                    'Emergency Contact': '+65 8234 5678',
+                    'How did you hear about us?': 'Instagram',
+                    'Previous Experience': 'Volunteer at animal shelter for 3 years',
+                    'Special Skills': 'Team leadership, Communication',
+                    'Why do you want to volunteer?': 'Looking to expand my volunteering experience to environmental causes.',
+                    'Availability': 'Weekends only, preferably morning slots'
+                }
+            }
+        ];
+
+        const applicationsData = [];
+        // Target specific activity by UUID
+        const targetActivityId = '15983a66-8548-408d-9444-8c6008c329bd';
+
+        for (const sample of sampleFormData) {
+            const userId = userIds[sample.email];
+            if (userId) {
+                applicationsData.push({
+                    activity_id: targetActivityId,
+                    user_id: userId,
+                    status: 'approved',
+                    form_data: sample.form_data,
+                    applied_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
+                });
+            }
+        }
+
+        if (applicationsData.length > 0) {
+            const { error: appError } = await supabase.from('applications').upsert(applicationsData, { onConflict: 'user_id,activity_id' });
+            if (appError) {
+                logs.push(`Applications insert error: ${appError.message}`);
+            } else {
+                logs.push(`Seeded ${applicationsData.length} form responses for Beach Cleanup activities.`);
+            }
+        }
+
 
         // 5. Ensure Specific Test User with Resume
         const testUserEmail = 'kim.hong.zhang323@gmail.com';

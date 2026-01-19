@@ -17,6 +17,8 @@ interface Activity {
     volunteers_registered: number;
     skills_required: string[];
     status: string;
+    form_responses?: number;
+    attendance_count?: number;
 }
 
 export default function EventsPage() {
@@ -158,6 +160,25 @@ export default function EventsPage() {
                         ? shortageA - shortageB
                         : shortageB - shortageA;
                 }
+                if (sortConfig.key === 'volunteers') {
+                    return sortConfig.direction === 'asc'
+                        ? a.volunteers_registered - b.volunteers_registered
+                        : b.volunteers_registered - a.volunteers_registered;
+                }
+                if (sortConfig.key === 'responses') {
+                    const respA = a.form_responses ?? 0;
+                    const respB = b.form_responses ?? 0;
+                    return sortConfig.direction === 'asc'
+                        ? respA - respB
+                        : respB - respA;
+                }
+                if (sortConfig.key === 'attendance') {
+                    const attA = a.attendance_count ?? 0;
+                    const attB = b.attendance_count ?? 0;
+                    return sortConfig.direction === 'asc'
+                        ? attA - attB
+                        : attB - attA;
+                }
                 return 0;
             });
         }
@@ -231,20 +252,36 @@ export default function EventsPage() {
                             />
                         </div>
 
-                        {/* Sort Dropdown (Only separate when in grid mode, or kept for consistency) */}
+                        {/* Sort Pills (Only in grid mode) */}
                         {viewMode === 'grid' && (
-                            <div className="relative group">
-                                <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 shadow-sm transition-all whitespace-nowrap">
-                                    <Filter size={16} />
-                                    Sort: <span className="text-indigo-600 font-bold capitalize">{sortConfig.key}</span>
-                                </button>
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 transform origin-top-right">
-                                    <button onClick={() => setSortConfig({ key: 'date', direction: 'asc' })} className={`w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-50 ${sortConfig.key === 'date' && sortConfig.direction === 'asc' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-600'}`}>Date: Earliest First</button>
-                                    <button onClick={() => setSortConfig({ key: 'date', direction: 'desc' })} className={`w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-50 ${sortConfig.key === 'date' && sortConfig.direction === 'desc' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-600'}`}>Date: Latest First</button>
-                                    <div className="h-px bg-gray-100 my-1"></div>
-                                    <button onClick={() => setSortConfig({ key: 'urgency', direction: 'desc' })} className={`w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-50 ${sortConfig.key === 'urgency' && sortConfig.direction === 'desc' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-600'}`}>Shortage: High to Low</button>
-                                    <div className="h-px bg-gray-100 my-1"></div>
-                                    <button onClick={() => setSortConfig({ key: 'title', direction: 'asc' })} className={`w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-50 ${sortConfig.key === 'title' && sortConfig.direction === 'asc' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-600'}`}>Name: A - Z</button>
+                            <div className="flex items-center gap-2">
+                                {/* Sort Category Pills */}
+                                <div className="flex bg-gray-100 p-1 rounded-lg">
+                                    {[
+                                        { key: 'date', label: 'Date' },
+                                        { key: 'volunteers', label: 'Volunteers' },
+                                        { key: 'responses', label: 'Responses' },
+                                        { key: 'attendance', label: 'Attendance' },
+                                    ].map((option) => (
+                                        <button
+                                            key={option.key}
+                                            onClick={() => setSortConfig(prev => ({
+                                                key: option.key,
+                                                direction: prev.key === option.key ? (prev.direction === 'asc' ? 'desc' : 'asc') : 'desc'
+                                            }))}
+                                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${sortConfig.key === option.key
+                                                    ? 'bg-white shadow-sm text-indigo-600'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                        >
+                                            {option.label}
+                                            {sortConfig.key === option.key && (
+                                                <span className="ml-1">
+                                                    {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                                                </span>
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         )}

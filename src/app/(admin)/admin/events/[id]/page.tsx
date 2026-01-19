@@ -4,7 +4,7 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Calendar, MapPin, Users, Clock, ArrowLeft, CheckCircle2, XCircle, User, Loader2, Mail, Network, Type, Sparkles, Edit2, ArrowUpDown, Megaphone } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, ArrowLeft, CheckCircle2, XCircle, User, Loader2, Mail, Network, Type, Sparkles, Edit2, ArrowUpDown, Megaphone, Download } from 'lucide-react';
 import Link from 'next/link';
 import AIResponseAnalysis from '@/components/admin/AIResponseAnalysis';
 import EditEventDialog from '@/components/admin/EditEventDialog';
@@ -71,6 +71,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
     const [broadcastQR, setBroadcastQR] = useState<string | null>(null);
+    const [expandedResponses, setExpandedResponses] = useState<Set<string>>(new Set());
 
     // Sorting State
     const [sortConfig, setSortConfig] = useState<{ key: keyof Volunteer | 'user', direction: 'asc' | 'desc' }>({ key: 'applied_at', direction: 'desc' });
@@ -461,7 +462,66 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     </button>
 
                     {activeTab === 'responses' && (
-                        <div className="ml-auto flex items-center pr-4">
+                        <div className="ml-auto flex items-center gap-3 pr-4">
+                            {/* Export Dropdown */}
+                            <div className="relative group">
+                                <button className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100">
+                                    <Download size={14} />
+                                    Export ▾
+                                </button>
+                                <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-xl border border-gray-100 p-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-30">
+                                    <button
+                                        onClick={() => {
+                                            if (responses.length === 0) { alert('No responses to export'); return; }
+                                            const allFields = new Set<string>();
+                                            responses.forEach(r => Object.keys(r.responses).forEach(k => allFields.add(k)));
+                                            const fields = ['User Name', 'Email', 'Submitted At', ...Array.from(allFields)];
+                                            const csvRows = [fields.join(',')];
+                                            responses.forEach(r => {
+                                                const row = [
+                                                    `"${r.user_name}"`,
+                                                    `"${r.user_email}"`,
+                                                    `"${new Date(r.submitted_at).toLocaleString()}"`,
+                                                    ...Array.from(allFields).map(f => `"${String(r.responses[f] || '').replace(/"/g, '""')}"`)
+                                                ];
+                                                csvRows.push(row.join(','));
+                                            });
+                                            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                                            const url = URL.createObjectURL(blob);
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.download = `form-responses-${activity?.title || 'export'}-${new Date().toISOString().split('T')[0]}.csv`;
+                                            link.click();
+                                            URL.revokeObjectURL(url);
+                                        }}
+                                        className="w-full text-left px-3 py-2 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                        📄 Export CSV
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (responses.length === 0) { alert('No responses to export'); return; }
+                                            const XLSX = (await import('xlsx')).default;
+                                            const allFields = new Set<string>();
+                                            responses.forEach(r => Object.keys(r.responses).forEach(k => allFields.add(k)));
+                                            const data = responses.map(r => ({
+                                                'User Name': r.user_name,
+                                                'Email': r.user_email,
+                                                'Submitted At': new Date(r.submitted_at).toLocaleString(),
+                                                ...Object.fromEntries(Array.from(allFields).map(f => [f, r.responses[f] || '']))
+                                            }));
+                                            const ws = XLSX.utils.json_to_sheet(data);
+                                            const wb = XLSX.utils.book_new();
+                                            XLSX.utils.book_append_sheet(wb, ws, 'Responses');
+                                            XLSX.writeFile(wb, `form-responses-${activity?.title || 'export'}-${new Date().toISOString().split('T')[0]}.xlsx`);
+                                        }}
+                                        className="w-full text-left px-3 py-2 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                        📊 Export Excel
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="flex bg-gray-100 p-1 rounded-xl">
                                 <button
                                     onClick={() => setIsDynamicView(false)}
@@ -634,36 +694,64 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                                             <tr>
                                                 <td colSpan={3} className="px-8 py-12 text-center text-gray-400 text-sm">No form responses yet</td>
                                             </tr>
-                                        ) : responses.map((resp) => (
-                                            <tr key={resp.id} className="hover:bg-gray-50/50 transition-colors">
-                                                <td className="px-8 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                                                            <Mail size={14} />
+                                        ) : responses.map((resp) => {
+                                            const isExpanded = expandedResponses.has(resp.id);
+                                            const responseEntries = Object.entries(resp.responses);
+                                            const hasMore = responseEntries.length > 2;
+
+                                            return (
+                                                <tr key={resp.id} className="hover:bg-gray-50/50 transition-colors">
+                                                    <td className="px-8 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                                                                <Mail size={14} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-gray-900">{resp.user_name}</p>
+                                                                <p className="text-xs text-gray-500">{resp.user_email}</p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-gray-900">{resp.user_name}</p>
-                                                            <p className="text-xs text-gray-500">{resp.user_email}</p>
+                                                    </td>
+                                                    <td className="px-8 py-4">
+                                                        <span className="text-sm text-gray-500">
+                                                            {new Date(resp.submitted_at).toLocaleString()}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-4">
+                                                        <div className="text-xs space-y-1.5">
+                                                            {(isExpanded ? responseEntries : responseEntries.slice(0, 2)).map(([q, a], i) => (
+                                                                <p key={i} className={isExpanded ? '' : 'line-clamp-1'}>
+                                                                    <span className="font-bold text-gray-500">{q}:</span>{' '}
+                                                                    <span className="text-gray-700">{String(a)}</span>
+                                                                </p>
+                                                            ))}
+                                                            {hasMore && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setExpandedResponses(prev => {
+                                                                            const next = new Set(prev);
+                                                                            if (isExpanded) {
+                                                                                next.delete(resp.id);
+                                                                            } else {
+                                                                                next.add(resp.id);
+                                                                            }
+                                                                            return next;
+                                                                        });
+                                                                    }}
+                                                                    className="text-indigo-600 font-bold hover:underline flex items-center gap-1 mt-1"
+                                                                >
+                                                                    {isExpanded ? (
+                                                                        <>Show less ↑</>
+                                                                    ) : (
+                                                                        <>+{responseEntries.length - 2} more answers ↓</>
+                                                                    )}
+                                                                </button>
+                                                            )}
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-4">
-                                                    <span className="text-sm text-gray-500">
-                                                        {new Date(resp.submitted_at).toLocaleString()}
-                                                    </span>
-                                                </td>
-                                                <td className="px-8 py-4">
-                                                    <div className="text-xs space-y-1">
-                                                        {Object.entries(resp.responses).slice(0, 2).map(([q, a], i) => (
-                                                            <p key={i} className="line-clamp-1"><span className="font-bold text-gray-400">{q}:</span> {String(a)}</p>
-                                                        ))}
-                                                        {Object.keys(resp.responses).length > 2 && (
-                                                            <button className="text-indigo-600 font-bold hover:underline">+{Object.keys(resp.responses).length - 2} more answers</button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

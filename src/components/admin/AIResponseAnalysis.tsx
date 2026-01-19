@@ -3,11 +3,17 @@
 import React from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, AreaChart, Area, Legend
+    PieChart, Pie, Cell, AreaChart, Area, Legend, RadarChart, PolarGrid,
+    PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
-import { BarChart3, PieChart as PieIcon, AreaChart as AreaIcon, Info, Sparkles, AlertCircle } from 'lucide-react';
+import { BarChart3, PieChart as PieIcon, AreaChart as AreaIcon, Info, Sparkles, AlertCircle, Target, TrendingUp, Layers } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#06b6d4'];
+const GRADIENT_COLORS = [
+    { start: '#6366f1', end: '#a855f7' },
+    { start: '#ec4899', end: '#f43f5e' },
+    { start: '#22c55e', end: '#06b6d4' }
+];
 
 interface ChartData {
     name: string;
@@ -18,7 +24,7 @@ interface ChartData {
 interface ChartSpec {
     id: string;
     title: string;
-    type: 'bar' | 'pie' | 'area';
+    type: 'bar' | 'pie' | 'area' | 'radar' | 'horizontal' | 'donut';
     data: ChartData[];
     explanation: string;
 }
@@ -41,6 +47,37 @@ export default function AIResponseAnalysis({ data }: { data: AnalysisData }) {
 
     const renderChart = (chart: ChartSpec) => {
         switch (chart.type) {
+            case 'donut':
+                return (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                            <defs>
+                                {GRADIENT_COLORS.map((color, i) => (
+                                    <linearGradient key={i} id={`gradient-${chart.id}-${i}`} x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stopColor={color.start} />
+                                        <stop offset="100%" stopColor={color.end} />
+                                    </linearGradient>
+                                ))}
+                            </defs>
+                            <Pie
+                                data={chart.data}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={70}
+                                outerRadius={100}
+                                paddingAngle={3}
+                                dataKey="value"
+                                cornerRadius={4}
+                            >
+                                {chart.data.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={`url(#gradient-${chart.id}-${index % 3})`} stroke="none" />
+                                ))}
+                            </Pie>
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+                            <Legend />
+                        </PieChart>
+                    </ResponsiveContainer>
+                );
             case 'pie':
                 return (
                     <ResponsiveContainer width="100%" height={300}>
@@ -63,20 +100,50 @@ export default function AIResponseAnalysis({ data }: { data: AnalysisData }) {
                         </PieChart>
                     </ResponsiveContainer>
                 );
+            case 'radar':
+                return (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chart.data}>
+                            <PolarGrid stroke="#e2e8f0" />
+                            <PolarAngleAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                            <Radar name="Responses" dataKey="value" stroke="#6366f1" fill="#6366f1" fillOpacity={0.3} strokeWidth={2} />
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+                        </RadarChart>
+                    </ResponsiveContainer>
+                );
+            case 'horizontal':
+                return (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={chart.data} layout="vertical" margin={{ left: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                            <XAxis type="number" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                            <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} width={80} />
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} cursor={{ fill: '#f8fafc' }} />
+                            <Bar dataKey="value" fill="url(#horizontalGradient)" radius={[0, 4, 4, 0]} barSize={20} />
+                            <defs>
+                                <linearGradient id="horizontalGradient" x1="0" y1="0" x2="1" y2="0">
+                                    <stop offset="0%" stopColor="#6366f1" />
+                                    <stop offset="100%" stopColor="#a855f7" />
+                                </linearGradient>
+                            </defs>
+                        </BarChart>
+                    </ResponsiveContainer>
+                );
             case 'area':
                 return (
                     <ResponsiveContainer width="100%" height={300}>
                         <AreaChart data={chart.data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id={`color-${chart.id}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
                                     <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
                             <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
                             <YAxis stroke="#94a3b8" fontSize={12} />
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <Tooltip />
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
                             <Area type="monotone" dataKey="value" stroke="#6366f1" fillOpacity={1} fill={`url(#color-${chart.id})`} strokeWidth={2} />
                         </AreaChart>
                     </ResponsiveContainer>
@@ -86,10 +153,16 @@ export default function AIResponseAnalysis({ data }: { data: AnalysisData }) {
                 return (
                     <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={chart.data}>
+                            <defs>
+                                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#6366f1" />
+                                    <stop offset="100%" stopColor="#a855f7" />
+                                </linearGradient>
+                            </defs>
                             <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
                             <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                            <Tooltip cursor={{ fill: '#f8fafc' }} />
-                            <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} cursor={{ fill: '#f8fafc' }} />
+                            <Bar dataKey="value" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 );
@@ -98,8 +171,11 @@ export default function AIResponseAnalysis({ data }: { data: AnalysisData }) {
 
     const getIcon = (type: string) => {
         switch (type) {
-            case 'pie': return <PieIcon size={16} />;
-            case 'area': return <AreaIcon size={16} />;
+            case 'pie':
+            case 'donut': return <PieIcon size={16} />;
+            case 'area': return <TrendingUp size={16} />;
+            case 'radar': return <Target size={16} />;
+            case 'horizontal': return <Layers size={16} />;
             default: return <BarChart3 size={16} />;
         }
     };
