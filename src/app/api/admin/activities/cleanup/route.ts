@@ -67,6 +67,11 @@ export async function GET() {
                     updates.volunteer_form = { ...defaultForm, title: `Application: ${title}` };
                 }
 
+                // Preserve high-fidelity data if it exists or use defaults
+                if (!act.activity_type) updates.activity_type = (act.category === 'befriending' ? 'Befriending' : 'Hub Support');
+                if (!act.organizer) updates.organizer = 'MINDS Community Office';
+                if (!act.schedule) updates.schedule = 'Flexible Schedule';
+
                 toUpdate.push({
                     id: act.id,
                     ...updates

@@ -42,6 +42,11 @@ interface VolunteerActivity {
     volunteer_form?: FormStructure;
     volunteers_needed?: number;
     capacity?: number;
+    organizer?: string;
+    organizer_label?: string;
+    schedule?: string;
+    activity_type?: string;
+    tags?: string[];
 }
 
 export default function EventDetailPage() {
@@ -260,7 +265,7 @@ export default function EventDetailPage() {
     const day = startDate.getDate();
     const month = startDate.toLocaleString('default', { month: 'long' }).toUpperCase();
     const year = startDate.getFullYear();
-    const schedule = `${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(activity.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const schedule = activity.schedule || `${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(activity.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
     const statusDisplay = getStatusDisplay();
 
@@ -436,7 +441,12 @@ export default function EventDetailPage() {
                         <h1 className="text-5xl font-black text-gray-900 mb-3 tracking-tight">
                             <span className="text-green-600 uppercase">{activity.title}</span>
                         </h1>
-                        <p className="text-xl text-gray-500 font-medium">Volunteering Opportunity</p>
+                        <p className="text-xl text-gray-500 font-medium">{activity.activity_type || 'Volunteering Opportunity'}</p>
+                        {activity.organizer && (
+                            <p className="text-lg text-gray-600 mt-2">
+                                {activity.organizer_label || 'Organizer'}: <span className="font-semibold text-gray-900">{activity.organizer}</span>
+                            </p>
+                        )}
                     </motion.div>
 
                     <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm transition-all hover:shadow-md">
