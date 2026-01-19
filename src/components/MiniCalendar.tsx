@@ -94,7 +94,7 @@ export default function MiniCalendar({ activities = [], enrolledEventIds = ['VOL
         )
         .sort((a, b) => (b.isEnrolled ? 1 : 0) - (a.isEnrolled ? 1 : 0));
 
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     return (
         <div className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100">
