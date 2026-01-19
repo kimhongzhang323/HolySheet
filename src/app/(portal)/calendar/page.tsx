@@ -19,6 +19,26 @@ import {
 } from 'lucide-react';
 import { VOLUNTEER_ACTIVITIES } from '@/lib/mockData';
 
+const getConflicts = (events: any[]) => {
+    if (events.length < 2) return [];
+    const sorted = [...events].sort((a, b) => a.startHour - b.startHour);
+    const conflicts: { start: number; duration: number }[] = [];
+
+    for (let i = 0; i < sorted.length; i++) {
+        for (let j = i + 1; j < sorted.length; j++) {
+            const a = sorted[i];
+            const b = sorted[j];
+            const start = Math.max(a.startHour, b.startHour);
+            const end = Math.min(a.startHour + a.duration, b.startHour + b.duration);
+
+            if (start < end) {
+                conflicts.push({ start, duration: end - start });
+            }
+        }
+    }
+    return conflicts;
+};
+
 const HOURS = Array.from({ length: 24 }, (_, i) => i); // 00:00 to 23:00
 
 interface CalendarEvent {
@@ -252,9 +272,9 @@ export default function CalendarPage() {
         // High contrast branding for registered/unregistered
         if (event.isEnrolled) {
             return {
-                bg: 'bg-emerald-600',
+                bg: 'bg-emerald-500/90',
                 text: 'text-white',
-                border: 'border-emerald-700 shadow-lg shadow-emerald-100',
+                border: 'border-emerald-600 shadow-lg shadow-emerald-50',
                 light: 'bg-emerald-50 text-emerald-700',
                 label: 'Registered'
             };
@@ -262,7 +282,7 @@ export default function CalendarPage() {
 
         if (event.isExternal) {
             return {
-                bg: 'bg-blue-500',
+                bg: 'bg-blue-500/90',
                 text: 'text-white',
                 border: 'border-blue-600 shadow-md',
                 light: 'bg-blue-50 text-blue-700',
@@ -270,8 +290,42 @@ export default function CalendarPage() {
             };
         }
 
+        // Categorized colors for available missions
+        const cat = (event.category || '').toLowerCase();
+
+        if (cat === 'community') {
+            return {
+                bg: 'bg-amber-100/90',
+                text: 'text-amber-800',
+                border: 'border-amber-200 border-dashed',
+                light: 'bg-amber-50 text-amber-600',
+                label: 'Community'
+            };
+        }
+
+        if (cat === 'education') {
+            return {
+                bg: 'bg-purple-100/90',
+                text: 'text-purple-800',
+                border: 'border-purple-200 border-dashed',
+                light: 'bg-purple-50 text-purple-600',
+                label: 'Education'
+            };
+        }
+
+        if (cat === 'environmental' || cat === 'environment') {
+            return {
+                bg: 'bg-teal-100/90',
+                text: 'text-teal-800',
+                border: 'border-teal-200 border-dashed',
+                light: 'bg-teal-50 text-teal-600',
+                label: 'Environmental'
+            };
+        }
+
+        // Default "Available" look
         return {
-            bg: 'bg-indigo-50/80',
+            bg: 'bg-indigo-50/90',
             text: 'text-indigo-700',
             border: 'border-indigo-100 border-dashed',
             light: 'bg-indigo-50/50 text-indigo-400',
@@ -454,33 +508,51 @@ export default function CalendarPage() {
                                                 style={{ top: `${i * 80 + 8}px` }}
                                             ></div>
                                         ))}
-                                        {calendarData.map((day, colIndex) => (
-                                            <div key={colIndex} className="relative h-[1920px]">
-                                                {[...activities, ...googleEvents].filter(e => e.fullDate === day.fullDate).map(event => {
-                                                    const identity = getEventIdentity(event);
-                                                    return (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, scale: 0.9 }}
-                                                            animate={{ opacity: 1, scale: 1 }}
-                                                            key={event.id}
-                                                            onClick={() => setSelectedEvent(event)}
-                                                            className={`absolute inset-x-1 rounded-2xl p-3 border shadow-md cursor-pointer hover:shadow-xl transition-all z-10 ${identity.bg} ${identity.text} ${identity.border}`}
+                                        {calendarData.map((day, colIndex) => {
+                                            const dayEvents = [...activities, ...googleEvents].filter(e => e.fullDate === day.fullDate);
+                                            const conflicts = getConflicts(dayEvents);
+
+                                            return (
+                                                <div key={colIndex} className="relative h-[1920px] isolate">
+                                                    {/* Conflict Overlays */}
+                                                    {conflicts.map((conf, ci) => (
+                                                        <div
+                                                            key={`conf-${ci}`}
+                                                            className="absolute inset-x-0 bg-red-500/10 border-y border-red-200/30 z-0"
                                                             style={{
-                                                                top: `${(event.startHour) * 80 + 8}px`,
-                                                                height: `${event.duration * 80}px`
+                                                                top: `${conf.start * 80 + 8}px`,
+                                                                height: `${conf.duration * 80}px`
                                                             }}
-                                                        >
-                                                            <div className="font-black text-xs leading-tight mb-1">{event.title}</div>
-                                                            <div className="flex flex-wrap items-center gap-1.5 mt-auto">
-                                                                <div className={`px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest bg-white/20`}>
-                                                                    {identity.label || (event.isEnrolled ? 'Confirmed' : 'Available')}
+                                                        />
+                                                    ))}
+
+                                                    {dayEvents.map(event => {
+                                                        const identity = getEventIdentity(event);
+                                                        return (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                                animate={{ opacity: 0.9, scale: 1 }}
+                                                                whileHover={{ opacity: 1, scale: 1.02, zIndex: 50 }}
+                                                                key={event.id}
+                                                                onClick={() => setSelectedEvent(event)}
+                                                                className={`absolute inset-x-1 rounded-2xl p-3 border shadow-md cursor-pointer hover:shadow-xl transition-all z-10 mix-blend-multiply ${identity.bg} ${identity.text} ${identity.border}`}
+                                                                style={{
+                                                                    top: `${(event.startHour) * 80 + 8}px`,
+                                                                    height: `${event.duration * 80}px`
+                                                                }}
+                                                            >
+                                                                <div className="font-black text-xs leading-tight mb-1 cursor-pointer">{event.title}</div>
+                                                                <div className="flex flex-wrap items-center gap-1.5 mt-auto">
+                                                                    <div className={`px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest bg-white/20`}>
+                                                                        {identity.label || (event.isEnrolled ? 'Confirmed' : 'Available')}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </motion.div>
-                                                    );
-                                                })}
-                                            </div>
-                                        ))}
+                                                            </motion.div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}

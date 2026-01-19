@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 export async function GET(req: NextRequest) {
     try {
         const searchParams = req.nextUrl.searchParams;
-        const targetEmail = searchParams.get('email') || 'volunteer20@holysheet.com';
+        const targetEmail = searchParams.get('email') || 'kim.hong.zhang323@gmail.com';
 
         console.log(`Starting Supabase Seed for ${targetEmail}...`);
 
@@ -21,9 +21,9 @@ export async function GET(req: NextRequest) {
                 .from('users')
                 .insert({
                     email: targetEmail,
-                    name: 'Elizabeth Taylor',
+                    name: 'Kim Hong Zhang',
                     role: 'user',
-                    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elizabeth',
+                    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=KimHong',
                     hours_volunteered: 0,
                     missions_completed: 0,
                     bio: 'Passionate senior volunteer with a focus on community art and youth education.',
@@ -58,44 +58,132 @@ export async function GET(req: NextRequest) {
             await supabase.from('applications').delete().eq('user_id', user.id); // Clear applications too
         }
 
-        // 3. Create/Ensure Activities (Past, Future, Pending)
-        const locations = ['MINDS Clementi', 'MINDS Ang Mo Kio', 'East Coast Park', 'Bedok CC', 'Jurong Library'];
-        const titles = ['Art Therapy', 'Beach Cleanup', 'Food Distribution', 'Tech Workshop', 'Reading Session'];
-
-        const activities = [];
-        const now = Date.now();
-        const DAY = 24 * 60 * 60 * 1000;
-
-        // i from -3 to 5 to get a mix
-        for (let i = -3; i <= 5; i++) {
-            if (i === 0) continue;
-            const rndTitle = titles[Math.floor(Math.random() * titles.length)];
-            const rndLoc = locations[Math.floor(Math.random() * locations.length)];
-
-            activities.push({
-                title: `${rndTitle} ${Math.abs(i)}`,
-                description: `Join us for ${rndTitle} at ${rndLoc}. A great opportunity to give back.`,
-                start_time: new Date(now + (i * 3 * DAY)).toISOString(),
-                end_time: new Date(now + (i * 3 * DAY) + (4 * 3600 * 1000)).toISOString(),
-                location: rndLoc,
-                capacity: 20,
+        // 3. Create/Ensure Activities (Real Mock Data from Frontend)
+        const VOLUNTEER_ACTIVITIES = [
+            {
+                title: 'CARE CIRCLE',
+                type: 'VOLUNTEER',
+                activityType: 'Care Circle',
+                category: 'befriending',
+                description: 'Be a friend to persons with intellectual disabilities (PWIDs). Build meaningful relationships through regular befriending sessions, activities, and community outings.',
+                location: 'MINDS Hub (Clementi)',
+                start_time: '2026-01-18T10:00:00Z',
+                end_time: '2026-01-18T13:00:00Z',
+                image_url: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800&h=600&fit=crop',
+                requirements: ['18 years and above', 'Commit for at least 6 months', 'Attend orientation session'],
                 volunteers_needed: 10,
-                image_url: `https://picsum.photos/seed/${rndTitle}${i}/400/300`,
-                allowed_tiers: ['ad-hoc', 'once-a-week'],
-                category: i % 2 === 0 ? 'Community' : 'Education'
-            });
-        }
+                capacity: 20
+            },
+            {
+                title: 'WEEKDAY HUB',
+                type: 'VOLUNTEER',
+                activityType: 'Hub Support',
+                category: 'hub',
+                description: 'Support Training Officers during daily programmes and activities. Assist with arts & crafts, music sessions, sports activities, and life skills training for PWIDs.',
+                location: 'MINDS Hub (Ang Mo Kio)',
+                start_time: '2026-01-20T09:00:00Z',
+                end_time: '2026-01-20T16:00:00Z',
+                image_url: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=800&h=600&fit=crop',
+                requirements: ['Weekday availability', 'Patient and caring nature', 'Able to commit at least 3 hours per session'],
+                volunteers_needed: 5,
+                capacity: 15
+            },
+            {
+                title: 'WEEKEND MYG',
+                type: 'BEFRIENDER',
+                category: 'befriending',
+                description: 'Join the MINDS Youth Group as a weekend befriender! Engage young adults with intellectual disabilities through fun recreational activities, games, and social outings.',
+                location: 'Various Locations',
+                start_time: '2026-01-25T14:00:00Z',
+                end_time: '2026-01-25T17:00:00Z',
+                image_url: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&h=600&fit=crop',
+                requirements: ['Weekend availability', 'Age 18-35 preferred', 'Commit for at least 6 months'],
+                volunteers_needed: 10,
+                capacity: 25
+            },
+            {
+                title: 'HOME BEFRIENDING',
+                type: 'BEFRIENDER',
+                category: 'befriending',
+                description: 'Visit PWIDs at their homes and build a lasting friendship. Engage in conversations, simple activities, and provide companionship to those who may have limited social interactions.',
+                location: 'Client Homes (Islandwide)',
+                start_time: '2026-01-22T10:00:00Z',
+                end_time: '2026-01-22T12:00:00Z',
+                image_url: 'https://images.unsplash.com/photo-1581578731522-8618e860953a?w=800&h=600&fit=crop',
+                requirements: ['Commit for at least 1 year', 'Background check required', 'Attend mandatory training'],
+                volunteers_needed: 15,
+                capacity: 30
+            },
+            {
+                title: 'ME TOO! CLUB',
+                type: 'ACTIVITY',
+                activityType: 'Hub Support',
+                category: 'hub',
+                description: 'Support rehabilitative activities at Me Too! Club. Help facilitate arts, music therapy, exercise sessions, and social skills programmes for PWIDs.',
+                location: 'Me Too! Club',
+                start_time: '2026-01-21T14:00:00Z',
+                end_time: '2026-01-21T17:00:00Z',
+                image_url: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&h=600&fit=crop',
+                requirements: ['Twice weekly commitment', 'Interest in therapeutic activities'],
+                volunteers_needed: 6,
+                capacity: 12
+            },
+            {
+                title: 'GRAPHIC DESIGNER',
+                type: 'DESIGNER',
+                activityType: 'Creative',
+                category: 'skills',
+                description: 'Use your creative skills to design marketing materials, event posters, social media graphics, and newsletters for MINDS.',
+                location: 'Remote',
+                start_time: '2026-02-01T09:00:00Z',
+                end_time: '2026-02-01T18:00:00Z',
+                image_url: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=600&fit=crop',
+                requirements: ['Proficiency in design software', 'Portfolio required'],
+                volunteers_needed: 3,
+                capacity: 5
+            },
+            {
+                title: 'PHOTO VOLUNTEER',
+                type: 'VOLUNTEER',
+                activityType: 'Creative',
+                category: 'skills',
+                description: 'Capture meaningful moments at MINDS events and activities. Help document the journey of PWIDs through photography.',
+                location: 'Various Locations',
+                start_time: '2026-02-15T09:00:00Z',
+                end_time: '2026-02-15T17:00:00Z',
+                image_url: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&h=600&fit=crop',
+                requirements: ['Own camera equipment', 'Event photography experience'],
+                volunteers_needed: 4,
+                capacity: 8
+            }
+        ];
 
-        // Upsert activities
+        const defaultForm = {
+            title: "Volunteer Application",
+            description: "Please provide a few details to help us prepare for your visit.",
+            fields: [
+                { label: "Emergency Contact Name", type: "text", required: true },
+                { label: "Emergency Contact Number", type: "tel", required: true },
+                { label: "Dietary Restrictions", type: "select", required: false, options: ["None", "Vegetarian", "Vegan", "Halal", "Gluten-Free"] },
+                { label: "Why do you want to join this mission?", type: "textarea", required: true }
+            ]
+        };
+
         const createdActivities = [];
-        for (const act of activities) {
+        for (const act of VOLUNTEER_ACTIVITIES) {
+            const payload = {
+                ...act,
+                image_url: `https://picsum.photos/seed/${encodeURIComponent(act.title)}/800/600`,
+                volunteer_form: { ...defaultForm, title: `Application: ${act.title}` }
+            };
+
             const { data: existing } = await supabase.from('activities').select('id').eq('title', act.title).single();
 
             if (existing) {
-                const { data: updated } = await supabase.from('activities').update(act).eq('id', existing.id).select().single();
+                const { data: updated } = await supabase.from('activities').update(payload).eq('id', existing.id).select().single();
                 if (updated) createdActivities.push(updated);
             } else {
-                const { data: inserted, error: insError } = await supabase.from('activities').insert(act).select().single();
+                const { data: inserted, error: insError } = await supabase.from('activities').insert(payload).select().single();
                 if (inserted) createdActivities.push(inserted);
                 else console.error(`Failed to insert activity ${act.title}:`, insError?.message);
             }

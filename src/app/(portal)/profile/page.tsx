@@ -198,6 +198,21 @@ export default function ProfilePage() {
                     setHistoryEvents(mappedHistory);
                 }
 
+                // 4. Fetch Dynamic Applications
+                const appsRes = await fetch('/api/applications');
+                if (appsRes.ok) {
+                    const data = await appsRes.json();
+                    const dynamicApps = (data.applications || []).map((app: any) => ({
+                        id: app.id,
+                        title: app.activities?.title || 'Unknown Activity',
+                        location: app.activities?.location || 'Unknown Location',
+                        date: app.activities?.start_time ? new Date(app.activities.start_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
+                        status: app.status,
+                        image: app.activities?.image_url || 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&q=80'
+                    }));
+                    setPendingApplications(prev => [...prev.filter(a => a.status.toLowerCase() !== 'pending'), ...dynamicApps]);
+                }
+
             } catch (error) {
                 console.error("Error fetching profile data:", error);
             }

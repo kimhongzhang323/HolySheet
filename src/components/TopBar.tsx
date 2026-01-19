@@ -62,13 +62,13 @@ export default function TopBar() {
                             Calendar
                         </Link>
                         <Link
-                            href="/support"
-                            className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${isActive('/support')
+                            href="/feedback"
+                            className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${isActive('/feedback')
                                 ? 'bg-gray-900 text-white shadow-md'
                                 : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
                                 }`}
                         >
-                            Support
+                            Feedback
                         </Link>
                     </nav>
                 </div>
@@ -152,14 +152,14 @@ export default function TopBar() {
                         Calendar
                     </Link>
                     <Link
-                        href="/support"
+                        href="/feedback"
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className={`p-3 rounded-xl text-sm font-bold transition-all flex items-center gap-3 ${isActive('/support')
+                        className={`p-3 rounded-xl text-sm font-bold transition-all flex items-center gap-3 ${isActive('/feedback')
                             ? 'bg-gray-900 text-white'
                             : 'text-gray-600 hover:bg-gray-50'
                             }`}
                     >
-                        Support
+                        Feedback
                     </Link>
 
                     <div className="h-px bg-gray-100 my-2"></div>

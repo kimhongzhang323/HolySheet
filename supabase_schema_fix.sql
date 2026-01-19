@@ -30,23 +30,11 @@ ADD COLUMN IF NOT EXISTS capacity integer DEFAULT 10,
 ADD COLUMN IF NOT EXISTS volunteers_needed integer DEFAULT 5,
 ADD COLUMN IF NOT EXISTS image_url text,
 ADD COLUMN IF NOT EXISTS allowed_tiers text[] DEFAULT '{ad-hoc,once-a-week}'::text[],
-ADD COLUMN IF NOT EXISTS category text;
+ADD COLUMN IF NOT EXISTS category text,
+ADD COLUMN IF NOT EXISTS volunteer_form jsonb DEFAULT null;
 
 -- 4. Update 'event_volunteers' table (Legacy/Current bookings)
-CREATE TABLE IF NOT EXISTS public.event_volunteers (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
-    activity_id uuid REFERENCES public.activities(id) ON DELETE CASCADE,
-    UNIQUE(user_id, activity_id)
-);
-
-ALTER TABLE IF EXISTS public.event_volunteers 
-ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending',
-ADD COLUMN IF NOT EXISTS joined_at timestamp with time zone DEFAULT now();
-
--- Ensure 'id' has a default value if it was created without one
-ALTER TABLE IF EXISTS public.event_volunteers 
-ALTER COLUMN id SET DEFAULT gen_random_uuid();
+-- ... (existing lines 36-51)
 
 -- 5. Explicit Applications Table
 CREATE TABLE IF NOT EXISTS public.applications (
@@ -55,6 +43,7 @@ CREATE TABLE IF NOT EXISTS public.applications (
     activity_id uuid REFERENCES public.activities(id) ON DELETE CASCADE,
     status text DEFAULT 'pending',
     applied_at timestamp with time zone DEFAULT now(),
+    form_data jsonb DEFAULT null,
     UNIQUE(user_id, activity_id)
 );
 
