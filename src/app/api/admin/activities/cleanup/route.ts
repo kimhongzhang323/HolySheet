@@ -71,6 +71,9 @@ export async function GET() {
                 if (!act.activity_type) updates.activity_type = (act.category === 'befriending' ? 'Befriending' : 'Hub Support');
                 if (!act.organizer) updates.organizer = 'MINDS Community Office';
                 if (!act.schedule) updates.schedule = 'Flexible Schedule';
+                if (!act.requirements || act.requirements.length === 0) {
+                    updates.requirements = ["Committed to the cause", "Friendly and approachable", "Fully vaccinated"];
+                }
 
                 toUpdate.push({
                     id: act.id,

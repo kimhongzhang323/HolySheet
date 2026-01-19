@@ -44,10 +44,26 @@ export async function GET(req: NextRequest) {
 
         // 3. Define Activities for different timeframes (weeks ago)
         const activityTemplates = [
-            { title: "Weekly Food Distribution", type: "Community" },
-            { title: "Senior Befriending", type: "Befriending" },
-            { title: "Beach Cleanup", type: "Environment" },
-            { title: "Digital Workshops", type: "Education" }
+            {
+                title: "Weekly Food Distribution",
+                type: "Community",
+                requirements: ["Able to lift 5kg", "Comfortable standing for 2 hours", "Team player"]
+            },
+            {
+                title: "Senior Befriending",
+                type: "Befriending",
+                requirements: ["Patient and good listener", "Basic dialect knowledge is a plus", "Fully vaccinated"]
+            },
+            {
+                title: "Beach Cleanup",
+                type: "Environment",
+                requirements: ["Comfortable working outdoors", "Bring own water bottle", "Able to bend and squat"]
+            },
+            {
+                title: "Digital Workshops",
+                type: "Education",
+                requirements: ["Tech-savvy (Basic Smartphone/Tablet)", "Patience with elderly", "Teaching experience preferred"]
+            }
         ];
 
         const weeksAgo = [1, 2, 3, 4];
@@ -83,7 +99,8 @@ export async function GET(req: NextRequest) {
                     volunteers_needed: 20,
                     capacity: 30,
                     status: 'completed',
-                    image_url: `https://picsum.photos/seed/${week}${template.type}/800/600`
+                    image_url: `https://picsum.photos/seed/${week}${template.type}/800/600`,
+                    requirements: template.requirements
                 };
 
                 const { data: act, error } = await supabase.from('activities').insert(actPayload).select().single();
