@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
 import { supabase } from "@/lib/supabaseClient"
+import bcrypt from "bcryptjs"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     debug: true,
@@ -28,23 +29,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
 
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: credentials.email as string,
-                    password: credentials.password as string
-                });
+                // Query the 'users' table directly
+                const { data: user, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('email', credentials.email)
+                    .single();
 
-                if (error || !data.user || !data.session) {
-                    console.error("Supabase Auth Error:", error?.message);
+                if (error || !user) {
+                    console.error("Auth Error (Custom Table):", error?.message);
                     return null;
                 }
 
+                // Password Verification
+                let isValid = false;
+                if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+                    // It's a bcrypt hash
+                    isValid = await bcrypt.compare(credentials.password as string, user.password);
+                } else {
+                    // Plain text comparison (for mock data like 'hashed_password123')
+                    isValid = (credentials.password === user.password);
+                }
+
+                if (!isValid) return null;
+
                 return {
-                    id: data.user.id,
-                    email: data.user.email,
-                    name: data.user.user_metadata?.full_name || data.user.email?.split("@")[0],
-                    image: data.user.user_metadata?.avatar_url,
-                    role: data.user.email === 'admin@holysheet.com' ? "admin" : (data.user.user_metadata?.role || "user"),
-                    supabaseAccessToken: data.session.access_token // Pass this to JWT callback
+                    id: user.id,
+                    email: user.email,
+                    name: user.name || user.email.split('@')[0],
+                    image: user.image,
+                    role: user.role || "user",
+                    supabaseAccessToken: "custom-table-token" // Placeholder as we aren't using Supabase Auth sessions
                 };
             }
         }),

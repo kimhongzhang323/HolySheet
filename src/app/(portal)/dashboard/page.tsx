@@ -11,6 +11,7 @@ import { MOCK_TICKETS, CALENDAR_DAYS, VOLUNTEER_ACTIVITIES } from '@/lib/mockDat
 import { Sparkles, ChevronLeft, ChevronRight, User, Heart, Shield, GraduationCap, Leaf, Coffee, Briefcase, Info, X } from 'lucide-react';
 import ImpactHeader from '@/components/ImpactHeader';
 import Link from 'next/link';
+import DashboardMap from '@/components/DashboardMap';
 
 interface Activity {
     id: string;
@@ -149,6 +150,8 @@ export default function PortalPage() {
                     start_time: act.start_time
                 })) as Activity[]);
                 setLoading(false);
+            } finally {
+                setLoading(false);
             }
         }
 
@@ -217,82 +220,18 @@ export default function PortalPage() {
                         </div>
                     </section>
 
-                    {/* Volunteer Map - Moved here */}
+                    {/* Volunteer Map */}
                     <section className="mt-6">
-                        <div className="bg-white p-2 rounded-[24px] border border-gray-100 shadow-sm relative overflow-hidden h-[200px]">
-                            <iframe
-                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d127641.63859040871!2d103.77768925!3d1.3139961!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da11238a8b9375%3A0x887869cf52abf5c4!2sSingapore!5e0!3m2!1sen!2ssg!4v1700000000000!5m2!1sen!2ssg"
-                                width="100%"
-                                height="100%"
-                                style={{ border: 0 }}
-                                allowFullScreen
-                                loading="lazy"
-                                referrerPolicy="no-referrer-when-downgrade"
-                                className="rounded-[18px] transition-all duration-700"
-                            ></iframe>
-
-                            {/* Map Label */}
-                            <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-gray-100 shadow-md">
-                                <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest leading-none mb-0.5">📍 Volunteer Map</p>
-                                <p className="text-xs font-bold text-gray-900 leading-none">Singapore</p>
-                            </div>
-
-                            {/* Pinpoint Markers - Positioned based on Singapore locations */}
-                            {/* Clementi Hub - West side */}
-                            <div className="absolute top-[55%] left-[30%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
-                                <div className="w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow-lg animate-pulse"></div>
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[8px] px-2 py-1 rounded whitespace-nowrap">
-                                    MINDS Clementi
-                                </div>
-                            </div>
-
-                            {/* Ang Mo Kio Hub - North */}
-                            <div className="absolute top-[35%] left-[50%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
-                                <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[8px] px-2 py-1 rounded whitespace-nowrap">
-                                    MINDS Ang Mo Kio
-                                </div>
-                            </div>
-
-                            {/* Tampines Hub - East side */}
-                            <div className="absolute top-[45%] left-[75%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
-                                <div className="w-4 h-4 bg-rose-500 rounded-full border-2 border-white shadow-lg animate-pulse" style={{ animationDelay: '0.6s' }}></div>
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[8px] px-2 py-1 rounded whitespace-nowrap">
-                                    MINDS Tampines
-                                </div>
-                            </div>
-
-                            {/* Me Too! Club - Central */}
-                            <div className="absolute top-[50%] left-[55%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
-                                <div className="w-3 h-3 bg-amber-500 rounded-full border-2 border-white shadow-lg animate-pulse" style={{ animationDelay: '0.9s' }}></div>
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[8px] px-2 py-1 rounded whitespace-nowrap">
-                                    Me Too! Club
-                                </div>
-                            </div>
-
-                            {/* Various Locations - South */}
-                            <div className="absolute top-[65%] left-[45%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
-                                <div className="w-3 h-3 bg-purple-500 rounded-full border-2 border-white shadow-lg animate-pulse" style={{ animationDelay: '1.2s' }}></div>
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[8px] px-2 py-1 rounded whitespace-nowrap">
-                                    Community Outreach
-                                </div>
-                            </div>
-
-                            {/* Activity Markers Overlay */}
-                            <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-gray-100 shadow-md">
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                                    <span className="text-[10px] font-semibold text-gray-700">5 Locations</span>
-                                </div>
-                            </div>
+                        <div className="bg-white p-1 rounded-[24px] border border-gray-100 shadow-sm relative overflow-hidden h-[300px]">
+                            <DashboardMap />
                         </div>
                     </section>
                 </div>
 
                 {/* MAIN COLUMN: Recommendations & Map (Span 8) */}
-                <div className="lg:col-span-8 space-y-10">
+                < div className="lg:col-span-8 space-y-10" >
                     {/* Mission Matchmaker Section */}
-                    <section>
+                    < section >
                         <div className="flex justify-between items-end mb-6">
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-900">Mission Matchmaker</h2>
@@ -311,42 +250,44 @@ export default function PortalPage() {
                             </div>
                         </div>
 
-                        {loading ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {[1, 2].map((i) => (
-                                    <div key={i} className="h-72 bg-gray-100 rounded-[30px] animate-pulse"></div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {activities
-                                    .filter(act => !(act as any).isEnrolled)
-                                    .slice(0, 2)
-                                    .map((activity, i) => (
-                                        <ActivityCard
-                                            key={activity.id}
-                                            activity={{
-                                                ...activity,
-                                                matchReason: i === 0 ? "98% Match - Design" : "92% Match - Local"
-                                            }}
-                                        />
+                        {
+                            loading ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {[1, 2].map((i) => (
+                                        <div key={i} className="h-72 bg-gray-100 rounded-[30px] animate-pulse"></div>
                                     ))}
-                                {activities.length === 0 && (
-                                    <div className="col-span-full py-16 text-center text-gray-400 bg-gray-50 border-2 border-dashed border-gray-100 rounded-[30px]">
-                                        <Sparkles className="mx-auto mb-3 opacity-20" size={32} />
-                                        <p className="font-medium">Curating new missions for you...</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </section>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {activities
+                                        .filter(act => !(act as any).isEnrolled)
+                                        .slice(0, 2)
+                                        .map((activity, i) => (
+                                            <ActivityCard
+                                                key={activity.id}
+                                                activity={{
+                                                    ...activity,
+                                                    matchReason: i === 0 ? "98% Match - Design" : "92% Match - Local"
+                                                }}
+                                            />
+                                        ))}
+                                    {activities.length === 0 && (
+                                        <div className="col-span-full py-16 text-center text-gray-400 bg-gray-50 border-2 border-dashed border-gray-100 rounded-[30px]">
+                                            <Sparkles className="mx-auto mb-3 opacity-20" size={32} />
+                                            <p className="font-medium">Curating new missions for you...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        }
+                    </section >
 
                     {/* Causes & Calendar Row */}
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+                    < div className="grid grid-cols-1 xl:grid-cols-12 gap-8" >
                         {/* Causes You Support (Span 7) */}
-                        <section className="xl:col-span-7">
+                        < section className="xl:col-span-7" >
                             {/* Causes Header */}
-                            <div className="flex justify-between items-start mb-4">
+                            < div className="flex justify-between items-start mb-4" >
                                 <div>
                                     <h2 className="text-xl font-bold text-gray-900">Your Interests</h2>
                                     <p className="text-xs text-gray-500 mt-1">
@@ -355,66 +296,70 @@ export default function PortalPage() {
                                 </div>
 
                                 {/* Action Buttons - Only show when changes exist */}
-                                {hasChanges && (
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={resetCauses}
-                                            className="text-xs font-medium text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-full border border-gray-200 hover:border-gray-300 transition-all"
-                                        >
-                                            Reset
-                                        </button>
-                                        <motion.button
-                                            initial={{ scale: 0.9, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            onClick={saveCauses}
-                                            className="text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 px-4 py-1.5 rounded-full transition-all shadow-sm hover:shadow-md flex items-center gap-1.5"
-                                        >
-                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            Save Changes
-                                        </motion.button>
-                                    </div>
-                                )}
-                            </div>
+                                {
+                                    hasChanges && (
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={resetCauses}
+                                                className="text-xs font-medium text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-full border border-gray-200 hover:border-gray-300 transition-all"
+                                            >
+                                                Reset
+                                            </button>
+                                            <motion.button
+                                                initial={{ scale: 0.9, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                onClick={saveCauses}
+                                                className="text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 px-4 py-1.5 rounded-full transition-all shadow-sm hover:shadow-md flex items-center gap-1.5"
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                </svg>
+                                                Save Changes
+                                            </motion.button>
+                                        </div>
+                                    )
+                                }
+                            </div >
 
                             {/* Causes Grid */}
-                            <div className="grid grid-cols-3 gap-4">
-                                {CAUSES.map(cause => {
-                                    const isSelected = selectedCauses.includes(cause.label);
-                                    return (
-                                        <motion.div
-                                            key={cause.label}
-                                            onClick={() => toggleCause(cause.label)}
-                                            whileTap={{ scale: 0.95 }}
-                                            className={`${cause.bg} rounded-2xl p-5 flex flex-col items-center justify-center gap-3 border-2 shadow-sm hover:shadow-lg transition-all cursor-pointer group relative overflow-hidden ${isSelected ? 'border-emerald-400 ring-2 ring-emerald-100' : 'border-transparent opacity-50 hover:opacity-80'}`}
-                                        >
-                                            {/* Selected indicator */}
-                                            <AnimatePresence>
-                                                {isSelected && (
-                                                    <motion.div
-                                                        initial={{ scale: 0 }}
-                                                        animate={{ scale: 1 }}
-                                                        exit={{ scale: 0 }}
-                                                        className="absolute top-2.5 right-2.5 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm"
-                                                    >
-                                                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                            <div className={`w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform ${!isSelected && 'grayscale'}`}>
-                                                <cause.icon size={26} className={cause.color} />
-                                            </div>
-                                            <span className={`text-sm font-bold ${isSelected ? 'text-gray-800' : 'text-gray-400'}`}>{cause.label}</span>
-                                        </motion.div>
-                                    );
-                                })}
-                            </div>
+                            < div className="grid grid-cols-3 gap-4" >
+                                {
+                                    CAUSES.map(cause => {
+                                        const isSelected = selectedCauses.includes(cause.label);
+                                        return (
+                                            <motion.div
+                                                key={cause.label}
+                                                onClick={() => toggleCause(cause.label)}
+                                                whileTap={{ scale: 0.95 }}
+                                                className={`${cause.bg} rounded-2xl p-5 flex flex-col items-center justify-center gap-3 border-2 shadow-sm hover:shadow-lg transition-all cursor-pointer group relative overflow-hidden ${isSelected ? 'border-emerald-400 ring-2 ring-emerald-100' : 'border-transparent opacity-50 hover:opacity-80'}`}
+                                            >
+                                                {/* Selected indicator */}
+                                                <AnimatePresence>
+                                                    {isSelected && (
+                                                        <motion.div
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            exit={{ scale: 0 }}
+                                                            className="absolute top-2.5 right-2.5 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm"
+                                                        >
+                                                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                                <div className={`w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform ${!isSelected && 'grayscale'}`}>
+                                                    <cause.icon size={26} className={cause.color} />
+                                                </div>
+                                                <span className={`text-sm font-bold ${isSelected ? 'text-gray-800' : 'text-gray-400'}`}>{cause.label}</span>
+                                            </motion.div>
+                                        );
+                                    })
+                                }
+                            </div >
 
                             {/* Helper Text */}
-                            <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-gray-400">
+                            < div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-gray-400" >
                                 <span className="inline-flex items-center gap-1">
                                     <div className="w-3 h-3 bg-emerald-100 border-2 border-emerald-400 rounded"></div>
                                     Selected
@@ -424,43 +369,45 @@ export default function PortalPage() {
                                     <div className="w-3 h-3 bg-gray-100 border border-gray-200 rounded opacity-50"></div>
                                     Available
                                 </span>
-                            </div>
+                            </div >
 
                             {/* Success Toast */}
                             <AnimatePresence>
-                                {showSaveSuccess && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center gap-2"
-                                    >
-                                        <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-emerald-800">Preferences saved!</p>
-                                            <p className="text-xs text-emerald-600">Your recommendations will be updated.</p>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </section>
+                                {
+                                    showSaveSuccess && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center gap-2"
+                                        >
+                                            <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+                                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-emerald-800">Preferences saved!</p>
+                                                <p className="text-xs text-emerald-600">Your recommendations will be updated.</p>
+                                            </div>
+                                        </motion.div>
+                                    )
+                                }
+                            </AnimatePresence >
+                        </section >
 
                         {/* Calendar Widget (Span 5) */}
-                        <section className="xl:col-span-5">
+                        < section className="xl:col-span-5" >
                             <div className="mb-5">
                                 <h2 className="text-xl font-bold text-gray-900 uppercase tracking-tighter italic opacity-20">Impact Calendar</h2>
                             </div>
                             <MiniCalendar activities={activities} enrolledEventIds={['VOL001']} />
-                        </section>
-                    </div>
-                </div>
-            </div>
+                        </section >
+                    </div >
+                </div >
+            </div >
             {/* Floating Assistant */}
-            <DatyAssistant />
-        </div>
+            < DatyAssistant />
+        </div >
     );
 }
