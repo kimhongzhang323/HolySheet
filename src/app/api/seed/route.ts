@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
                 endTime.setHours(13, 0, 0, 0); // 1 PM
 
                 const actPayload = {
-                    title: `${template.title} (Week -${week})`,
+                    title: template.title,
                     description: `Historical data simulation for ${targetTier} volunteers.`,
                     activity_type: template.type,
                     start_time: startTime.toISOString(),

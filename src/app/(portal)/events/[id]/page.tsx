@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     MapPin, ArrowLeft, Calendar, Clock, Users, Share2, Heart, CheckCircle,
     X, AlertCircle, FileText, Send, Phone, Mail, User, ToggleRight,
-    Upload, Image as ImageIcon
+    Upload, Image as ImageIcon, Sparkles
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -63,7 +63,7 @@ export default function EventDetailPage() {
 
     // Dynamic Form Data
     const [formData, setFormData] = useState<Record<string, string>>({});
-    const [autofillEnabled, setAutofillEnabled] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [portfolioFile, setPortfolioFile] = useState<{ fileName: string; fileType: 'pdf' | 'image'; fileUrl: string } | null>(null);
 
     useEffect(() => {
@@ -108,19 +108,63 @@ export default function EventDetailPage() {
         setFormData(prev => ({ ...prev, [label]: value }));
     };
 
-    const handleAutofillToggle = () => {
-        if (!autofillEnabled && session?.user) {
-            const updates: Record<string, string> = {};
-            if (activity?.volunteer_form?.fields) {
-                activity.volunteer_form.fields.forEach(f => {
-                    const labelLower = f.label.toLowerCase();
-                    if (labelLower.includes('name') && session.user?.name) updates[f.label] = session.user.name;
-                    if (labelLower.includes('email') && session.user?.email) updates[f.label] = session.user.email;
-                });
-            }
-            setFormData(prev => ({ ...prev, ...updates }));
+    const handleAIAutofill = async () => {
+        if (!session?.user?.id) return;
+        setIsAnalyzing(true);
+
+        // Simulate AI processing delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        try {
+            // Mock AI autofill - generates responses based on form field labels
+            const mockSuggestions: Record<string, string> = {};
+            const userName = session.user.name || 'Volunteer';
+            const userEmail = session.user.email || '';
+
+            activity?.volunteer_form?.fields.forEach(field => {
+                const label = field.label.toLowerCase();
+
+                // Generate contextual mock responses based on field label
+                if (label.includes('name') || label.includes('full name')) {
+                    mockSuggestions[field.label] = userName;
+                } else if (label.includes('email')) {
+                    mockSuggestions[field.label] = userEmail;
+                } else if (label.includes('phone') || label.includes('contact')) {
+                    mockSuggestions[field.label] = '+65 9123 4567';
+                } else if (label.includes('motivation') || label.includes('why')) {
+                    mockSuggestions[field.label] = `I am passionate about contributing to ${activity?.title || 'this initiative'} and believe my skills can make a meaningful impact. I'm eager to learn, collaborate with fellow volunteers, and support the community.`;
+                } else if (label.includes('experience') || label.includes('background')) {
+                    mockSuggestions[field.label] = `I have previous volunteering experience in community service and event coordination. I am comfortable working with diverse groups and have strong communication skills.`;
+                } else if (label.includes('skill') || label.includes('abilities')) {
+                    mockSuggestions[field.label] = 'Communication, Teamwork, Problem-solving, Time Management';
+                } else if (label.includes('availability') || label.includes('schedule')) {
+                    mockSuggestions[field.label] = 'Weekends and public holidays. Flexible timing.';
+                } else if (label.includes('dietary') || label.includes('food')) {
+                    mockSuggestions[field.label] = 'No dietary restrictions';
+                } else if (label.includes('emergency') || label.includes('contact person')) {
+                    mockSuggestions[field.label] = 'Family Member - +65 8765 4321';
+                } else if (label.includes('t-shirt') || label.includes('size')) {
+                    mockSuggestions[field.label] = 'M';
+                } else if (label.includes('expectation') || label.includes('hope')) {
+                    mockSuggestions[field.label] = `I hope to gain hands-on experience, meet like-minded individuals, and contribute positively to ${activity?.organizer || 'the organization'}'s mission.`;
+                } else if (label.includes('how did you') || label.includes('hear about')) {
+                    mockSuggestions[field.label] = 'Social media and word of mouth from friends';
+                } else if (field.type === 'textarea') {
+                    mockSuggestions[field.label] = `I am excited to participate in ${activity?.title || 'this activity'} and contribute my time and effort to support the community.`;
+                } else if (field.type === 'select' && field.options?.length) {
+                    mockSuggestions[field.label] = field.options[0]; // Select first option
+                } else if (field.type === 'text') {
+                    mockSuggestions[field.label] = userName;
+                }
+            });
+
+            setFormData(prev => ({ ...prev, ...mockSuggestions }));
+        } catch (error) {
+            console.error('Autofill Error:', error);
+            alert('Failed to generate responses.');
+        } finally {
+            setIsAnalyzing(false);
         }
-        setAutofillEnabled(!autofillEnabled);
     };
 
     const handlePortfolioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -300,20 +344,28 @@ export default function EventDetailPage() {
                                     <p className="text-sm text-gray-500">{schedule}</p>
                                 </div>
 
-                                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 mb-6">
                                     <div className="flex items-center gap-3">
-                                        <ToggleRight size={20} className="text-blue-600" />
+                                        <div className="bg-white p-2 text-indigo-500 rounded-lg shadow-sm">
+                                            <Sparkles size={20} />
+                                        </div>
                                         <div>
-                                            <p className="font-medium text-gray-900 text-sm">Autofill from Profile</p>
-                                            <p className="text-xs text-gray-500">Use your saved profile information</p>
+                                            <p className="font-bold text-gray-900 text-sm">Smart AI Autofill</p>
+                                            <p className="text-xs text-gray-500">Auto-complete based on your profile</p>
                                         </div>
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={handleAutofillToggle}
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autofillEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                        onClick={handleAIAutofill}
+                                        disabled={isAnalyzing}
+                                        className="px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-50 transition-colors shadow-sm disabled:opacity-50"
                                     >
-                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${autofillEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        {isAnalyzing ? (
+                                            <span className="flex items-center gap-2">
+                                                <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                                                Analyzing...
+                                            </span>
+                                        ) : 'Auto-Fill'}
                                     </button>
                                 </div>
 
@@ -328,7 +380,7 @@ export default function EventDetailPage() {
                                                 <textarea
                                                     value={formData[field.label] || ''}
                                                     onChange={(e) => handleFormChange(field.label, e.target.value)}
-                                                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:bg-white transition-all text-sm resize-none"
+                                                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:bg-white transition-all text-sm resize-none text-gray-900 placeholder:text-gray-400"
                                                     rows={3}
                                                     placeholder={`Enter ${field.label.toLowerCase()}`}
                                                 />
@@ -336,7 +388,7 @@ export default function EventDetailPage() {
                                                 <select
                                                     value={formData[field.label] || ''}
                                                     onChange={(e) => handleFormChange(field.label, e.target.value)}
-                                                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:bg-white transition-all text-sm"
+                                                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:bg-white transition-all text-sm text-gray-900"
                                                 >
                                                     <option value="">Select an option</option>
                                                     {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -346,7 +398,7 @@ export default function EventDetailPage() {
                                                     type={field.type}
                                                     value={formData[field.label] || ''}
                                                     onChange={(e) => handleFormChange(field.label, e.target.value)}
-                                                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:bg-white transition-all text-sm"
+                                                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:bg-white transition-all text-sm text-gray-900 placeholder:text-gray-400"
                                                     placeholder={`Enter ${field.label.toLowerCase()}`}
                                                 />
                                             )}

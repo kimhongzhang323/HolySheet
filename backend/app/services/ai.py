@@ -45,7 +45,7 @@ Summary (one sentence):"""
     try:
         if not admin_client: return "AI Client not configured"
         response = admin_client.models.generate_content(
-            model="gemini-3-flash",
+            model="gemini-3-flash-preview",
             contents=prompt
         )
         return response.text.strip()
@@ -551,3 +551,50 @@ async def analyze_responses(responses: List[Dict], activity_context: Dict) -> Di
             "charts": [],
             "key_findings": [str(e)]
         }
+
+
+async def generate_autofill_suggestions(user_profile: Dict, activity_details: Dict) -> Dict:
+    """
+    Generate personalized volunteer form responses.
+    """
+    prompt = f"""You are an expert Volunteer Coordinator Assistant.
+    Your goal is to help a volunteer applicant fill out an application form for a specific activity.
+    
+    **Applicant Profile:**
+    Name: {user_profile.get('name')}
+    Bio: {user_profile.get('bio', 'N/A')}
+    Skills: {', '.join(user_profile.get('skills', []))}
+    Resume Summary: {user_profile.get('resume_summary', 'N/A')}
+    Experience: {json.dumps(user_profile.get('experience', []))}
+    Achievements: {json.dumps(user_profile.get('achievements', []))}
+    
+    **Activity Details:**
+    Title: {activity_details.get('title')}
+    Organization: {activity_details.get('organizer', 'N/A')}
+    Description: {activity_details.get('description')}
+    Requirements: {', '.join(activity_details.get('requirements', []))}
+    
+    **Form Fields to Fill:**
+    {json.dumps(activity_details.get('form_fields', []))}
+    
+    **Task:**
+    Generate thoughtful, enthusiastic, and personalized responses for the form fields.
+    - Use the applicant's real experience to justify answers.
+    - Match the tone of the activity.
+    - For subjective questions (e.g., "Why join?"), write a compelling 2-3 sentence paragraph.
+    - Return ONLY a JSON object mapping Field Label -> Suggested Answer.
+    
+    JSON:"""
+
+    try:
+        if not admin_client: return {"error": "AI not configured"}
+        response = admin_client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=prompt,
+            config={"response_mime_type": "application/json"}
+        )
+        
+        return json.loads(response.text.strip())
+    except Exception as e:
+        print(f"Autofill Error: {e}")
+        return {}

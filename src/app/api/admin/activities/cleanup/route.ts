@@ -33,6 +33,7 @@ export async function GET() {
                 { label: "Emergency Contact Name", type: "text", required: true },
                 { label: "Emergency Contact Number", type: "tel", required: true },
                 { label: "Dietary Restrictions", type: "select", required: false, options: ["None", "Vegetarian", "Vegan", "Halal", "Gluten-Free"] },
+                { label: "Commitment Preference", type: "select", required: true, options: ["Just this session", "Once a month", "Weekly", "Long-term"] },
                 { label: "Why do you want to join this mission?", type: "textarea", required: true }
             ]
         };
@@ -53,18 +54,43 @@ export async function GET() {
             const currentImg = act.image_url || '';
             const hasForm = !!act.volunteer_form;
 
-            if (!currentImg || currentImg.includes('unsplash.com/photo-') || currentImg.includes('picsum.photos') || !hasForm) {
+            const needsTitleFix = title.match(/\(Week\s-\d+\)/);
+
+            if (needsTitleFix || !currentImg || currentImg.includes('unsplash.com/photo-') || currentImg.includes('picsum.photos') || !hasForm) {
                 const category = (act.category || 'volunteer').toLowerCase();
                 const keyword = unsplashKeywords[category] || unsplashKeywords['volunteer'];
 
                 const updates: any = {};
+
+                // Clean Title (Remove Week Suffix) e.g. " (Week -4)"
+                if (title.match(/\(Week\s-\d+\)/)) {
+                    updates.title = title.replace(/\s\(Week\s-\d+\)/, '');
+                }
                 // Force unique images using picsum with seed
                 if (!currentImg || currentImg.includes('unsplash.com/photo-') || currentImg.includes('picsum.photos')) {
                     // Using the activity ID as seed ensures uniqueness across all events
                     updates.image_url = `https://picsum.photos/seed/${act.id}/800/600`;
                 }
                 if (!hasForm) {
-                    updates.volunteer_form = { ...defaultForm, title: `Application: ${title}` };
+                    updates.volunteer_form = { ...defaultForm, title: `Application: ${updates.title || title}` };
+                } else {
+                    // Inject new question into existing form if missing
+                    const existingForm = act.volunteer_form;
+                    const hasCommitment = existingForm.fields.some((f: any) => f.label === "Commitment Preference");
+
+                    if (!hasCommitment) {
+                        const newFields = [...existingForm.fields];
+                        // Insert before the last item (usually big text area)
+                        const insertIndex = Math.max(0, newFields.length - 1);
+                        newFields.splice(insertIndex, 0, {
+                            label: "Commitment Preference",
+                            type: "select",
+                            required: true,
+                            options: ["Just this session", "Once a month", "Weekly", "Long-term"]
+                        });
+
+                        updates.volunteer_form = { ...existingForm, fields: newFields };
+                    }
                 }
 
                 // Preserve high-fidelity data if it exists or use defaults

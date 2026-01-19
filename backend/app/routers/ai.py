@@ -245,3 +245,60 @@ async def analyze_responses_endpoint(
     
     analysis = await ai_service.analyze_responses(resp_dicts, act_dict)
     return analysis
+
+
+from pydantic import BaseModel
+
+class AutofillRequest(BaseModel):
+    user_id: str
+    activity_id: str
+
+@router.post("/ai/autofill")
+async def autofill_endpoint(
+    request: AutofillRequest,
+    db: AsyncSession = Depends(get_database)
+):
+    try:
+        user_uuid = UUID(request.user_id)
+        act_uuid = UUID(request.activity_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid ID format")
+
+    # 1. Fetch User
+    u_result = await db.execute(select(UserDB).where(UserDB.id == user_uuid))
+    user = u_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 2. Fetch Activity
+    a_result = await db.execute(select(ActivityDB).where(ActivityDB.id == act_uuid))
+    activity = a_result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    # 3. Prepare Context
+    user_profile = {
+        "name": user.name,
+        "bio": user.bio,
+        "skills": user.skills or [],
+        "resume_summary": user.resume_json.get("summary") if user.resume_json else "",
+        "experience": user.resume_json.get("experience") if user.resume_json else [],
+        "achievements": user.achievements or []
+    }
+
+    form_fields = []
+    if activity.volunteer_form and "fields" in activity.volunteer_form:
+        form_fields = [f.get("label") for f in activity.volunteer_form["fields"]]
+
+    activity_details = {
+        "title": activity.title,
+        "organizer": activity.organizer,
+        "description": activity.description,
+        "requirements": activity.requirements or [],
+        "form_fields": form_fields
+    }
+
+    # 4. Generate
+    suggestions = await ai_service.generate_autofill_suggestions(user_profile, activity_details)
+    
+    return {"success": True, "suggestions": suggestions}

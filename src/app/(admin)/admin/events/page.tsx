@@ -28,6 +28,10 @@ export default function EventsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'asc' });
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6; // Grid of 3x2 ideal
+
     // Weekly View State
     const [viewMode, setViewMode] = useState<'grid' | 'weekly'>('grid');
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -163,6 +167,24 @@ export default function EventsPage() {
 
     const displayedActivities = getFilteredActivities();
 
+    // Pagination Logic
+    const totalItems = displayedActivities.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedActivities = displayedActivities.slice(startIndex, startIndex + itemsPerPage);
+
+    const goToPage = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    // Reset page on filter change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, viewMode, selectedWeek, sortConfig]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -257,8 +279,8 @@ export default function EventsPage() {
                                     key={idx}
                                     onClick={() => setSelectedWeek(idx)}
                                     className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${selectedWeek === idx
-                                            ? 'bg-indigo-50 text-indigo-600 shadow-sm'
-                                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                                        ? 'bg-indigo-50 text-indigo-600 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                                         }`}
                                 >
                                     {w}
@@ -292,7 +314,7 @@ export default function EventsPage() {
                     </div>
                 )}
 
-                {displayedActivities.map((activity) => (
+                {paginatedActivities.map((activity) => (
                     <Link key={activity.id} href={`/admin/events/${activity.id}`}>
                         <div className="group bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-indigo-100 transition-all cursor-pointer relative overflow-hidden h-full">
                             {/* Status Badge */}
@@ -354,6 +376,47 @@ export default function EventsPage() {
                     </Link>
                 ))}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-gray-200 pt-6 mt-8">
+                    <p className="text-sm text-gray-500 hidden sm:block">
+                        Showing <span className="font-bold text-gray-900">{startIndex + 1}</span> to <span className="font-bold text-gray-900">{Math.min(startIndex + itemsPerPage, totalItems)}</span> of <span className="font-bold text-gray-900">{totalItems}</span> results
+                    </p>
+
+                    <div className="flex items-center gap-2 mx-auto sm:mx-0">
+                        <button
+                            onClick={() => goToPage(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <ChevronLeft size={20} className="text-gray-600" />
+                        </button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <button
+                                key={page}
+                                onClick={() => goToPage(page)}
+                                className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${currentPage === page
+                                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                                    : 'text-gray-600 hover:bg-gray-50'
+                                    }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+
+                        <button
+                            onClick={() => goToPage(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <ChevronRight size={20} className="text-gray-600" />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
+
     );
 }
