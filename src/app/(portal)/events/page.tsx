@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, X, QrCode, Users, Heart, Sparkles, SlidersHorizontal, ChevronDown, Building2, Palette, Clock, CheckCircle2 } from 'lucide-react';
+import { Search, MapPin, X, QrCode, Users, Heart, Sparkles, SlidersHorizontal, ChevronDown, Building2, Palette, Clock, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
-// Volunteer Category definitions
+// Constants
 const CATEGORIES = [
     { id: 'all', label: 'All Activities', icon: Sparkles },
     { id: 'befriending', label: 'Befriending', icon: Heart },
@@ -15,7 +15,6 @@ const CATEGORIES = [
     { id: 'outings', label: 'Outings', icon: MapPin },
 ];
 
-// Activity types for filtering
 const ACTIVITY_TYPES = [
     'All Types',
     'Care Circle',
@@ -26,7 +25,6 @@ const ACTIVITY_TYPES = [
     'Training Support',
 ];
 
-// Engagement frequency options
 const ENGAGEMENT_FREQUENCIES = [
     'All Engagements',
     'Ad Hoc',
@@ -35,7 +33,6 @@ const ENGAGEMENT_FREQUENCIES = [
     '3 or More Times a Week',
 ];
 
-// Locations for filtering (MINDS centers)
 const LOCATIONS = [
     'All Locations',
     'MINDS Hub (Clementi)',
@@ -76,6 +73,7 @@ export default function EventsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [selectedActivity, setSelectedActivity] = useState<VolunteerActivity | null>(null);
     const [showFilters, setShowFilters] = useState(false);
     const [selectedActivityType, setSelectedActivityType] = useState('All Types');
@@ -126,13 +124,6 @@ export default function EventsPage() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isEnrolled = (eventId: string) => enrolledEventIds.includes(eventId);
 
-    // Handle QR code click for enrolled events
-    const handleQRClick = (activity: VolunteerActivity, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setQrEventData(activity);
-        setShowQRModal(true);
-    };
-
     // Map engagement frequency to display label
     const getEngagementLabel = (frequency?: string) => {
         switch (frequency) {
@@ -155,7 +146,7 @@ export default function EventsPage() {
         }
     };
 
-    // Filter activities based on search, category, activity type, location, and engagement
+    // Filter activities
     const filteredActivities = activities.filter(activity => {
         const matchesSearch =
             activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -202,6 +193,29 @@ export default function EventsPage() {
         setSelectedActivityType('All Types');
         setSelectedLocation('All Locations');
         setSelectedEngagement('All Engagements');
+    };
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
+
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedCategory, selectedActivityType, selectedLocation, selectedEngagement]);
+
+    // Calculate pagination
+    const totalItems = filteredActivities.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+    const paginatedActivities = filteredActivities.slice(startIndex, endIndex);
+
+    const goToPage = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     };
 
     return (
@@ -352,7 +366,7 @@ export default function EventsPage() {
 
             {/* Results Count */}
             <p className="text-sm text-gray-500">
-                Showing <span className="font-semibold text-gray-900">{filteredActivities.length}</span> volunteer opportunities
+                Showing <span className="font-semibold text-gray-900">{totalItems > 0 ? `${startIndex + 1}-${endIndex}` : '0'}</span> of <span className="font-semibold text-gray-900">{totalItems}</span> volunteer opportunities
                 {selectedCategory !== 'all' && (
                     <> in <span className="font-semibold text-gray-900">{CATEGORIES.find(c => c.id === selectedCategory)?.label}</span></>
                 )}
@@ -370,110 +384,194 @@ export default function EventsPage() {
 
             {/* Activities Grid - Ticket Style Cards */}
             {!isLoading && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {filteredActivities.map((activity, index) => (
-                        <motion.div
-                            key={activity.id}
-                            layoutId={activity.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: index * 0.05 }}
-                            onClick={() => router.push(`/events/${activity.id}`)}
-                            className="group cursor-pointer"
-                        >
-                            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 flex">
-                                {/* Left: Activity Image */}
-                                <motion.div
-                                    layoutId={`${activity.id}-image`}
-                                    className="w-32 md:w-40 shrink-0 relative overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300"
-                                >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                        src={activity.image_url}
-                                        alt={activity.title}
-                                        className="w-full h-full object-cover absolute inset-0 group-hover:scale-110 transition-transform duration-500"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                                    {/* Category Badge */}
-                                    {activity.category && (
-                                        <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getCategoryColor(activity.category)}`}>
-                                            {activity.category}
-                                        </div>
-                                    )}
-
-                                    {/* Engagement Frequency Badge */}
-                                    {activity.engagement_frequency && (
-                                        <div className={`absolute bottom-3 left-3 px-2 py-1 rounded-full text-[10px] font-bold ${getEngagementBadgeColor(activity.engagement_frequency)}`}>
-                                            <Clock size={10} className="inline mr-1" />
-                                            {getEngagementLabel(activity.engagement_frequency)}
-                                        </div>
-                                    )}
-                                </motion.div>
-
-                                {/* Middle: Content */}
-                                <div className="flex-1 p-5 md:p-6">
-                                    {/* Title */}
-                                    <motion.h3
-                                        layoutId={`${activity.id}-title`}
-                                        className="text-xl font-bold text-gray-900 mb-1"
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {paginatedActivities.map((activity, index) => (
+                            <motion.div
+                                key={activity.id}
+                                layoutId={activity.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: index * 0.05 }}
+                                onClick={() => router.push(`/events/${activity.id}`)}
+                                className="group cursor-pointer"
+                            >
+                                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 flex">
+                                    {/* Left: Activity Image */}
+                                    <motion.div
+                                        layoutId={`${activity.id}-image`}
+                                        className="w-32 md:w-40 shrink-0 relative overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300"
                                     >
-                                        <span className="text-green-600">{activity.title}</span>{' '}
-                                        {activity.type && <span className="text-gray-400 font-normal">{activity.type}</span>}
-                                    </motion.h3>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={activity.image_url}
+                                            alt={activity.title}
+                                            className="w-full h-full object-cover absolute inset-0 group-hover:scale-110 transition-transform duration-500"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-                                    {/* Organizer */}
-                                    {activity.organizer && (
-                                        <p className="text-sm text-gray-500 mb-2">
-                                            {activity.organizer_label || 'Programme'}: <span className="text-gray-700">{activity.organizer}</span>
-                                        </p>
-                                    )}
-
-                                    {/* Location */}
-                                    <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
-                                        <MapPin size={12} className="text-gray-400" />
-                                        <span className={activity.location === 'To Be Confirmed' ? 'italic text-gray-400' : ''}>
-                                            {activity.location || 'Location TBC'}
-                                        </span>
-                                    </div>
-
-                                    {/* Schedule Row */}
-                                    {activity.schedule && (
-                                        <div className="text-sm text-gray-600 mb-3">
-                                            <span className="font-medium">{activity.schedule}</span>
-                                        </div>
-                                    )}
-
-                                    {/* Date and Spots Row */}
-                                    <div className="flex items-end gap-6">
-                                        <div>
-                                            <span className="text-4xl font-bold text-gray-900 leading-none">{activity.date}</span>
-                                            <span className="block text-xs text-green-500 font-medium mt-1">{activity.month} {activity.year}</span>
-                                        </div>
-                                        {activity.volunteers_needed !== undefined && (
-                                            <div className="flex items-center gap-1 text-sm">
-                                                <Users size={14} className="text-green-500" />
-                                                <span className="text-green-600 font-semibold">{activity.volunteers_needed} spots left</span>
+                                        {/* Category Badge */}
+                                        {activity.category && (
+                                            <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getCategoryColor(activity.category)}`}>
+                                                {activity.category}
                                             </div>
                                         )}
+
+                                        {/* Engagement Frequency Badge */}
+                                        {activity.engagement_frequency && (
+                                            <div className={`absolute bottom-3 left-3 px-2 py-1 rounded-full text-[10px] font-bold ${getEngagementBadgeColor(activity.engagement_frequency)}`}>
+                                                <Clock size={10} className="inline mr-1" />
+                                                {getEngagementLabel(activity.engagement_frequency)}
+                                            </div>
+                                        )}
+                                    </motion.div>
+
+                                    {/* Middle: Content */}
+                                    <div className="flex-1 p-5 md:p-6">
+                                        {/* Title */}
+                                        <motion.h3
+                                            layoutId={`${activity.id}-title`}
+                                            className="text-xl font-bold text-gray-900 mb-1"
+                                        >
+                                            <span className="text-green-600">{activity.title}</span>{' '}
+                                            {activity.type && <span className="text-gray-400 font-normal">{activity.type}</span>}
+                                        </motion.h3>
+
+                                        {/* Organizer */}
+                                        {activity.organizer && (
+                                            <p className="text-sm text-gray-500 mb-2">
+                                                {activity.organizer_label || 'Programme'}: <span className="text-gray-700">{activity.organizer}</span>
+                                            </p>
+                                        )}
+
+                                        {/* Location */}
+                                        <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
+                                            <MapPin size={12} className="text-gray-400" />
+                                            <span className={activity.location === 'To Be Confirmed' ? 'italic text-gray-400' : ''}>
+                                                {activity.location || 'Location TBC'}
+                                            </span>
+                                        </div>
+
+                                        {/* Schedule Row */}
+                                        {activity.schedule && (
+                                            <div className="text-sm text-gray-600 mb-3">
+                                                <span className="font-medium">{activity.schedule}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Date and Spots Row */}
+                                        <div className="flex items-end gap-6">
+                                            <div>
+                                                <span className="text-4xl font-bold text-gray-900 leading-none">{activity.date}</span>
+                                                <span className="block text-xs text-green-500 font-medium mt-1">{activity.month} {activity.year}</span>
+                                            </div>
+                                            {activity.volunteers_needed !== undefined && (
+                                                <div className="flex items-center gap-1 text-sm">
+                                                    <Users size={14} className="text-green-500" />
+                                                    <span className="text-green-600 font-semibold">{activity.volunteers_needed} spots left</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Right: QR Code / Join */}
+                                    <div
+                                        className={`w-20 md:w-24 shrink-0 border-l border-dashed border-gray-200 flex flex-col items-center justify-center p-3 cursor-pointer bg-gray-50/50 hover:bg-gray-100 transition-colors`}
+                                        onClick={() => router.push(`/events/${activity.id}`)}
+                                    >
+                                        <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-lg border border-gray-200 flex items-center justify-center shadow-sm">
+                                            <QrCode className="w-8 h-8 md:w-10 md:h-10 text-gray-700" />
+                                        </div>
+                                        <span className="text-[10px] text-gray-400 mt-2 text-center">
+                                            View
+                                        </span>
                                     </div>
                                 </div>
+                            </motion.div>
+                        ))}
+                    </div>
 
-                                {/* Right: QR Code / Join */}
-                                <div
-                                    className={`w-20 md:w-24 shrink-0 border-l border-dashed border-gray-200 flex flex-col items-center justify-center p-3 cursor-pointer bg-gray-50/50 hover:bg-gray-100 transition-colors`}
-                                    onClick={() => router.push(`/events/${activity.id}`)}
-                                >
-                                    <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-lg border border-gray-200 flex items-center justify-center shadow-sm">
-                                        <QrCode className="w-8 h-8 md:w-10 md:h-10 text-gray-700" />
-                                    </div>
-                                    <span className="text-[10px] text-gray-400 mt-2 text-center">
-                                        View
-                                    </span>
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between border-t border-gray-200 pt-6">
+                            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-700">
+                                        Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{endIndex}</span> of{' '}
+                                        <span className="font-medium">{totalItems}</span> results
+                                    </p>
+                                </div>
+                                <div>
+                                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                        <button
+                                            onClick={() => goToPage(currentPage - 1)}
+                                            disabled={currentPage === 1}
+                                            className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <span className="sr-only">Previous</span>
+                                            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                                        </button>
+
+                                        {/* Example Page Numbers - Simplified for now, can be expanded */}
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            // Logic to show current page surroundings
+                                            let pageNum = i + 1;
+                                            if (totalPages > 5 && currentPage > 3) {
+                                                pageNum = currentPage - 2 + i;
+                                                if (pageNum > totalPages) pageNum -= (pageNum - totalPages);
+                                            }
+
+                                            // Simple clamp for this example to stick to valid range
+                                            if (pageNum > totalPages) return null;
+
+                                            return (
+                                                <button
+                                                    key={pageNum}
+                                                    onClick={() => goToPage(pageNum)}
+                                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === pageNum
+                                                        ? 'z-10 bg-green-50 border-green-500 text-green-600'
+                                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            );
+                                        })}
+
+                                        <button
+                                            onClick={() => goToPage(currentPage + 1)}
+                                            disabled={currentPage === totalPages}
+                                            className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <span className="sr-only">Next</span>
+                                            <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                                        </button>
+                                    </nav>
                                 </div>
                             </div>
-                        </motion.div>
-                    ))}
+
+                            {/* Mobile Pagination (Simplified) */}
+                            <div className="flex items-center justify-between sm:hidden w-full">
+                                <button
+                                    onClick={() => goToPage(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    Previous
+                                </button>
+                                <span className="text-sm text-gray-700">
+                                    Page {currentPage} / {totalPages}
+                                </span>
+                                <button
+                                    onClick={() => goToPage(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
