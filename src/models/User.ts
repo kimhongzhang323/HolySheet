@@ -18,6 +18,16 @@ const UserSchema: Schema = new Schema({
         default: 'ad-hoc'
     },
     skills: { type: [String] },
+    interests: { type: [String], default: [] }, // User selected interests
+    hours_volunteered: { type: Number, default: 0 },
+    missions_completed: { type: Number, default: 0 },
+    bio: { type: String },
+    availability: { type: [String], default: [] },
+    achievements: [{
+        title: { type: String },
+        date: { type: Date },
+        icon: { type: String }
+    }],
     password: { type: String, select: false }, // Password for Credentials auth
     phoneNumber: { type: String },
     otp: { type: String, select: false },
@@ -45,6 +55,12 @@ export interface IUser extends Document {
     role: 'user' | 'volunteer' | 'staff' | 'admin';
     tier?: 'ad-hoc' | 'once-a-week' | 'twice-a-week' | 'three-plus-a-week';
     skills?: string[];
+    interests?: string[];
+    hours_volunteered?: number;
+    missions_completed?: number;
+    bio?: string;
+    availability?: string[];
+    achievements?: { title: string; date: Date; icon?: string }[];
     password?: string;
     phoneNumber?: string;
     otp?: string;

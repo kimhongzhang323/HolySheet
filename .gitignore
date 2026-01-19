@@ -106,3 +106,8 @@ htmlcov/
 # Backend specific
 backend/.env.local
 backend/__pycache__/
+
+# WhatsApp Web
+.wwebjs_auth/
+.wwebjs_cache/
+cache/

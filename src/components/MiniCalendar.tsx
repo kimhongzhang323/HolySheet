@@ -94,6 +94,8 @@ export default function MiniCalendar({ activities = [], enrolledEventIds = ['VOL
         )
         .sort((a, b) => (b.isEnrolled ? 1 : 0) - (a.isEnrolled ? 1 : 0));
 
+    const [isExpanded, setIsExpanded] = useState(false);
+
     return (
         <div className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100">
             {/* Header */}
@@ -201,40 +203,70 @@ export default function MiniCalendar({ activities = [], enrolledEventIds = ['VOL
 
             {/* Upcoming Events List */}
             <div className="space-y-4">
-                <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Missions this month</h3>
-                    <span className="text-[10px] font-bold text-gray-900 leading-none">{calendarEvents.length} Tasks</span>
-                </div>
-                {calendarEvents.length > 0 ? (
-                    calendarEvents.map((event) => (
-                        <div key={event._id || event.id} className="flex gap-4 items-center group cursor-pointer">
-                            <div className={`w-[50px] h-[50px] rounded-xl flex flex-col items-center justify-center shrink-0 transition-all ${event.isEnrolled ? 'bg-emerald-500 shadow-md shadow-emerald-100' : 'bg-gray-50 group-hover:bg-blue-50'}`}>
-                                <span className={`text-xs font-black leading-none ${event.isEnrolled ? 'text-white' : 'text-gray-700 group-hover:text-blue-600'}`}>{event.day}</span>
-                                <span className={`text-[8px] font-bold uppercase tracking-tight ${event.isEnrolled ? 'text-emerald-50/80' : 'text-gray-400 group-hover:text-blue-400'}`}>{event.dayName}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                    <h4 className={`font-bold text-sm truncate transition-colors ${event.isEnrolled ? 'text-emerald-700' : 'text-gray-900 group-hover:text-blue-600'}`}>
-                                        {event.title}
-                                    </h4>
-                                    {event.isEnrolled && (
-                                        <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                                        </div>
-                                    )}
-                                </div>
-                                <p className="text-[10px] text-gray-400 truncate flex items-center gap-1">
-                                    <span className={`w-1 h-1 rounded-full ${event.isEnrolled ? 'bg-emerald-300' : 'bg-gray-300'}`}></span>
-                                    {event.location}
-                                </p>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <div className="py-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-100">
-                        <p className="text-xs text-gray-400 italic">No missions found for this month.</p>
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="w-full flex justify-between items-center mb-2 hover:bg-gray-50 p-1 rounded-lg transition-colors group"
+                >
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Missions this month</h3>
+                        <motion.div
+                            animate={{ rotate: isExpanded ? 0 : -90 }}
+                            className="text-gray-400 group-hover:text-emerald-500 transition-colors"
+                        >
+                            <ChevronLeft size={14} className="rotate-270" style={{ transform: 'rotate(270deg)' }} />
+                        </motion.div>
                     </div>
-                )}
+                    <span className="text-[10px] font-bold text-gray-900 leading-none">{calendarEvents.length} Tasks</span>
+                </button>
+
+                <AnimatePresence initial={false}>
+                    {isExpanded && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            className="overflow-hidden space-y-4"
+                        >
+                            {calendarEvents.length > 0 ? (
+                                calendarEvents.map((event, idx) => (
+                                    <motion.div
+                                        key={event._id || event.id || idx}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        className="flex gap-4 items-center group cursor-pointer"
+                                    >
+                                        <div className={`w-[50px] h-[50px] rounded-xl flex flex-col items-center justify-center shrink-0 transition-all ${event.isEnrolled ? 'bg-emerald-500 shadow-md shadow-emerald-100' : 'bg-gray-50 group-hover:bg-blue-50'}`}>
+                                            <span className={`text-xs font-black leading-none ${event.isEnrolled ? 'text-white' : 'text-gray-700 group-hover:text-blue-600'}`}>{event.day}</span>
+                                            <span className={`text-[8px] font-bold uppercase tracking-tight ${event.isEnrolled ? 'text-emerald-50/80' : 'text-gray-400 group-hover:text-blue-400'}`}>{event.dayName}</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                <h4 className={`font-bold text-sm truncate transition-colors ${event.isEnrolled ? 'text-emerald-700' : 'text-gray-900 group-hover:text-blue-600'}`}>
+                                                    {event.title}
+                                                </h4>
+                                                {event.isEnrolled && (
+                                                    <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 truncate flex items-center gap-1">
+                                                <span className={`w-1 h-1 rounded-full ${event.isEnrolled ? 'bg-emerald-300' : 'bg-gray-300'}`}></span>
+                                                {event.location}
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                ))
+                            ) : (
+                                <div className="py-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-100">
+                                    <p className="text-xs text-gray-400 italic">No missions found for this month.</p>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

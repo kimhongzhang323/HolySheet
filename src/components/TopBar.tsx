@@ -26,10 +26,8 @@ export default function TopBar() {
                 <div className="flex items-center gap-12">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg shadow-black/20 group-hover:scale-105 transition-transform">
-                            <span className="text-white font-bold text-xl">H</span>
-                        </div>
-                        <span className="font-bold text-xl tracking-tight text-gray-900 hidden sm:block">HolySheet</span>
+                        <img src="/logo.png" alt="JomCare" className="w-10 h-10 group-hover:scale-105 transition-transform" />
+                        <span className="font-bold text-xl tracking-tight text-gray-900 hidden sm:block">JomCare</span>
                     </Link>
 
                     {/* Desktop Navigation Pills */}
@@ -62,13 +60,13 @@ export default function TopBar() {
                             Calendar
                         </Link>
                         <Link
-                            href="/support"
-                            className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${isActive('/support')
+                            href="/feedback"
+                            className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${isActive('/feedback')
                                 ? 'bg-gray-900 text-white shadow-md'
                                 : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
                                 }`}
                         >
-                            Support
+                            Feedback
                         </Link>
                     </nav>
                 </div>
@@ -152,14 +150,14 @@ export default function TopBar() {
                         Calendar
                     </Link>
                     <Link
-                        href="/support"
+                        href="/feedback"
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className={`p-3 rounded-xl text-sm font-bold transition-all flex items-center gap-3 ${isActive('/support')
+                        className={`p-3 rounded-xl text-sm font-bold transition-all flex items-center gap-3 ${isActive('/feedback')
                             ? 'bg-gray-900 text-white'
                             : 'text-gray-600 hover:bg-gray-50'
                             }`}
                     >
-                        Support
+                        Feedback
                     </Link>
 
                     <div className="h-px bg-gray-100 my-2"></div>

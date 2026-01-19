@@ -29,8 +29,8 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        // Proxy all API requests EXCEPT /api/auth/* to Python backend
-        source: '/api/:path((?!auth).*)*',
+        // Proxy all API requests EXCEPT /api/auth/*, /api/admin/*, /api/bookings/* to Python backend
+        source: '/api/:path((?!auth|admin|bookings).*)',
         destination: 'http://127.0.0.1:8000/:path*',
       },
     ]

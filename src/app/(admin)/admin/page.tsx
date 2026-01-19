@@ -212,7 +212,8 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Distribution Chart */}
-                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col h-[400px]">
+                {/* Distribution Chart */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col h-[420px]">
                     <h3 className="font-bold text-gray-900 text-lg mb-2 flex items-center gap-2">
                         <PieChartIcon className="text-gray-400" size={20} />
                         Activity Types
@@ -224,8 +225,8 @@ export default function AdminDashboard() {
                                     data={distributionData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={80}
-                                    outerRadius={110}
+                                    innerRadius={65}
+                                    outerRadius={90}
                                     paddingAngle={5}
                                     dataKey="value"
                                 >
@@ -243,11 +244,13 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                     {/* Updated Legend */}
-                    <div className="mt-2 flex flex-wrap gap-2 justify-center pb-2">
+                    <div className="mt-4 grid grid-cols-2 lg:grid-cols-3 gap-2 px-2 overflow-y-auto max-h-[100px] scrollbar-thin scrollbar-thumb-gray-200">
                         {distributionData.map((entry, index) => (
-                            <div key={index} className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
-                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                                <span className="text-xs font-medium text-gray-600">{entry.name} ({entry.value})</span>
+                            <div key={index} className="flex items-center gap-1.5 bg-gray-50 px-2 py-1.5 rounded-md min-w-0">
+                                <div className="w-2.5 h-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                <span className="text-xs font-medium text-gray-600 truncate" title={`${entry.name} (${entry.value})`}>
+                                    {entry.name} <span className="text-gray-400">({entry.value})</span>
+                                </span>
                             </div>
                         ))}
                     </div>

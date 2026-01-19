@@ -19,7 +19,27 @@ import {
 } from 'lucide-react';
 import { VOLUNTEER_ACTIVITIES } from '@/lib/mockData';
 
-const HOURS = Array.from({ length: 13 }, (_, i) => i + 7); // 7 AM to 7 PM
+const getConflicts = (events: any[]) => {
+    if (events.length < 2) return [];
+    const sorted = [...events].sort((a, b) => a.startHour - b.startHour);
+    const conflicts: { start: number; duration: number }[] = [];
+
+    for (let i = 0; i < sorted.length; i++) {
+        for (let j = i + 1; j < sorted.length; j++) {
+            const a = sorted[i];
+            const b = sorted[j];
+            const start = Math.max(a.startHour, b.startHour);
+            const end = Math.min(a.startHour + a.duration, b.startHour + b.duration);
+
+            if (start < end) {
+                conflicts.push({ start, duration: end - start });
+            }
+        }
+    }
+    return conflicts;
+};
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i); // 00:00 to 23:00
 
 interface CalendarEvent {
     id: string;
@@ -43,13 +63,12 @@ export default function CalendarPage() {
     const [isSyncing, setIsSyncing] = useState(false);
     const [syncAlert, setSyncAlert] = useState<{ type: 'success' | 'warning' | 'error', message: string } | null>(null);
     const [activities, setActivities] = useState<any[]>([]);
+    const [googleEvents, setGoogleEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-
-    // Custom identities state (persisted per event ID)
-    const [customIdentities, setCustomIdentities] = useState<Record<string, { color: string; label?: string }>>({});
     const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
 
-    const enrolledEventIds = ['VOL001'];
+    const [enrolledIds, setEnrolledIds] = useState<string[]>([]);
+    const [customIdentities, setCustomIdentities] = useState<Record<string, { color: string; label?: string }>>({});
 
     // Define available tag colors
     const tagColors = [
@@ -64,9 +83,19 @@ export default function CalendarPage() {
         async function fetchFeed() {
             setLoading(true);
             try {
-                const token = (session as any)?.accessToken;
-                const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
-                const res = await fetch('/api/activities/feed', { headers });
+                // 1. Fetch Enrollments
+                const enrollRes = await fetch('/api/user/activities?type=upcoming');
+                let registeredIds: string[] = [];
+                if (enrollRes.ok) {
+                    const enrollData = await enrollRes.json();
+                    registeredIds = (enrollData.activities || [])
+                        .filter((a: any) => a.status === 'confirmed' || a.status === 'approved')
+                        .map((a: any) => a.activity_id || a.id);
+                    setEnrolledIds(registeredIds);
+                }
+
+                // 2. Fetch All Activities
+                const res = await fetch('/api/activities/feed');
                 let rawData = [];
 
                 if (res.ok) {
@@ -75,26 +104,14 @@ export default function CalendarPage() {
                 }
 
                 if (rawData.length === 0) {
-                    rawData = [
-                        {
-                            _id: 'VOL001',
-                            title: 'Care Circle Volunteer',
-                            location: 'MINDS Hub (Clementi)',
-                            start_time: '2026-01-18T10:00:00',
-                            end_time: '2026-01-18T13:00:00',
-                            month: 'Jan',
-                            date: '18',
-                            image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=600&fit=crop'
-                        },
-                        ...VOLUNTEER_ACTIVITIES
-                    ];
+                    rawData = VOLUNTEER_ACTIVITIES;
                 }
 
                 // Process and normalize events for calendar
                 const processed = rawData.map((act: any) => {
                     const start = new Date(act.start_time);
                     const end = new Date(act.end_time);
-                    const isEnrolled = enrolledEventIds.includes(act._id || act.id);
+                    const isEnrolled = registeredIds.includes(act._id || act.id);
 
                     return {
                         ...act,
@@ -105,7 +122,6 @@ export default function CalendarPage() {
                         day: start.getDate(),
                         month: start.toLocaleDateString('en-US', { month: 'short' }),
                         fullDate: start.toISOString().split('T')[0],
-                        color: isEnrolled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-700 border-gray-100'
                     };
                 });
 
@@ -205,27 +221,39 @@ export default function CalendarPage() {
         setIsSyncing(true);
         setSyncAlert(null);
 
-        // Simulate Google Calendar sync
-        await new Promise(r => setTimeout(r, 2000));
-
-        // Simulate a conflict check (Randomly show a "crash" / conflict)
-        const hasConflict = Math.random() > 0.7;
-
-        if (hasConflict) {
+        try {
+            const res = await fetch('/api/calendar/sync');
+            if (res.ok) {
+                const data = await res.json();
+                const fetchedEvents = (data.events || []).map((e: any) => ({
+                    ...e,
+                    isExternal: true,
+                    fullDate: e.date,
+                    startHour: e.start
+                }));
+                setGoogleEvents(fetchedEvents);
+                setSyncAlert({
+                    type: 'success',
+                    message: `Successfully synced ${fetchedEvents.length} events from Google Calendar!`
+                });
+            } else {
+                const error = await res.json();
+                setSyncAlert({
+                    type: 'error',
+                    message: error.error || 'Failed to sync with Google Calendar'
+                });
+            }
+        } catch (error) {
+            console.error("Sync error:", error);
             setSyncAlert({
-                type: 'warning',
-                message: 'Sync complete, but 1 scheduling conflict was found in your Google Calendar (Jan 22).'
+                type: 'error',
+                message: 'Internal error during sync'
             });
-        } else {
-            setSyncAlert({
-                type: 'success',
-                message: 'Successfully synced your volunteer schedule with Google Calendar!'
-            });
+        } finally {
+            setIsSyncing(false);
+            // Auto-hide alert after 5s
+            setTimeout(() => setSyncAlert(null), 5000);
         }
-
-        setIsSyncing(false);
-        // Auto-hide alert after 5s
-        setTimeout(() => setSyncAlert(null), 5000);
     };
 
     const getEventIdentity = (event: any) => {
@@ -240,12 +268,68 @@ export default function CalendarPage() {
                 label: custom.label
             };
         }
+
+        // High contrast branding for registered/unregistered
+        if (event.isEnrolled) {
+            return {
+                bg: 'bg-emerald-500/90',
+                text: 'text-white',
+                border: 'border-emerald-600 shadow-lg shadow-emerald-50',
+                light: 'bg-emerald-50 text-emerald-700',
+                label: 'Registered'
+            };
+        }
+
+        if (event.isExternal) {
+            return {
+                bg: 'bg-blue-500/90',
+                text: 'text-white',
+                border: 'border-blue-600 shadow-md',
+                light: 'bg-blue-50 text-blue-700',
+                label: 'Google Calendar'
+            };
+        }
+
+        // Categorized colors for available missions
+        const cat = (event.category || '').toLowerCase();
+
+        if (cat === 'community') {
+            return {
+                bg: 'bg-amber-100/90',
+                text: 'text-amber-800',
+                border: 'border-amber-200 border-dashed',
+                light: 'bg-amber-50 text-amber-600',
+                label: 'Community'
+            };
+        }
+
+        if (cat === 'education') {
+            return {
+                bg: 'bg-purple-100/90',
+                text: 'text-purple-800',
+                border: 'border-purple-200 border-dashed',
+                light: 'bg-purple-50 text-purple-600',
+                label: 'Education'
+            };
+        }
+
+        if (cat === 'environmental' || cat === 'environment') {
+            return {
+                bg: 'bg-teal-100/90',
+                text: 'text-teal-800',
+                border: 'border-teal-200 border-dashed',
+                light: 'bg-teal-50 text-teal-600',
+                label: 'Environmental'
+            };
+        }
+
+        // Default "Available" look
         return {
-            bg: event.isEnrolled ? 'bg-emerald-500' : 'bg-white',
-            text: event.isEnrolled ? 'text-white' : 'text-gray-700',
-            border: event.isEnrolled ? 'border-emerald-400' : 'border-gray-100',
-            light: event.isEnrolled ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-700',
-            label: null
+            bg: 'bg-indigo-50/90',
+            text: 'text-indigo-700',
+            border: 'border-indigo-100 border-dashed',
+            light: 'bg-indigo-50/50 text-indigo-400',
+            label: 'Available'
         };
     };
 
@@ -374,7 +458,7 @@ export default function CalendarPage() {
                             {selectedView === 'Month' ? (
                                 <div className="grid grid-cols-7 gap-3 flex-1">
                                     {calendarData.map((day, i) => {
-                                        const dayEvents = activities.filter(e => e.fullDate === day.fullDate);
+                                        const dayEvents = [...activities, ...googleEvents].filter(e => e.fullDate === day.fullDate);
                                         return (
                                             <div
                                                 key={i}
@@ -424,33 +508,51 @@ export default function CalendarPage() {
                                                 style={{ top: `${i * 80 + 8}px` }}
                                             ></div>
                                         ))}
-                                        {calendarData.map((day, colIndex) => (
-                                            <div key={colIndex} className="relative h-[1100px]">
-                                                {activities.filter(e => e.fullDate === day.fullDate).map(event => {
-                                                    const identity = getEventIdentity(event);
-                                                    return (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, scale: 0.9 }}
-                                                            animate={{ opacity: 1, scale: 1 }}
-                                                            key={event.id}
-                                                            onClick={() => setSelectedEvent(event)}
-                                                            className={`absolute inset-x-1 rounded-2xl p-3 border shadow-md cursor-pointer hover:shadow-xl transition-all z-10 ${identity.bg} ${identity.text} ${identity.border}`}
+                                        {calendarData.map((day, colIndex) => {
+                                            const dayEvents = [...activities, ...googleEvents].filter(e => e.fullDate === day.fullDate);
+                                            const conflicts = getConflicts(dayEvents);
+
+                                            return (
+                                                <div key={colIndex} className="relative h-[1920px] isolate">
+                                                    {/* Conflict Overlays */}
+                                                    {conflicts.map((conf, ci) => (
+                                                        <div
+                                                            key={`conf-${ci}`}
+                                                            className="absolute inset-x-0 bg-red-500/10 border-y border-red-200/30 z-0"
                                                             style={{
-                                                                top: `${(event.startHour - 7) * 80 + 8}px`,
-                                                                height: `${event.duration * 80}px`
+                                                                top: `${conf.start * 80 + 8}px`,
+                                                                height: `${conf.duration * 80}px`
                                                             }}
-                                                        >
-                                                            <div className="font-black text-xs leading-tight mb-1">{event.title}</div>
-                                                            <div className="flex flex-wrap items-center gap-1.5 mt-auto">
-                                                                <div className={`px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest bg-white/20`}>
-                                                                    {identity.label || (event.isEnrolled ? 'Confirmed' : 'Available')}
+                                                        />
+                                                    ))}
+
+                                                    {dayEvents.map(event => {
+                                                        const identity = getEventIdentity(event);
+                                                        return (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                                animate={{ opacity: 0.9, scale: 1 }}
+                                                                whileHover={{ opacity: 1, scale: 1.02, zIndex: 50 }}
+                                                                key={event.id}
+                                                                onClick={() => setSelectedEvent(event)}
+                                                                className={`absolute inset-x-1 rounded-2xl p-3 border shadow-md cursor-pointer hover:shadow-xl transition-all z-10 mix-blend-multiply ${identity.bg} ${identity.text} ${identity.border}`}
+                                                                style={{
+                                                                    top: `${(event.startHour) * 80 + 8}px`,
+                                                                    height: `${event.duration * 80}px`
+                                                                }}
+                                                            >
+                                                                <div className="font-black text-xs leading-tight mb-1 cursor-pointer">{event.title}</div>
+                                                                <div className="flex flex-wrap items-center gap-1.5 mt-auto">
+                                                                    <div className={`px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest bg-white/20`}>
+                                                                        {identity.label || (event.isEnrolled ? 'Confirmed' : 'Available')}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </motion.div>
-                                                    );
-                                                })}
-                                            </div>
-                                        ))}
+                                                            </motion.div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}

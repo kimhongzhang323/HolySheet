@@ -6,8 +6,13 @@ import { Inter } from 'next/font/google';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-    title: 'MINDS Activity Hub',
-    description: 'Community Activity Portal',
+    title: 'JomCare',
+    description: 'Volunteer Management Platform for Community Service',
+    icons: {
+        icon: '/logo.png',
+        shortcut: '/logo.png',
+        apple: '/logo.png',
+    },
 };
 
 import Providers from '@/components/Providers';

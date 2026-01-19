@@ -23,11 +23,12 @@ const DEFAULT_USER = {
 };
 
 // Mock stats
-const MOCK_STATS = {
-    volunteerEvents: 8,
-    totalHours: 48,
-    upcomingEvents: 5,
-    pendingApplications: 2,
+// Initial stats state
+const INITIAL_STATS = {
+    volunteerEvents: 0,
+    totalHours: 0,
+    upcomingEvents: 5, // Keep mock for now
+    pendingApplications: 2, // Keep mock for now
 };
 
 // Mock event history - Volunteer only
@@ -117,48 +118,107 @@ const MOCK_BADGES = [
 export default function ProfilePage() {
     const { data: session } = useSession();
     const [profile, setProfile] = useState(DEFAULT_USER);
-    const [activeTab, setActiveTab] = useState('overview');
+    const [stats, setStats] = useState(INITIAL_STATS);
+    const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+    const [historyEvents, setHistoryEvents] = useState<any[]>([]);
+    const [achievements, setAchievements] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState<string>('overview');
     const [isStatsOpen, setIsStatsOpen] = useState(false);
     const [isAchievementsOpen, setIsAchievementsOpen] = useState(false);
     const [isUpcomingOpen, setIsUpcomingOpen] = useState(false);
     const [historyView, setHistoryView] = useState<'grid' | 'list'>('grid');
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
+    const [pendingApplications, setPendingApplications] = useState<any[]>([]);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 6;
-    const totalPages = Math.max(1, Math.ceil(MOCK_EVENT_HISTORY.length / ITEMS_PER_PAGE));
-    const paginatedHistory = MOCK_EVENT_HISTORY.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    const totalPages = Math.max(1, Math.ceil(historyEvents.length / ITEMS_PER_PAGE));
+    const paginatedHistory = historyEvents.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     useEffect(() => {
-        const fetchProfile = async () => {
-            // Load from localStorage
-            const savedData = localStorage.getItem('user_profile');
-            if (savedData) {
-                const parsed = JSON.parse(savedData);
-                setProfile(prev => ({
-                    ...prev,
-                    ...parsed
-                }));
-            } else if (session?.user) {
-                setProfile(prev => ({
-                    ...prev,
-                    name: session.user?.name || prev.name,
-                    email: session.user?.email || prev.email,
-                    avatar: session.user?.image || prev.avatar,
-                }));
-            }
+        const fetchAllData = async () => {
+            if (!session?.user) return;
 
-            if (session?.user) {
-                try {
-                    const res = await fetch('http://localhost:8000/user/profile', {});
-                } catch (e) {
-                    // ignore
+            try {
+                // 1. Fetch Stats & Profile Info
+                const statsRes = await fetch('/api/user/stats');
+                if (statsRes.ok) {
+                    const data = await statsRes.json();
+                    setStats(prev => ({
+                        ...prev,
+                        volunteerEvents: data.missions || 0,
+                        totalHours: data.hours || 0,
+                    }));
+                    setProfile(prev => ({
+                        ...prev,
+                        name: data.name || session.user?.name || prev.name,
+                        email: session.user?.email || prev.email,
+                        avatar: data.image || session.user?.image || prev.avatar,
+                        bio: data.bio || prev.bio,
+                        phone: data.phone || prev.phone,
+                        location: data.location || prev.location,
+                        joinedDate: data.joinedDate ? new Date(data.joinedDate).toLocaleDateString() : prev.joinedDate,
+                        skills: data.skills || []
+                    }));
+                    if (data.achievements) setAchievements(data.achievements);
                 }
+
+                // 2. Fetch Upcoming Activities
+                const upcomingRes = await fetch('/api/user/activities?type=upcoming');
+                if (upcomingRes.ok) {
+                    const data = await upcomingRes.json();
+                    const allUpcoming = data.activities || [];
+                    setUpcomingEvents(allUpcoming.filter((a: any) => a.status === 'confirmed' || a.status === 'approved'));
+                    setPendingApplications(allUpcoming.filter((a: any) => a.status === 'pending').map((item: any) => ({
+                        id: item.id || item.activity_id,
+                        title: item.activity?.title || 'Unknown Activity',
+                        location: item.activity?.location || 'Unknown Location',
+                        date: item.activity?.start_time ? new Date(item.activity.start_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
+                        status: 'Pending',
+                        image: item.activity?.image_url || 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&q=80'
+                    })));
+                }
+
+                // 3. Fetch History
+                const historyRes = await fetch('/api/user/activities?type=history');
+                if (historyRes.ok) {
+                    const data = await historyRes.json();
+                    const mappedHistory = (data.activities || []).map((item: any) => ({
+                        id: item.id || item.activity_id, // ensure ID
+                        title: item.activity?.title || 'Unknown Activity',
+                        location: item.activity?.location || 'Unknown Location',
+                        date: item.activity?.start_time ? new Date(item.activity.start_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
+                        status: item.status === 'attended' ? 'On Time' : (item.status === 'confirmed' ? 'Upcoming' : item.status), // Map status to UI labels
+                        checkIn: '09:00', // Mock check-in times for now as backend doesn't store exact check-in yet
+                        checkOut: '13:00',
+                        image: item.activity?.image_url || 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&q=80'
+                    }));
+                    setHistoryEvents(mappedHistory);
+                }
+
+                // 4. Fetch Dynamic Applications
+                const appsRes = await fetch('/api/applications');
+                if (appsRes.ok) {
+                    const data = await appsRes.json();
+                    const dynamicApps = (data.applications || []).map((app: any) => ({
+                        id: app.id,
+                        title: app.activities?.title || 'Unknown Activity',
+                        location: app.activities?.location || 'Unknown Location',
+                        date: app.activities?.start_time ? new Date(app.activities.start_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
+                        status: app.status,
+                        image: app.activities?.image_url || 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&q=80'
+                    }));
+                    setPendingApplications(prev => [...prev.filter(a => a.status.toLowerCase() !== 'pending'), ...dynamicApps]);
+                }
+
+            } catch (error) {
+                console.error("Error fetching profile data:", error);
             }
         };
-        fetchProfile();
+
+        fetchAllData();
     }, [session]);
 
     const getStatusColor = (status: string) => {
@@ -276,7 +336,7 @@ export default function ProfilePage() {
                                 <Heart size={20} className="text-green-600" />
                             </div>
                             <div>
-                                <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.volunteerEvents}</h4>
+                                <h4 className="text-2xl font-bold text-gray-900">{stats.volunteerEvents}</h4>
                                 <p className="text-xs text-gray-500 font-medium">Volunteer</p>
                             </div>
                         </div>
@@ -287,7 +347,7 @@ export default function ProfilePage() {
                                 <Clock size={20} className="text-orange-600" />
                             </div>
                             <div>
-                                <h4 className="text-2xl font-bold text-gray-900">{MOCK_STATS.totalHours}</h4>
+                                <h4 className="text-2xl font-bold text-gray-900">{stats.totalHours}</h4>
                                 <p className="text-xs text-gray-500 font-medium">Volunteer Hrs</p>
                             </div>
                         </div>
@@ -335,10 +395,10 @@ export default function ProfilePage() {
                         </p>
                         <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wide">
                             <span className="px-2 py-1 bg-white text-emerald-700 rounded-lg shadow-sm">
-                                3 Skills
+                                {(profile as any).skills?.length || 0} Skills
                             </span>
                             <span className="px-2 py-1 bg-white text-emerald-700 rounded-lg shadow-sm">
-                                48 Hours
+                                {stats.totalHours} Hours
                             </span>
                         </div>
                     </Link>
@@ -355,7 +415,7 @@ export default function ProfilePage() {
                     >
                         {activeTab === 'overview' && (
                             <div className="space-y-6">
-                                {/* Achievements / Badges */}
+                                {/* Achievements section */}
                                 <div className="bg-white p-6 rounded-[20px] border border-gray-100 shadow-sm">
                                     <div
                                         className="flex items-center justify-between mb-4 md:mb-6 cursor-pointer md:cursor-default"
@@ -365,84 +425,64 @@ export default function ProfilePage() {
                                             <h3 className="text-xl font-bold text-gray-900">Achievements in Progress</h3>
                                             <ChevronRight size={20} className={`text-gray-400 md:hidden transition-transform duration-200 ${isAchievementsOpen ? 'rotate-90' : ''}`} />
                                         </div>
-                                        <Link href="/achievements" className="hidden md:block text-sm font-semibold text-emerald-600 hover:text-emerald-700" onClick={(e) => e.stopPropagation()}>
+                                        <Link href="/achievements" className="hidden md:block text-sm font-semibold text-emerald-600 hover:text-emerald-700">
                                             View All
                                         </Link>
                                     </div>
                                     <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${isAchievementsOpen ? '' : 'hidden md:grid'}`}>
-                                        {MOCK_BADGES.map((badge) => (
-                                            <div
-                                                key={badge.id}
-                                                className="bg-white border border-gray-100 p-4 rounded-2xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all group"
-                                            >
-                                                {/* Large Icon Container */}
-                                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 ${badge.bg} border border-gray-100 shadow-sm overflow-hidden`}>
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img src={badge.image} alt={badge.name} className="w-12 h-12 object-contain drop-shadow-sm transform group-hover:scale-110 transition-transform duration-500" />
-                                                </div>
-
-                                                {/* Content */}
+                                        {achievements.length === 0 && (
+                                            <div className="col-span-2 text-center py-8 text-gray-500 text-sm">
+                                                No achievements yet. Start volunteering to earn badges!
+                                            </div>
+                                        )}
+                                        {achievements.map((badge: any, idx: number) => (
+                                            <div key={idx} className="bg-white border border-gray-100 p-4 rounded-2xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all group">
+                                                <Award className="text-blue-500 shrink-0" size={24} />
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex justify-between items-end mb-2">
-                                                        <h4 className="font-bold text-gray-900 truncate pr-2 text-lg">{badge.name}</h4>
-                                                        <span className={`text-sm font-bold ${badge.color.replace('bg-', 'text-')}`}>
-                                                            {badge.progress}/{badge.max}
-                                                        </span>
-                                                    </div>
-
-                                                    {/* Progress Bar */}
-                                                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden mb-1.5">
-                                                        <div
-                                                            className={`h-full rounded-full ${badge.color} transition-all duration-1000 ease-out`}
-                                                            style={{ width: `${(badge.progress / badge.max) * 100}%` }}
-                                                        ></div>
-                                                    </div>
-
-                                                    <p className="text-xs text-gray-500 font-medium truncate">{badge.description}</p>
+                                                    <h4 className="font-bold text-gray-900 truncate pr-2 text-lg">{badge.title || badge.name || 'Badge'}</h4>
+                                                    <p className="text-xs text-gray-500 font-medium truncate">{badge.description || 'Awarded for volunteering.'}</p>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
 
-                                {/* Upcoming */}
+                                {/* Upcoming Schedule section */}
                                 <div className="bg-white p-6 rounded-[20px] border border-gray-100 shadow-sm">
                                     <div
                                         className="flex items-center justify-between mb-4 md:mb-6 cursor-pointer md:cursor-default"
                                         onClick={() => setIsUpcomingOpen(!isUpcomingOpen)}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <h3 className="text-lg font-bold text-gray-900">Upcoming Schedule</h3>
+                                            <h3 className="text-xl font-bold text-gray-900">Upcoming Schedule</h3>
                                             <ChevronRight size={20} className={`text-gray-400 md:hidden transition-transform duration-200 ${isUpcomingOpen ? 'rotate-90' : ''}`} />
                                         </div>
-                                        <Link href="/events" className="hidden md:block text-sm font-semibold text-indigo-600 hover:text-indigo-700" onClick={(e) => e.stopPropagation()}>
+                                        <Link href="/events" className="hidden md:block text-sm font-semibold text-indigo-600 hover:text-indigo-700">
                                             Find more
                                         </Link>
                                     </div>
                                     <div className={`space-y-3 ${isUpcomingOpen ? '' : 'hidden md:block'}`}>
-                                        {MOCK_UPCOMING.map((event) => {
-                                            const CategoryIcon = getCategoryIcon(event.category);
-                                            return (
-                                                <div
-                                                    key={event.id}
-                                                    className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-2xl hover:bg-gray-100 transition-colors group cursor-pointer"
-                                                >
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={`w-12 h-12 flex items-center justify-center rounded-xl bg-white shadow-sm ${getCategoryColor(event.category).replace('bg-', 'text-')}`}>
-                                                            <div className={`absolute w-12 h-12 rounded-xl opacity-10 ${getCategoryColor(event.category)}`}></div>
-                                                            <CategoryIcon size={20} />
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{event.title}</h4>
-                                                            <p className="text-xs text-gray-500 font-medium">{event.date}</p>
-                                                        </div>
+                                        {upcomingEvents.length === 0 && (
+                                            <div className="text-center py-4 text-gray-500 text-sm">No upcoming activities.</div>
+                                        )}
+                                        {upcomingEvents.map((event: any, idx: number) => (
+                                            <div key={event.id || idx} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-2xl hover:bg-gray-100 transition-colors group cursor-pointer">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white shadow-sm text-green-600">
+                                                        <Calendar size={20} />
                                                     </div>
-                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${getStatusColor(event.status)}`}>
-                                                        {event.status}
-                                                    </span>
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{event.activity?.title || 'Unknown Event'}</h4>
+                                                        <p className="text-xs text-gray-500 font-medium">
+                                                            {event.activity?.start_time ? new Date(event.activity.start_time).toLocaleDateString() : '-'}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                            );
-                                        })}
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${getStatusColor(event.status)}`}>
+                                                    {event.status}
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -484,9 +524,12 @@ export default function ProfilePage() {
 
                                 {/* History Grid */}
                                 <div className={`grid gap-4 ${isHistoryOpen ? '' : 'hidden md:grid'} ${historyView === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                                    {paginatedHistory.map((event) => (
+                                    {paginatedHistory.length === 0 && (
+                                        <div className="col-span-full text-center py-8 text-gray-500">No past activities found.</div>
+                                    )}
+                                    {paginatedHistory.map((event: any, index: number) => (
                                         <div
-                                            key={event.id}
+                                            key={event.id || `history-${index}`}
                                             className="relative bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all group flex flex-col h-full border border-gray-100"
                                         >
                                             {/* Notches */}
@@ -591,13 +634,36 @@ export default function ProfilePage() {
                                     <ChevronRight size={20} className={`text-gray-400 md:hidden transition-transform duration-200 ${isApplicationsOpen ? 'rotate-90' : ''}`} />
                                 </div>
                                 <div className={`min-h-[400px] flex flex-col items-center justify-center text-center ${isApplicationsOpen ? 'flex' : 'hidden md:flex'}`}>
-                                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                                        <Clock size={32} className="text-gray-400" />
-                                    </div>
-                                    <h3 className="text-lg font-bold text-gray-900">No Pending Applications</h3>
-                                    <p className="text-gray-500 text-sm max-w-xs mt-2">
-                                        You have no pending volunteer or event applications at the moment.
-                                    </p>
+                                    {pendingApplications.length === 0 ? (
+                                        <>
+                                            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                                                <Clock size={32} className="text-gray-400" />
+                                            </div>
+                                            <h3 className="text-lg font-bold text-gray-900">No Pending Applications</h3>
+                                            <p className="text-gray-500 text-sm max-w-xs mt-2">
+                                                You have no pending volunteer or event applications at the moment.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <div className="w-full space-y-4 text-left">
+                                            {pendingApplications.map((app, index) => (
+                                                <div key={app.id || `app-${index}`} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-2xl hover:bg-gray-100 transition-colors group">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm overflow-hidden shrink-0">
+                                                            <img src={app.image} className="w-full h-full object-cover" alt={app.title} />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-bold text-gray-900 leading-tight">{app.title}</h4>
+                                                            <p className="text-xs text-gray-500 font-medium">{app.date} • {app.location}</p>
+                                                        </div>
+                                                    </div>
+                                                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700">
+                                                        {app.status}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                     <Link
                                         href="/events"
                                         className="mt-6 px-6 py-2.5 bg-indigo-600 text-white rounded-full font-semibold text-sm hover:bg-indigo-700 transition-colors"

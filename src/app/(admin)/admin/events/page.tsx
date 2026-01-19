@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Calendar, MapPin, Users, Clock, Filter, Plus, Search, MoreVertical, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Filter, Plus, Search, MoreVertical, Loader2, AlertCircle, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 
 interface Activity {
@@ -16,6 +17,8 @@ interface Activity {
     volunteers_registered: number;
     skills_required: string[];
     status: string;
+    form_responses?: number;
+    attendance_count?: number;
 }
 
 export default function EventsPage() {
@@ -23,6 +26,18 @@ export default function EventsPage() {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'asc' });
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6; // Grid of 3x2 ideal
+
+    // Weekly View State
+    const [viewMode, setViewMode] = useState<'grid' | 'weekly'>('grid');
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [selectedWeek, setSelectedWeek] = useState(0); // 0 to 4 (approx 4 weeks)
 
     useEffect(() => {
         if (session?.accessToken) {
@@ -33,25 +48,17 @@ export default function EventsPage() {
     const fetchActivities = async () => {
         try {
             setLoading(true);
-            if (!session?.accessToken) {
-                console.log("No session token available yet");
-                return;
-            }
-            console.log("Fetching activities with token:", session.accessToken.substring(0, 20) + "...");
+            if (!session?.accessToken) return;
 
             const res = await fetch('/api/admin/activities', {
                 headers: {
                     'Authorization': `Bearer ${session.accessToken}`
                 }
             });
-            console.log("Response status:", res.status);
-            if (!res.ok) {
-                const errorText = await res.text();
-                console.error("Error response:", errorText);
-                throw new Error('Failed to fetch activities');
-            }
+
+            if (!res.ok) throw new Error('Failed to fetch activities');
+
             const data = await res.json();
-            console.log("Fetched activities:", data.length);
             setActivities(data);
         } catch (err) {
             console.error(err);
@@ -81,6 +88,124 @@ export default function EventsPage() {
         return 'Filling Up';
     };
 
+    // Navigation Logic
+    const nextMonth = () => {
+        const next = new Date(currentMonth);
+        next.setMonth(currentMonth.getMonth() + 1);
+        setCurrentMonth(next);
+        setSelectedWeek(0);
+    };
+
+    const prevMonth = () => {
+        const prev = new Date(currentMonth);
+        prev.setMonth(currentMonth.getMonth() - 1);
+        setCurrentMonth(prev);
+        setSelectedWeek(0);
+    };
+
+    // Filtering Logic
+    const getFilteredActivities = () => {
+        let filtered = [...activities];
+
+        // 1. Search Filter (Always applied)
+        filtered = filtered.filter(act =>
+            act.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            act.location?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+        // 2. View Mode Logic
+        if (viewMode === 'weekly') {
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+
+            // Calculate start/end dates for Selected Week
+            // Week 0: 1st - 7th
+            // Week 1: 8th - 14th
+            // Week 2: 15th - 21st
+            // Week 3: 22nd - End of Month
+            const startDay = (selectedWeek * 7) + 1;
+            const endDay = selectedWeek === 3 ? 31 : startDay + 6; // Last week covers rest of month
+
+            filtered = filtered.filter(act => {
+                const actDate = new Date(act.start_time);
+                return (
+                    actDate.getFullYear() === year &&
+                    actDate.getMonth() === month &&
+                    actDate.getDate() >= startDay &&
+                    actDate.getDate() <= endDay
+                );
+            });
+
+            // Weekly view always sorts by date
+            filtered.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+        } else {
+            // 'grid' mode sorting
+            filtered.sort((a, b) => {
+                if (sortConfig.key === 'date') {
+                    return sortConfig.direction === 'asc'
+                        ? new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+                        : new Date(b.start_time).getTime() - new Date(a.start_time).getTime();
+                }
+                if (sortConfig.key === 'title') {
+                    return sortConfig.direction === 'asc'
+                        ? a.title.localeCompare(b.title)
+                        : b.title.localeCompare(a.title);
+                }
+                if (sortConfig.key === 'urgency') {
+                    // Calculate shortage (needed - registered)
+                    const shortageA = Math.max(0, a.volunteers_needed - a.volunteers_registered);
+                    const shortageB = Math.max(0, b.volunteers_needed - b.volunteers_registered);
+                    return sortConfig.direction === 'asc'
+                        ? shortageA - shortageB
+                        : shortageB - shortageA;
+                }
+                if (sortConfig.key === 'volunteers') {
+                    return sortConfig.direction === 'asc'
+                        ? a.volunteers_registered - b.volunteers_registered
+                        : b.volunteers_registered - a.volunteers_registered;
+                }
+                if (sortConfig.key === 'responses') {
+                    const respA = a.form_responses ?? 0;
+                    const respB = b.form_responses ?? 0;
+                    return sortConfig.direction === 'asc'
+                        ? respA - respB
+                        : respB - respA;
+                }
+                if (sortConfig.key === 'attendance') {
+                    const attA = a.attendance_count ?? 0;
+                    const attB = b.attendance_count ?? 0;
+                    return sortConfig.direction === 'asc'
+                        ? attA - attB
+                        : attB - attA;
+                }
+                return 0;
+            });
+        }
+
+        return filtered;
+    };
+
+    const displayedActivities = getFilteredActivities();
+
+    // Pagination Logic
+    const totalItems = displayedActivities.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedActivities = displayedActivities.slice(startIndex, startIndex + itemsPerPage);
+
+    const goToPage = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    // Reset page on filter change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, viewMode, selectedWeek, sortConfig]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -92,7 +217,6 @@ export default function EventsPage() {
     return (
         <div className="flex flex-col h-full bg-white relative p-8">
             {/* Header */}
-            {/* Header */}
             <div className="flex flex-col gap-6 mb-8">
                 <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
                     <div>
@@ -101,14 +225,67 @@ export default function EventsPage() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                        {/* View Toggle */}
+                        <div className="flex bg-gray-100 p-1 rounded-lg">
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
+                            >
+                                <LayoutGrid size={18} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('weekly')}
+                                className={`p-2 rounded-md transition-all ${viewMode === 'weekly' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
+                            >
+                                <CalendarDays size={18} />
+                            </button>
+                        </div>
+
                         <div className="relative flex-1 sm:flex-none">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                             <input
                                 type="text"
                                 placeholder="Search events..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64 shadow-sm"
                             />
                         </div>
+
+                        {/* Sort Pills (Only in grid mode) */}
+                        {viewMode === 'grid' && (
+                            <div className="flex items-center gap-2">
+                                {/* Sort Category Pills */}
+                                <div className="flex bg-gray-100 p-1 rounded-lg">
+                                    {[
+                                        { key: 'date', label: 'Date' },
+                                        { key: 'volunteers', label: 'Volunteers' },
+                                        { key: 'responses', label: 'Responses' },
+                                        { key: 'attendance', label: 'Attendance' },
+                                    ].map((option) => (
+                                        <button
+                                            key={option.key}
+                                            onClick={() => setSortConfig(prev => ({
+                                                key: option.key,
+                                                direction: prev.key === option.key ? (prev.direction === 'asc' ? 'desc' : 'asc') : 'desc'
+                                            }))}
+                                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${sortConfig.key === option.key
+                                                    ? 'bg-white shadow-sm text-indigo-600'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                        >
+                                            {option.label}
+                                            {sortConfig.key === option.key && (
+                                                <span className="ml-1">
+                                                    {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                                                </span>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <button className="flex items-center justify-center gap-2 px-4 py-2 bg-[#101828] text-white text-sm font-bold rounded-lg hover:bg-gray-800 shadow-lg shadow-gray-200 transition-all whitespace-nowrap">
                             <Plus size={16} />
                             Create Event
@@ -116,6 +293,40 @@ export default function EventsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Weekly View Controls */}
+            {viewMode === 'weekly' && (
+                <div className="mb-6 space-y-4">
+                    <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div className="flex items-center gap-4">
+                            <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200 shadow-sm hover:shadow">
+                                <ChevronLeft size={20} className="text-gray-600" />
+                            </button>
+                            <h2 className="text-lg font-bold text-gray-900 min-w-[140px] text-center">
+                                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </h2>
+                            <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200 shadow-sm hover:shadow">
+                                <ChevronRight size={20} className="text-gray-600" />
+                            </button>
+                        </div>
+
+                        <div className="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1">
+                            {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map((w, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setSelectedWeek(idx)}
+                                    className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${selectedWeek === idx
+                                        ? 'bg-indigo-50 text-indigo-600 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    {w}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Error State */}
             {error && (
@@ -127,15 +338,20 @@ export default function EventsPage() {
 
             {/* Events Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {activities.length === 0 && !loading && (
-                    <div className="col-span-full py-12 text-center text-gray-500 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                {displayedActivities.length === 0 && !loading && (
+                    <div className="col-span-full py-16 text-center text-gray-500 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                         <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                        <p className="font-medium">No events found</p>
-                        <p className="text-sm mt-1">Get started by creating a new event.</p>
+                        <p className="font-medium text-lg text-gray-900">No events found</p>
+                        <p className="text-sm mt-1">
+                            {viewMode === 'weekly'
+                                ? `No events scheduled for Week ${selectedWeek + 1} of ${currentMonth.toLocaleDateString('en-US', { month: 'long' })}`
+                                : "Try adjusting your search or filters"
+                            }
+                        </p>
                     </div>
                 )}
 
-                {activities.map((activity) => (
+                {paginatedActivities.map((activity) => (
                     <Link key={activity.id} href={`/admin/events/${activity.id}`}>
                         <div className="group bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-indigo-100 transition-all cursor-pointer relative overflow-hidden h-full">
                             {/* Status Badge */}
@@ -181,7 +397,6 @@ export default function EventsPage() {
                                 <div className="flex -space-x-2">
                                     {[...Array(Math.min(3, activity.volunteers_registered))].map((_, i) => (
                                         <div key={i} className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-[8px] font-bold text-gray-500">
-                                            {/* Placeholder avatars */}
                                         </div>
                                     ))}
                                     {activity.volunteers_registered > 3 && (
@@ -198,6 +413,47 @@ export default function EventsPage() {
                     </Link>
                 ))}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-gray-200 pt-6 mt-8">
+                    <p className="text-sm text-gray-500 hidden sm:block">
+                        Showing <span className="font-bold text-gray-900">{startIndex + 1}</span> to <span className="font-bold text-gray-900">{Math.min(startIndex + itemsPerPage, totalItems)}</span> of <span className="font-bold text-gray-900">{totalItems}</span> results
+                    </p>
+
+                    <div className="flex items-center gap-2 mx-auto sm:mx-0">
+                        <button
+                            onClick={() => goToPage(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <ChevronLeft size={20} className="text-gray-600" />
+                        </button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <button
+                                key={page}
+                                onClick={() => goToPage(page)}
+                                className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${currentPage === page
+                                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                                    : 'text-gray-600 hover:bg-gray-50'
+                                    }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+
+                        <button
+                            onClick={() => goToPage(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <ChevronRight size={20} className="text-gray-600" />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
+
     );
 }

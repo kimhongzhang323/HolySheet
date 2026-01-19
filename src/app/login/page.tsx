@@ -69,11 +69,9 @@ export default function LoginPage() {
                 <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-gray-200/50 border border-white/50 p-8 space-y-6">
                     {/* Header with Logo */}
                     <div className="text-center space-y-2">
-                        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-500 shadow-lg shadow-orange-200 mb-2">
-                            <Sparkles className="w-7 h-7 text-white" />
-                        </div>
-                        <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
-                        <p className="text-sm text-gray-500">Sign in to your HolySheet account</p>
+                        <img src="/logo.png" alt="JomCare" className="w-16 h-16 mx-auto mb-2" />
+                        <h1 className="text-2xl font-bold text-gray-900">Welcome to JomCare</h1>
+                        <p className="text-sm text-gray-500">Sign in to your volunteer account</p>
                     </div>
 
                     {/* Error Message */}
