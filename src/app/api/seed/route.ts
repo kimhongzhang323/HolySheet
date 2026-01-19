@@ -158,13 +158,29 @@ export async function GET(req: NextRequest) {
         // 5.5 Seed Form Responses for Beach Cleanup activities
         const beachCleanupActivities = insertedActivities.filter(a => a.title === 'Beach Cleanup');
 
-        // Create sample users first
+
+        // Create sample users first - expanded list for richer data
         const formUsers = [
             { email: 'sarah.lim@example.com', name: 'Sarah Lim' },
             { email: 'john.tan@example.com', name: 'John Tan' },
             { email: 'amanda.chen@example.com', name: 'Amanda Chen' },
             { email: 'david.wong@example.com', name: 'David Wong' },
-            { email: 'michelle.goh@example.com', name: 'Michelle Goh' }
+            { email: 'michelle.goh@example.com', name: 'Michelle Goh' },
+            { email: 'ryan.lee@example.com', name: 'Ryan Lee' },
+            { email: 'jessica.ng@example.com', name: 'Jessica Ng' },
+            { email: 'marcus.teo@example.com', name: 'Marcus Teo' },
+            { email: 'priya.sharma@example.com', name: 'Priya Sharma' },
+            { email: 'kevin.chua@example.com', name: 'Kevin Chua' },
+            { email: 'rachel.ong@example.com', name: 'Rachel Ong' },
+            { email: 'daniel.lim@example.com', name: 'Daniel Lim' },
+            { email: 'emily.koh@example.com', name: 'Emily Koh' },
+            { email: 'jason.yeo@example.com', name: 'Jason Yeo' },
+            { email: 'sophia.tan@example.com', name: 'Sophia Tan' },
+            { email: 'alex.ho@example.com', name: 'Alex Ho' },
+            { email: 'natalie.foo@example.com', name: 'Natalie Foo' },
+            { email: 'brandon.sim@example.com', name: 'Brandon Sim' },
+            { email: 'grace.low@example.com', name: 'Grace Low' },
+            { email: 'timothy.chan@example.com', name: 'Timothy Chan' }
         ];
 
         const userIds: Record<string, string> = {};
@@ -186,7 +202,10 @@ export async function GET(req: NextRequest) {
                     'Commitment Preference': 'Just this session',
                     'T-Shirt Size': 'Medium',
                     'Emergency Contact': '+65 9123 4567',
-                    'How did you hear about us?': 'Social media'
+                    'How did you hear about us?': 'Social media',
+                    'Previous Experience': 'First time volunteer',
+                    'Special Skills': 'Photography',
+                    'Why do you want to volunteer?': 'Want to give back to the community'
                 }
             },
             {
@@ -197,7 +216,9 @@ export async function GET(req: NextRequest) {
                     'T-Shirt Size': 'Large',
                     'Emergency Contact': '+65 9876 5432',
                     'How did you hear about us?': 'Friend referral',
-                    'Previous Experience': '2 years of volunteering at various beach cleanups'
+                    'Previous Experience': '2 years of volunteering at various cleanups',
+                    'Special Skills': 'First Aid, Leadership',
+                    'Why do you want to volunteer?': 'Passionate about environmental conservation'
                 }
             },
             {
@@ -209,7 +230,8 @@ export async function GET(req: NextRequest) {
                     'Emergency Contact': '+65 8765 4321',
                     'How did you hear about us?': 'Website',
                     'Previous Experience': 'First time volunteer',
-                    'Special Skills': 'Photography, Social Media Management'
+                    'Special Skills': 'Social Media Management',
+                    'Why do you want to volunteer?': 'Looking to meet like-minded people'
                 }
             },
             {
@@ -220,9 +242,9 @@ export async function GET(req: NextRequest) {
                     'T-Shirt Size': 'XL',
                     'Emergency Contact': '+65 9012 3456',
                     'How did you hear about us?': 'School/University',
-                    'Previous Experience': 'Organized environmental campaigns at NUS',
+                    'Previous Experience': 'Organized environmental campaigns',
                     'Special Skills': 'Event coordination, First Aid',
-                    'Why do you want to volunteer?': 'I am passionate about marine conservation and want to make a tangible impact on our local beaches.'
+                    'Why do you want to volunteer?': 'Marine conservation is my passion'
                 }
             },
             {
@@ -233,10 +255,204 @@ export async function GET(req: NextRequest) {
                     'T-Shirt Size': 'Medium',
                     'Emergency Contact': '+65 8234 5678',
                     'How did you hear about us?': 'Instagram',
-                    'Previous Experience': 'Volunteer at animal shelter for 3 years',
+                    'Previous Experience': '3 years at animal shelter',
                     'Special Skills': 'Team leadership, Communication',
-                    'Why do you want to volunteer?': 'Looking to expand my volunteering experience to environmental causes.',
-                    'Availability': 'Weekends only, preferably morning slots'
+                    'Why do you want to volunteer?': 'Expanding my volunteering experience'
+                }
+            },
+            {
+                email: 'ryan.lee@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'None',
+                    'Commitment Preference': 'Regular (Monthly)',
+                    'T-Shirt Size': 'Large',
+                    'Emergency Contact': '+65 9111 2222',
+                    'How did you hear about us?': 'Friend referral',
+                    'Previous Experience': '5 years community service',
+                    'Special Skills': 'Driving, Heavy lifting',
+                    'Why do you want to volunteer?': 'Want to make a difference'
+                }
+            },
+            {
+                email: 'jessica.ng@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Vegetarian',
+                    'Commitment Preference': 'Weekly',
+                    'T-Shirt Size': 'Small',
+                    'Emergency Contact': '+65 9222 3333',
+                    'How did you hear about us?': 'Social media',
+                    'Previous Experience': 'First time volunteer',
+                    'Special Skills': 'Graphic Design',
+                    'Why do you want to volunteer?': 'Looking for meaningful activities'
+                }
+            },
+            {
+                email: 'marcus.teo@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'None',
+                    'Commitment Preference': 'Just this session',
+                    'T-Shirt Size': 'Medium',
+                    'Emergency Contact': '+65 9333 4444',
+                    'How did you hear about us?': 'LinkedIn',
+                    'Previous Experience': '1 year corporate volunteering',
+                    'Special Skills': 'Project Management',
+                    'Why do you want to volunteer?': 'Team building with colleagues'
+                }
+            },
+            {
+                email: 'priya.sharma@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Vegetarian',
+                    'Commitment Preference': 'Regular (Monthly)',
+                    'T-Shirt Size': 'Medium',
+                    'Emergency Contact': '+65 9444 5555',
+                    'How did you hear about us?': 'Community center',
+                    'Previous Experience': '4 years teaching',
+                    'Special Skills': 'Teaching, Mentoring',
+                    'Why do you want to volunteer?': 'Love working with nature'
+                }
+            },
+            {
+                email: 'kevin.chua@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Halal',
+                    'Commitment Preference': 'Flexible',
+                    'T-Shirt Size': 'Large',
+                    'Emergency Contact': '+65 9555 6666',
+                    'How did you hear about us?': 'School/University',
+                    'Previous Experience': 'Student volunteer club leader',
+                    'Special Skills': 'Video Production',
+                    'Why do you want to volunteer?': 'CCA requirements and genuine interest'
+                }
+            },
+            {
+                email: 'rachel.ong@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'None',
+                    'Commitment Preference': 'Weekly',
+                    'T-Shirt Size': 'Small',
+                    'Emergency Contact': '+65 9666 7777',
+                    'How did you hear about us?': 'Instagram',
+                    'Previous Experience': 'Beach cleanup regular',
+                    'Special Skills': 'Photography, Swimming',
+                    'Why do you want to volunteer?': 'Keep our beaches beautiful'
+                }
+            },
+            {
+                email: 'daniel.lim@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Gluten-free',
+                    'Commitment Preference': 'Ad-hoc',
+                    'T-Shirt Size': 'XL',
+                    'Emergency Contact': '+65 9777 8888',
+                    'How did you hear about us?': 'Website',
+                    'Previous Experience': 'First time volunteer',
+                    'Special Skills': 'Construction, Heavy lifting',
+                    'Why do you want to volunteer?': 'Try something new'
+                }
+            },
+            {
+                email: 'emily.koh@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Vegan',
+                    'Commitment Preference': 'Regular (Monthly)',
+                    'T-Shirt Size': 'Small',
+                    'Emergency Contact': '+65 9888 9999',
+                    'How did you hear about us?': 'Friend referral',
+                    'Previous Experience': 'Environmental advocate',
+                    'Special Skills': 'Public Speaking, Writing',
+                    'Why do you want to volunteer?': 'Environmental activism'
+                }
+            },
+            {
+                email: 'jason.yeo@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'None',
+                    'Commitment Preference': 'Just this session',
+                    'T-Shirt Size': 'Medium',
+                    'Emergency Contact': '+65 8111 2222',
+                    'How did you hear about us?': 'Social media',
+                    'Previous Experience': '2 years food distribution',
+                    'Special Skills': 'Logistics, Driving',
+                    'Why do you want to volunteer?': 'Help the community'
+                }
+            },
+            {
+                email: 'sophia.tan@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'None',
+                    'Commitment Preference': 'Flexible',
+                    'T-Shirt Size': 'Medium',
+                    'Emergency Contact': '+65 8222 3333',
+                    'How did you hear about us?': 'TikTok',
+                    'Previous Experience': 'First time volunteer',
+                    'Special Skills': 'Content Creation',
+                    'Why do you want to volunteer?': 'Create content for awareness'
+                }
+            },
+            {
+                email: 'alex.ho@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Halal',
+                    'Commitment Preference': 'Regular (Monthly)',
+                    'T-Shirt Size': 'Large',
+                    'Emergency Contact': '+65 8333 4444',
+                    'How did you hear about us?': 'Newspaper',
+                    'Previous Experience': 'Retired teacher, 10 years volunteering',
+                    'Special Skills': 'Mentoring, Administration',
+                    'Why do you want to volunteer?': 'Stay active in retirement'
+                }
+            },
+            {
+                email: 'natalie.foo@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Pescatarian',
+                    'Commitment Preference': 'Weekly',
+                    'T-Shirt Size': 'Small',
+                    'Emergency Contact': '+65 8444 5555',
+                    'How did you hear about us?': 'Instagram',
+                    'Previous Experience': 'Marine biology student',
+                    'Special Skills': 'Marine life identification, Research',
+                    'Why do you want to volunteer?': 'Apply knowledge to real conservation'
+                }
+            },
+            {
+                email: 'brandon.sim@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'None',
+                    'Commitment Preference': 'Just this session',
+                    'T-Shirt Size': 'XL',
+                    'Emergency Contact': '+65 8555 6666',
+                    'How did you hear about us?': 'Company CSR',
+                    'Previous Experience': 'Corporate volunteering events',
+                    'Special Skills': 'Data Analysis, Reporting',
+                    'Why do you want to volunteer?': 'Company initiative'
+                }
+            },
+            {
+                email: 'grace.low@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'Vegetarian',
+                    'Commitment Preference': 'Ad-hoc',
+                    'T-Shirt Size': 'Medium',
+                    'Emergency Contact': '+65 8666 7777',
+                    'How did you hear about us?': 'Friend referral',
+                    'Previous Experience': 'Yoga instructor, wellness',
+                    'Special Skills': 'First Aid, Wellness coaching',
+                    'Why do you want to volunteer?': 'Combine wellness and nature'
+                }
+            },
+            {
+                email: 'timothy.chan@example.com',
+                form_data: {
+                    'Dietary Restrictions': 'None',
+                    'Commitment Preference': 'Regular (Monthly)',
+                    'T-Shirt Size': 'Large',
+                    'Emergency Contact': '+65 8777 8888',
+                    'How did you hear about us?': 'Website',
+                    'Previous Experience': '6 years various NGOs',
+                    'Special Skills': 'Fundraising, Networking',
+                    'Why do you want to volunteer?': 'Expand my impact'
                 }
             }
         ];
