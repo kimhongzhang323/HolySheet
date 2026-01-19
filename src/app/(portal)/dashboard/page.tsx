@@ -57,12 +57,7 @@ export default function PortalPage() {
         setSelectedCauses([...originalCauses]);
     };
 
-    // Mock stats for ImpactHeader
-    const impactStats = {
-        hours: 48,
-        missions: 12,
-        skills: 5
-    };
+
 
     // Category items for InfiniteMenu
     const CATEGORY_ITEMS = [
@@ -145,7 +140,6 @@ export default function PortalPage() {
                 setLoading(false);
             }
         }
-
         if (session) {
             fetchFeed();
         }
@@ -153,8 +147,7 @@ export default function PortalPage() {
 
     return (
         <div className="space-y-10">
-            {/* Top Row: Impact Header */}
-            <ImpactHeader stats={impactStats} userName={session?.user?.name || 'Volunteer'} />
+            {/* Top Row: Impact Header Removed */}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* LEFT COLUMN: Assignments & Applications (Span 4) */}
