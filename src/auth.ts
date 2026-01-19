@@ -13,7 +13,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
             authorization: {
                 params: {
-                    scope: "openid email profile",
+                    scope: "openid email profile https://www.googleapis.com/auth/calendar.events.readonly",
                     prompt: "consent",
                     access_type: "offline",
                     response_type: "code"
@@ -66,6 +66,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     ],
     // session: { strategy: "jwt" }, // Default
     callbacks: {
+        async signIn({ user, account, profile }) {
+            if (account?.provider === "google" && user.email) {
+                // Determine name and image from various possible sources in the callback objects
+                const name = user.name || (profile as any)?.name || user.email.split('@')[0];
+                const image = user.image || (profile as any)?.picture;
+
+                const { error } = await supabase
+                    .from('users')
+                    .upsert({
+                        email: user.email,
+                        name: name,
+                        image: image,
+                    }, { onConflict: 'email' });
+
+                if (error) {
+                    console.error("Error upserting user from Google sign-in:", error.message);
+                }
+            }
+            return true;
+        },
         async jwt({ token, user, account }) {
             // Initial sign in
             if (user) {
@@ -84,6 +104,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 token.supabaseAccessToken = (user as any).supabaseAccessToken || user.email;
             }
 
+            // Capture Google Access Token if signing in with Google
+            if (account && account.provider === "google") {
+                token.googleAccessToken = account.access_token;
+            }
+
             return token;
         },
         async session({ session, token }) {
@@ -93,6 +118,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }
             // Expose the Supabase access token to the client so calls can be made
             (session as any).accessToken = token.supabaseAccessToken;
+
+            // Expose the Google Access Token to the client
+            session.googleAccessToken = token.googleAccessToken;
 
             return session;
         },

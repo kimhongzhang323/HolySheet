@@ -195,8 +195,8 @@ export default function PortalPage() {
                         </div>
                         <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm p-4 space-y-3">
                             {applications.length > 0 ? (
-                                applications.map((app) => (
-                                    <div key={app.id} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:border-emerald-200 transition-colors cursor-pointer group">
+                                applications.map((app, index) => (
+                                    <div key={app.id || `app-${index}`} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:border-emerald-200 transition-colors cursor-pointer group">
                                         <div className="flex items-center gap-3">
                                             <div className={`w-10 h-10 ${app.bg} rounded-xl flex items-center justify-center`}>
                                                 <Shield size={18} className={app.color} />
@@ -263,7 +263,7 @@ export default function PortalPage() {
                                         .slice(0, 2)
                                         .map((activity, i) => (
                                             <ActivityCard
-                                                key={activity.id}
+                                                key={activity.id || `rec-${i}`}
                                                 activity={{
                                                     ...activity,
                                                     matchReason: i === 0 ? "98% Match - Design" : "92% Match - Local"
