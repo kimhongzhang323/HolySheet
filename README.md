@@ -18,7 +18,7 @@
 
 ## 📖 Overview
 
-MINDS Activity Hub is a full-stack volunteer management system designed to streamline activity coordination, volunteer engagement, and administrative operations. It features an AI-powered assistant for intelligent form autofill, volunteer matching, and natural language queries.
+JomCare is a full-stack volunteer management system designed to streamline activity coordination, volunteer engagement, and administrative operations. It features an AI-powered assistant for intelligent form autofill, volunteer matching, and natural language queries.
 
 ## 🎯 Problem Statement
 
