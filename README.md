@@ -20,6 +20,25 @@
 
 MINDS Activity Hub is a full-stack volunteer management system designed to streamline activity coordination, volunteer engagement, and administrative operations. It features an AI-powered assistant for intelligent form autofill, volunteer matching, and natural language queries.
 
+## 🎯 Problem Statement
+
+> **How might we reduce friction in activity sign-ups for both individuals and caregivers, while reducing manual effort for staff in managing and consolidating registration data?**
+
+The non-profit sector is suffering from a broken digital process defined by three critical failures:
+
+| Stakeholder | Current Pain Points |
+|-------------|-------------------|
+| **Participants** | Register separately across multiple programmes, leading to double-booking and scheduling conflicts |
+| **Volunteers** | Rely on fragmented Google Sheets or email to sign up, with no consolidated system across programmes |
+| **Staff** | Spend **8+ hours per week** manually creating schedules on Canva, managing Google Forms, and contacting caregivers via messaging apps |
+
+Research shows that the average online registration form abandonment rate is **~70%**, with 27% of users abandoning due to form length. Meanwhile, IT teams spend up to **42%** of their time on system maintenance and "workarounds" rather than strategic work.
+
+**JomCare solves this** by providing a unified platform where:
+- Participants view a single calendar to register for all activities
+- Volunteers register via one intuitive platform
+- Staff reduce admin time to **4 hours per week** with visual calendar views and streamlined registration
+
 ## ✨ Features
 
 ### 🎯 Volunteer Portal
