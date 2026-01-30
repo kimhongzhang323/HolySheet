@@ -53,7 +53,7 @@ export default function JointAttendancePage() {
                         location: act.location,
                         volunteers_registered: act.volunteers_registered || 0,
                         volunteers_needed: act.volunteers_needed || 0,
-                        engagement_level: act.engagement_level || 'Medium'
+                        engagement_level: act.engagement_level || 'Ad hoc'
                     }
                 }));
                 setEvents(formattedEvents);
@@ -143,9 +143,10 @@ export default function JointAttendancePage() {
 
         // Simpler "Text Bar" style matching Portal
         const engagementColor =
-            props.engagement_level === 'High' ? 'bg-red-400' :
-                props.engagement_level === 'Medium' ? 'bg-yellow-400' :
-                    props.engagement_level === 'Low' ? 'bg-green-400' : 'bg-gray-400';
+            props.engagement_level === 'Ad hoc' ? 'bg-red-400' :
+                props.engagement_level === 'Once a week' ? 'bg-blue-400' :
+                    props.engagement_level === 'Twice a week' ? 'bg-purple-400' :
+                        props.engagement_level === '3 or more times a week' ? 'bg-orange-400' : 'bg-gray-400';
 
         return (
             <div className={`px-1.5 py-0.5 md:py-1 rounded-sm md:rounded-md text-[10px] md:text-xs w-full ${colors} cursor-pointer hover:opacity-80 transition-opacity truncate font-medium flex items-center gap-1.5`}>
@@ -442,7 +443,7 @@ export default function JointAttendancePage() {
                             </button>
                         </div>
                         <div className="space-y-2">
-                            {['High', 'Medium', 'Low'].map(level => (
+                            {['Ad hoc', 'Once a week', 'Twice a week', '3 or more times a week'].map(level => (
                                 <label key={level} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors">
                                     <input
                                         type="checkbox"
@@ -456,10 +457,11 @@ export default function JointAttendancePage() {
                                         }}
                                         className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
                                     />
-                                    <span className="text-sm font-medium text-gray-700">{level} Intensity</span>
-                                    {level === 'High' && <span className="ml-auto w-2 h-2 rounded-full bg-red-400"></span>}
-                                    {level === 'Medium' && <span className="ml-auto w-2 h-2 rounded-full bg-yellow-400"></span>}
-                                    {level === 'Low' && <span className="ml-auto w-2 h-2 rounded-full bg-green-400"></span>}
+                                    <span className="text-sm font-medium text-gray-700">{level} engagement</span>
+                                    {level === 'Ad hoc' && <span className="ml-auto w-2 h-2 rounded-full bg-red-400"></span>}
+                                    {level === 'Once a week' && <span className="ml-auto w-2 h-2 rounded-full bg-blue-400"></span>}
+                                    {level === 'Twice a week' && <span className="ml-auto w-2 h-2 rounded-full bg-purple-400"></span>}
+                                    {level === '3 or more times a week' && <span className="ml-auto w-2 h-2 rounded-full bg-orange-400"></span>}
                                 </label>
                             ))}
                         </div>
