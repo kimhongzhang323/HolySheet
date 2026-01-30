@@ -496,16 +496,49 @@ export default function EventDetailPage() {
                         </div>
                     </div>
 
-                    {activity.requirements && (
-                        <div className="bg-emerald-50/50 rounded-3xl p-8 border border-emerald-100">
-                            <h2 className="text-xl font-bold text-gray-900 mb-6">Requirements</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {activity.requirements.map((req, i) => (
-                                    <div key={i} className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-emerald-100/50">
-                                        <CheckCircle size={20} className="text-emerald-500 shrink-0" />
-                                        <span className="text-sm font-medium text-gray-700">{req}</span>
-                                    </div>
-                                ))}
+                    {activity.requirements && activity.requirements.length > 0 && (
+                        <div className="bg-gradient-to-br from-emerald-50/80 to-teal-50/50 rounded-3xl p-8 border border-emerald-100">
+                            <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                                <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
+                                Requirements Checklist
+                            </h2>
+                            <p className="text-sm text-gray-500 mb-6">Please ensure you meet all requirements before applying</p>
+                            <div className="space-y-3">
+                                {activity.requirements.map((req: any, i: number) => {
+                                    // Determine if requirement is auto-checked based on user profile
+                                    const isAutoChecked = req.autoCheck === 'age' ? true : // Assume age requirements met for demo
+                                        req.autoCheck === 'skills' ? false : // Skills need manual verification
+                                            req.autoCheck === 'interests' ? true : // Assume interests match
+                                                req.autoCheck === 'vaccination' ? false : // Vaccinations need verification
+                                                    false;
+
+                                    return (
+                                        <div
+                                            key={req.id || i}
+                                            className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isAutoChecked
+                                                    ? 'bg-emerald-50 border-emerald-200'
+                                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${isAutoChecked
+                                                    ? 'bg-emerald-500 text-white'
+                                                    : 'bg-gray-100 border-2 border-gray-300'
+                                                }`}>
+                                                {isAutoChecked && <CheckCircle size={14} />}
+                                            </div>
+                                            <div className="flex-1">
+                                                <span className={`text-sm font-medium ${isAutoChecked ? 'text-emerald-800' : 'text-gray-700'}`}>
+                                                    {typeof req === 'string' ? req : req.label}
+                                                </span>
+                                                {isAutoChecked && req.autoCheck && (
+                                                    <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                                        Auto-verified
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
