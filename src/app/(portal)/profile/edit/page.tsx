@@ -9,9 +9,9 @@ import {
     Save, X, Check, Search, Map as MapIcon
 } from 'lucide-react';
 import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from '@react-google-maps/api';
+import { GOOGLE_MAPS_CONFIG } from '@/lib/googleMapsConfig';
 
 const center = { lat: 1.3521, lng: 103.8198 }; // Singapore
-const libraries: ("places")[] = ["places"];
 
 // Mock user data (in real app, this would come from API/database)
 const INITIAL_USER_DATA = {
@@ -33,11 +33,7 @@ export default function EditProfilePage() {
     const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
     const [markerPosition, setMarkerPosition] = useState(center);
 
-    const { isLoaded } = useJsApiLoader({
-        id: 'google-map-script',
-        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '',
-        libraries
-    });
+    const { isLoaded } = useJsApiLoader(GOOGLE_MAPS_CONFIG);
 
     // Form state
     const [formData, setFormData] = useState({

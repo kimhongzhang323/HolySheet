@@ -186,7 +186,7 @@ export default function ProfilePage() {
                     status: 'confirmed',
                     activity: {
                         title: item.title,
-                        start_time: item.date || item.start_time,
+                        start_time: item.start_time || item.date, // Prefer start_time (ISO format) over date (human-readable)
                         image_url: item.image || item.image_url
                     }
                 }));
@@ -392,8 +392,8 @@ export default function ProfilePage() {
             {/* Main Content Tabs */}
             <div className="flex flex-col lg:flex-row gap-8">
                 {/* Left Column: Navigation & Quick Info */}
-                <div className="w-full lg:w-1/4 space-y-6">
-                    <nav className="flex lg:flex-col gap-1 p-1.5 bg-gray-100 rounded-2xl sticky top-24 z-20 overflow-x-auto">
+                <div className="w-full lg:w-1/4 space-y-6 relative">
+                    <nav className="flex lg:flex-col gap-1 p-1.5 bg-gray-100 rounded-2xl lg:sticky lg:top-24 z-20 overflow-x-auto">
                         {[
                             { id: 'overview', label: 'Overview', icon: Star },
                             { id: 'history', label: 'History', icon: Clock },
@@ -413,10 +413,10 @@ export default function ProfilePage() {
                         ))}
                     </nav>
 
-                    {/* Resume Card */}
+                    {/* Resume Card - Hidden on mobile */}
                     <Link
                         href="/profile/volunteer-resume"
-                        className="block bg-gradient-to-br from-emerald-50 to-teal-50 rounded-[20px] p-6 border border-emerald-100 shadow-sm hover:shadow-md transition-all group"
+                        className="hidden lg:block bg-gradient-to-br from-emerald-50 to-teal-50 rounded-[20px] p-6 border border-emerald-100 shadow-sm hover:shadow-md transition-all group"
                     >
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="font-bold text-gray-900">Volunteer Resume</h3>
