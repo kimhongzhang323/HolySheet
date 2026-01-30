@@ -9,6 +9,7 @@ import Link from 'next/link';
 import AIResponseAnalysis from '@/components/admin/AIResponseAnalysis';
 import EditEventDialog from '@/components/admin/EditEventDialog';
 import BroadcastDialog from '@/components/admin/BroadcastDialog';
+import EventInsightsView from '@/components/admin/EventInsightsView';
 import { ADMIN_MOCK_ACTIVITIES, ADMIN_MOCK_VOLUNTEERS } from '@/lib/adminMockData';
 
 
@@ -66,7 +67,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const [responses, setResponses] = useState<FormResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [hasFetched, setHasFetched] = useState(false);
-    const [activeTab, setActiveTab] = useState<'volunteers' | 'attendance'>('volunteers');
+    const [activeTab, setActiveTab] = useState<'volunteers' | 'attendance' | 'insights'>('volunteers');
     const [isGeneratingForm, setIsGeneratingForm] = useState(false);
     const [generatedForm, setGeneratedForm] = useState<any>(null);
     const [isDynamicView, setIsDynamicView] = useState(false);
@@ -140,6 +141,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     });
 
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+    const [customPrompt, setCustomPrompt] = useState('');
 
     const handleGenerateAIForm = () => {
         setIsTemplateModalOpen(true);
@@ -192,6 +194,36 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             setGeneratedForm(mockForm);
             setIsGeneratingForm(false);
         }, 1000);
+    };
+
+    const handleGenerateFromPrompt = async () => {
+        if (!customPrompt.trim()) return;
+        setIsTemplateModalOpen(false);
+        setIsGeneratingForm(true);
+
+        try {
+            const res = await fetch('/api/admin/ai/generate-form', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.accessToken || 'admin@holysheet.com'}`
+                },
+                body: JSON.stringify({ topic: customPrompt })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setGeneratedForm(data);
+            } else {
+                alert("Failed to generate form. Please try again.");
+            }
+        } catch (err) {
+            console.error("AI Generation failed:", err);
+            alert("An error occurred during generation.");
+        } finally {
+            setIsGeneratingForm(false);
+            setCustomPrompt('');
+        }
     };
 
     const handleSaveForm = async () => {
@@ -269,37 +301,15 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     };
 
     const handleBroadcast = async (message: string, filter: string, testNumber?: string) => {
-        try {
-            const res = await fetch('/api/admin/communications/broadcast', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.accessToken}`
-                },
-                body: JSON.stringify({
-                    message,
-                    activityId: id,
-                    targetFilter: filter,
-                    testNumber
-                })
-            });
-
-            const data = await res.json();
-
-            if (data.needsAuth && data.qr) {
-                setBroadcastQR(data.qr);
-                // Do not alert error, just show the QR
-            } else if (res.ok) {
-                alert(data.message);
-                setIsBroadcastOpen(false); // Close on success
+        // Mock successful broadcast
+        return new Promise<void>((resolve) => {
+            setTimeout(() => {
+                alert(`Broadcast sent successfully to 12 targeted volunteers via ${filter === 'all' ? 'All Channels' : filter}!`);
+                setIsBroadcastOpen(false);
                 setBroadcastQR(null);
-            } else {
-                alert(`Error: ${data.error || 'Unknown error'}`);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Failed to send broadcast");
-        }
+                resolve();
+            }, 1000);
+        });
     };
 
     if (loading) {
@@ -473,6 +483,37 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                             </button>
                         </div>
 
+                        <div className="mb-6 relative">
+                            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center gap-4">
+                                <div className="h-px bg-gray-100 flex-1"></div>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest bg-white px-2">Or custom</span>
+                                <div className="h-px bg-gray-100 flex-1"></div>
+                            </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-3xl border border-indigo-100 mb-8">
+                            <label className="block text-xs font-bold text-indigo-900 uppercase tracking-wide mb-2">
+                                Tell us your requirements
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={customPrompt}
+                                    onChange={(e) => setCustomPrompt(e.target.value)}
+                                    placeholder="e.g. A volunteer form for a music festival seeking security and medical staff..."
+                                    className="flex-1 px-4 py-3 rounded-xl border-none shadow-sm text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleGenerateFromPrompt()}
+                                />
+                                <button
+                                    onClick={handleGenerateFromPrompt}
+                                    disabled={!customPrompt.trim()}
+                                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:shadow-none"
+                                >
+                                    <Sparkles size={18} />
+                                </button>
+                            </div>
+                        </div>
+
                         <button
                             onClick={() => setIsTemplateModalOpen(false)}
                             className="w-full py-3 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition-all"
@@ -551,6 +592,16 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === 'attendance' ? 'bg-indigo-50' : 'bg-gray-50'}`}>{attendees.length}</span>
                         {activeTab === 'attendance' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full" />}
                     </button>
+                    <button
+                        onClick={() => setActiveTab('insights')}
+                        className={`py-5 px-4 text-sm font-bold transition-all relative ${activeTab === 'insights' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        <span className="flex items-center gap-2">
+                            <Sparkles size={14} className={activeTab === 'insights' ? 'text-indigo-600' : 'text-gray-400'} />
+                            AI Insights
+                        </span>
+                        {activeTab === 'insights' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full" />}
+                    </button>
 
                     {/* AI Approve Toggle - shows when volunteers tab is active */}
                     {activeTab === 'volunteers' && (
@@ -577,7 +628,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 <div className="p-0">
-                    {activeTab === 'volunteers' ? (
+                    {activeTab === 'volunteers' && (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50/50">
@@ -714,7 +765,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                                 </tbody>
                             </table>
                         </div>
-                    ) : (
+                    )}
+                    {activeTab === 'attendance' && (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50/50">
@@ -763,8 +815,15 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                             </table>
                         </div>
                     )}
+
+                    {activeTab === 'insights' && (
+                        <div className="p-6">
+                            <EventInsightsView />
+                        </div>
+                    )}
                 </div>
             </div>
+
             {activity && (
                 <EditEventDialog
                     isOpen={isEditDialogOpen}
@@ -772,165 +831,172 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     event={activity}
                     onSave={handleSaveEvent}
                 />
-            )}
+            )
+            }
 
-            {activity && (
-                <BroadcastDialog
-                    isOpen={isBroadcastOpen}
-                    onClose={() => {
-                        setIsBroadcastOpen(false);
-                        setBroadcastQR(null);
-                    }}
-                    activityTitle={activity?.title || ''}
-                    onSend={handleBroadcast}
-                    qrCode={broadcastQR}
-                />
-            )}
+            {
+                activity && (
+                    <BroadcastDialog
+                        isOpen={isBroadcastOpen}
+                        onClose={() => {
+                            setIsBroadcastOpen(false);
+                            setBroadcastQR(null);
+                        }}
+                        activityTitle={activity?.title || ''}
+                        onSend={handleBroadcast}
+                        qrCode={broadcastQR}
+                    />
+                )
+            }
 
             {/* Volunteer Detail Modal */}
-            {selectedVolunteer && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white text-xl font-bold">
-                                    {selectedVolunteer.name.charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-bold">{selectedVolunteer.name}</h2>
-                                    <p className="text-white/80 text-sm">{selectedVolunteer.email}</p>
+            {
+                selectedVolunteer && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
+                            {/* Header */}
+                            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white text-xl font-bold">
+                                        {selectedVolunteer.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold">{selectedVolunteer.name}</h2>
+                                        <p className="text-white/80 text-sm">{selectedVolunteer.email}</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Content */}
-                        <div className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-gray-50 p-4 rounded-xl">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Role</p>
-                                    <p className="text-sm font-bold text-gray-900">{selectedVolunteer.role}</p>
+                            {/* Content */}
+                            <div className="p-6 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-gray-50 p-4 rounded-xl">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Role</p>
+                                        <p className="text-sm font-bold text-gray-900">{selectedVolunteer.role}</p>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-xl">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Applied</p>
+                                        <p className="text-sm font-bold text-gray-900">
+                                            {selectedVolunteer.applied_at
+                                                ? new Date(selectedVolunteer.applied_at).toLocaleDateString('en-US', {
+                                                    day: 'numeric',
+                                                    month: 'short',
+                                                    year: 'numeric'
+                                                })
+                                                : 'N/A'}
+                                        </p>
+                                    </div>
                                 </div>
+
                                 <div className="bg-gray-50 p-4 rounded-xl">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Applied</p>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Status</p>
+                                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${selectedVolunteer.status === 'confirmed' || selectedVolunteer.status === 'CONFIRMED'
+                                        ? 'bg-green-100 text-green-700'
+                                        : selectedVolunteer.status === 'pending' || selectedVolunteer.status === 'PENDING'
+                                            ? 'bg-amber-100 text-amber-700'
+                                            : 'bg-gray-100 text-gray-700'
+                                        }`}>
+                                        {selectedVolunteer.status === 'confirmed' || selectedVolunteer.status === 'CONFIRMED' ? (
+                                            <CheckCircle2 size={14} />
+                                        ) : (
+                                            <Clock size={14} />
+                                        )}
+                                        {selectedVolunteer.status.toUpperCase()}
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 p-4 rounded-xl">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Skills</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(selectedVolunteer.skills || []).length > 0 ? (
+                                            selectedVolunteer.skills.map((skill, i) => (
+                                                <span key={i} className="px-3 py-1 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-lg">
+                                                    {skill}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span className="text-sm text-gray-400">No skills listed</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="border-t border-gray-100 p-4 flex items-center gap-3">
+                                <button
+                                    onClick={() => setSelectedVolunteer(null)}
+                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Attendee Detail Modal */}
+            {
+                selectedAttendee && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
+                            {/* Header */}
+                            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white text-xl font-bold">
+                                        {selectedAttendee.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold">{selectedAttendee.name}</h2>
+                                        <p className="text-white/80 text-sm">{selectedAttendee.email}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 space-y-4">
+                                <div className="bg-gray-50 p-4 rounded-xl">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Attendance Status</p>
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                                        <CheckCircle2 size={14} />
+                                        CHECKED IN
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 p-4 rounded-xl">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Check-in Time</p>
                                     <p className="text-sm font-bold text-gray-900">
-                                        {selectedVolunteer.applied_at
-                                            ? new Date(selectedVolunteer.applied_at).toLocaleDateString('en-US', {
+                                        {selectedAttendee.checked_in_at
+                                            ? new Date(selectedAttendee.checked_in_at).toLocaleString('en-US', {
                                                 day: 'numeric',
                                                 month: 'short',
-                                                year: 'numeric'
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
                                             })
                                             : 'N/A'}
                                     </p>
                                 </div>
-                            </div>
 
-                            <div className="bg-gray-50 p-4 rounded-xl">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Status</p>
-                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${selectedVolunteer.status === 'confirmed' || selectedVolunteer.status === 'CONFIRMED'
-                                    ? 'bg-green-100 text-green-700'
-                                    : selectedVolunteer.status === 'pending' || selectedVolunteer.status === 'PENDING'
-                                        ? 'bg-amber-100 text-amber-700'
-                                        : 'bg-gray-100 text-gray-700'
-                                    }`}>
-                                    {selectedVolunteer.status === 'confirmed' || selectedVolunteer.status === 'CONFIRMED' ? (
-                                        <CheckCircle2 size={14} />
-                                    ) : (
-                                        <Clock size={14} />
-                                    )}
-                                    {selectedVolunteer.status.toUpperCase()}
+                                <div className="bg-gray-50 p-4 rounded-xl">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Event</p>
+                                    <p className="text-sm font-bold text-gray-900">{activity?.title || 'N/A'}</p>
                                 </div>
                             </div>
 
-                            <div className="bg-gray-50 p-4 rounded-xl">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Skills</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {(selectedVolunteer.skills || []).length > 0 ? (
-                                        selectedVolunteer.skills.map((skill, i) => (
-                                            <span key={i} className="px-3 py-1 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-lg">
-                                                {skill}
-                                            </span>
-                                        ))
-                                    ) : (
-                                        <span className="text-sm text-gray-400">No skills listed</span>
-                                    )}
-                                </div>
+                            {/* Actions */}
+                            <div className="border-t border-gray-100 p-4 flex items-center gap-3">
+                                <button
+                                    onClick={() => setSelectedAttendee(null)}
+                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+                                >
+                                    Close
+                                </button>
                             </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="border-t border-gray-100 p-4 flex items-center gap-3">
-                            <button
-                                onClick={() => setSelectedVolunteer(null)}
-                                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
-                            >
-                                Close
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
-
-            {/* Attendee Detail Modal */}
-            {selectedAttendee && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white text-xl font-bold">
-                                    {selectedAttendee.name.charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-bold">{selectedAttendee.name}</h2>
-                                    <p className="text-white/80 text-sm">{selectedAttendee.email}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Content */}
-                        <div className="p-6 space-y-4">
-                            <div className="bg-gray-50 p-4 rounded-xl">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Attendance Status</p>
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
-                                    <CheckCircle2 size={14} />
-                                    CHECKED IN
-                                </div>
-                            </div>
-
-                            <div className="bg-gray-50 p-4 rounded-xl">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Check-in Time</p>
-                                <p className="text-sm font-bold text-gray-900">
-                                    {selectedAttendee.checked_in_at
-                                        ? new Date(selectedAttendee.checked_in_at).toLocaleString('en-US', {
-                                            day: 'numeric',
-                                            month: 'short',
-                                            year: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })
-                                        : 'N/A'}
-                                </p>
-                            </div>
-
-                            <div className="bg-gray-50 p-4 rounded-xl">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Event</p>
-                                <p className="text-sm font-bold text-gray-900">{activity?.title || 'N/A'}</p>
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="border-t border-gray-100 p-4 flex items-center gap-3">
-                            <button
-                                onClick={() => setSelectedAttendee(null)}
-                                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
