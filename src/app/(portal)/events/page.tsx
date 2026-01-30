@@ -93,8 +93,6 @@ export default function EventsPage() {
         async function fetchActivities() {
             try {
                 setIsLoading(true);
-                // Simulate network delay
-                await new Promise(resolve => setTimeout(resolve, 600));
 
                 const data = VOLUNTEER_ACTIVITIES;
 

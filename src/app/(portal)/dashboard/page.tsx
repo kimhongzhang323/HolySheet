@@ -98,17 +98,12 @@ export default function PortalPage() {
     ];
 
     useEffect(() => {
-        // Simulate data loading
-        const timer = setTimeout(() => {
-            setActivities(VOLUNTEER_ACTIVITIES as unknown as Activity[]);
-            setAssignments(USER_ASSIGNMENTS);
-            setApplications(USER_APPLICATIONS);
-            setSelectedCauses(USER_INTERESTS);
-            setOriginalCauses(USER_INTERESTS);
-            setLoading(false);
-        }, 800);
-
-        return () => clearTimeout(timer);
+        setActivities(VOLUNTEER_ACTIVITIES as unknown as Activity[]);
+        setAssignments(USER_ASSIGNMENTS);
+        setApplications(USER_APPLICATIONS);
+        setSelectedCauses(USER_INTERESTS);
+        setOriginalCauses(USER_INTERESTS);
+        setLoading(false);
     }, [session]);
 
     return (

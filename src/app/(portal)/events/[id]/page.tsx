@@ -70,8 +70,6 @@ export default function EventDetailPage() {
         async function fetchActivity() {
             try {
                 setIsLoading(true);
-                // Simulate network delay
-                await new Promise(resolve => setTimeout(resolve, 500));
 
                 const activityData = VOLUNTEER_ACTIVITIES.find((a: any) => (a._id || a.id) === id) as any;
 
