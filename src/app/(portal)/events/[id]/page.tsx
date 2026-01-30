@@ -490,7 +490,7 @@ export default function EventDetailPage() {
                             About This Activity
                         </h2>
                         <div className="prose prose-lg prose-gray max-w-none text-gray-600 leading-relaxed">
-                            {(activity.fullDescription || activity.description).split('\n').map((line, i) => (
+                            {(activity.fullDescription || activity.description || 'No description available for this activity.').split('\n').map((line, i) => (
                                 <p key={i} className="mb-4">{line}</p>
                             ))}
                         </div>

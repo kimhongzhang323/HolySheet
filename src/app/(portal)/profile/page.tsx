@@ -318,36 +318,66 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* Stats Row (Light Cards) */}
-                <div>
-                    {/* Mobile Header for Stats */}
-                    <div
-                        className="flex md:hidden items-center justify-between mb-4 cursor-pointer"
-                        onClick={() => setIsStatsOpen(!isStatsOpen)}
-                    >
-                        <h3 className="text-lg font-bold text-gray-900">Overview Stats</h3>
-                        <ChevronRight size={20} className={`text-gray-400 transition-transform duration-200 ${isStatsOpen ? 'rotate-90' : ''}`} />
-                    </div>
-                    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${isStatsOpen ? '' : 'hidden md:grid'}`}>
-                        {/* Stat 1: Volunteer */}
-                        <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
-                            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                                <Heart size={20} className="text-green-600" />
+                {/* Gamified Tier Progression */}
+                <div className="bg-gradient-to-r from-gray-50 via-white to-gray-50 rounded-3xl p-6 relative overflow-hidden border border-gray-200 shadow-sm">
+                    {/* Background Decoration */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-emerald-100/50 to-transparent rounded-full blur-3xl" />
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-amber-100/50 to-transparent rounded-full blur-2xl" />
+
+                    <div className="relative z-10">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                    <Award size={24} className="text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Current Tier</p>
+                                    <h3 className="text-xl font-black text-gray-900">Silver Volunteer</h3>
+                                </div>
                             </div>
-                            <div>
-                                <h4 className="text-2xl font-bold text-gray-900">{stats.volunteerEvents}</h4>
-                                <p className="text-xs text-gray-500 font-medium">Volunteer</p>
+                            <div className="text-right">
+                                <p className="text-3xl font-black text-emerald-600">{stats.totalHours}</p>
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Hours Logged</p>
                             </div>
                         </div>
 
-                        {/* Stat 2: Volunteer Hrs */}
-                        <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-100 transition-colors border border-gray-100">
-                            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                                <Clock size={20} className="text-orange-600" />
+                        {/* Progress Bar */}
+                        <div className="mb-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-gray-500">Progress to <span className="text-amber-600">Gold Volunteer</span></span>
+                                <span className="text-xs font-black text-emerald-600">{Math.min(100, Math.round((stats.totalHours / 50) * 100))}%</span>
                             </div>
-                            <div>
-                                <h4 className="text-2xl font-bold text-gray-900">{stats.totalHours}</h4>
-                                <p className="text-xs text-gray-500 font-medium">Volunteer Hrs</p>
+                            <div className="h-4 bg-gray-200 rounded-full overflow-hidden border border-gray-300/50">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${Math.min(100, (stats.totalHours / 50) * 100)}%` }}
+                                    transition={{ duration: 1, ease: 'easeOut' }}
+                                    className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 rounded-full relative"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-white/30 rounded-full" />
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full shadow-lg animate-pulse" />
+                                </motion.div>
+                            </div>
+                        </div>
+
+                        {/* Tier Milestones */}
+                        <div className="flex items-center justify-between text-[10px] font-bold">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-full bg-gray-400 border-2 border-gray-300" />
+                                <span className="text-gray-500">Bronze</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 border-2 border-gray-500 shadow-sm" />
+                                <span className="text-gray-800 font-black">Silver</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-full bg-amber-400/50 border-2 border-amber-500/50" />
+                                <span className="text-amber-600">Gold</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-full bg-purple-400/30 border-2 border-purple-400/40" />
+                                <span className="text-purple-500">Platinum</span>
                             </div>
                         </div>
                     </div>

@@ -11,9 +11,12 @@ interface MiniCalendarProps {
     enrolledEventIds?: string[];
 }
 
-export default function MiniCalendar({ activities = [], enrolledEventIds = ['VOL001'] }: MiniCalendarProps) {
+import { VOLUNTEER_ACTIVITIES } from '@/lib/mockData';
+
+export default function MiniCalendar({ activities = VOLUNTEER_ACTIVITIES, enrolledEventIds = ['VOL002'] }: MiniCalendarProps) {
     const today = new Date();
-    const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+    // Default to April 2026 to show mock data
+    const [currentDate, setCurrentDate] = useState(new Date(2026, 3, 1)); // Month is 0-indexed, 3 is April
     const [hoveredDay, setHoveredDay] = useState<number | null>(null);
 
     // Handle month navigation

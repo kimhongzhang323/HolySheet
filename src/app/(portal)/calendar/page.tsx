@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -57,6 +58,7 @@ interface CalendarEvent {
 
 export default function CalendarPage() {
     const { data: session } = useSession();
+    const router = useRouter();
     const [selectedView, setSelectedView] = useState<'Month' | 'Week' | 'Day'>('Month');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [calendarData, setCalendarData] = useState<{ day: string; date: number; fullDate: string; isToday: boolean; isCurrentMonth?: boolean }[]>([]);
@@ -547,46 +549,61 @@ export default function CalendarPage() {
             {/* Sidebar (Span 3) */}
             <div className="w-full xl:w-80 flex flex-col gap-6 shrink-0 h-full overflow-y-auto custom-scrollbar pr-1">
                 {/* Next Mission Card */}
-                <div className="bg-gray-900 rounded-3xl p-6 text-white shadow-xl shadow-gray-200/50 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Zap size={80} strokeWidth={3} />
-                    </div>
-                    <span className="inline-block px-3 py-1 bg-emerald-500 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
-                        Next Mission
-                    </span>
-                    {nextMission ? (
-                        <>
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className={`w-2 h-2 rounded-full animate-pulse ${getEventIdentity(nextMission).bg === 'bg-white' ? 'bg-blue-400' : 'bg-white'}`} />
-                                <h3 className="text-xl font-black line-clamp-2 leading-tight">{nextMission.title}</h3>
-                            </div>
-                            <div className="space-y-3 mt-4">
-                                <div className="flex items-center gap-3 text-gray-400">
-                                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                                        <CalendarIcon size={14} className="text-emerald-400" />
-                                    </div>
-                                    <span className="text-xs font-bold">{new Date(nextMission.start_time).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-gray-400">
-                                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                                        <Clock size={14} className="text-emerald-400" />
-                                    </div>
-                                    <span className="text-xs font-bold">10:00 AM - 1:00 PM</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-gray-400">
-                                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                                        <MapPin size={14} className="text-emerald-400" />
-                                    </div>
-                                    <span className="text-xs font-bold truncate">{nextMission.location.split('(')[0]}</span>
-                                </div>
-                            </div>
-                            <button className="w-full mt-6 py-3 bg-white text-gray-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-black/10">
-                                View Details
-                            </button>
-                        </>
-                    ) : (
-                        <p className="text-gray-400 text-xs italic">No upcoming missions found.</p>
+                <div className="bg-gray-900 rounded-3xl text-white shadow-xl shadow-gray-200/50 relative overflow-hidden group">
+                    {/* Hero Image */}
+                    {nextMission && (
+                        <div className="relative h-32 w-full overflow-hidden">
+                            <img
+                                src={nextMission.image_url || nextMission.image}
+                                alt={nextMission.title}
+                                className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-900/50 to-gray-900" />
+                        </div>
                     )}
+                    <div className="p-6 pt-4 -mt-8 relative z-10">
+                        <span className="inline-block px-3 py-1 bg-emerald-500 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
+                            Next Mission
+                        </span>
+                        {nextMission ? (
+                            <>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className={`w-2 h-2 rounded-full animate-pulse ${getEventIdentity(nextMission).bg === 'bg-white' ? 'bg-blue-400' : 'bg-white'}`} />
+                                    <h3 className="text-xl font-black line-clamp-2 leading-tight">{nextMission.title}</h3>
+                                </div>
+                                <div className="space-y-3 mt-4">
+                                    <div className="flex items-center gap-3 text-gray-400">
+                                        <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                                            <CalendarIcon size={14} className="text-emerald-400" />
+                                        </div>
+                                        <span className="text-xs font-bold">{new Date(nextMission.start_time).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-gray-400">
+                                        <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                                            <Clock size={14} className="text-emerald-400" />
+                                        </div>
+                                        <span className="text-xs font-bold">
+                                            {new Date(nextMission.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(nextMission.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-gray-400">
+                                        <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                                            <MapPin size={14} className="text-emerald-400" />
+                                        </div>
+                                        <span className="text-xs font-bold truncate">{nextMission.location?.split('(')[0]}</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => router.push(`/events/${nextMission.id}`)}
+                                    className="w-full mt-6 py-3 bg-white text-gray-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-black/10"
+                                >
+                                    View Details
+                                </button>
+                            </>
+                        ) : (
+                            <p className="text-gray-400 text-xs italic">No upcoming missions found.</p>
+                        )}
+                    </div>
                 </div>
 
                 {/* Monthly Stats */}
