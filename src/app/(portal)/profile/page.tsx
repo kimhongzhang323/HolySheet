@@ -208,7 +208,7 @@ export default function ProfilePage() {
                     location: 'Singapore', // Mock
                     date: app.date || 'TBD',
                     status: app.status,
-                    image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=400&fit=crop'
+                    image: app.image || 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=400&fit=crop'
                 }));
                 setPendingApplications(dynamicApps);
 
@@ -662,9 +662,9 @@ export default function ProfilePage() {
                                     </div>
                                     <ChevronRight size={20} className={`text-gray-400 md:hidden transition-transform duration-200 ${isApplicationsOpen ? 'rotate-90' : ''}`} />
                                 </div>
-                                <div className={`min-h-[400px] flex flex-col items-center justify-center text-center ${isApplicationsOpen ? 'flex' : 'hidden md:flex'}`}>
+                                <div className={`${isApplicationsOpen ? 'block' : 'hidden md:block'}`}>
                                     {pendingApplications.length === 0 ? (
-                                        <>
+                                        <div className="min-h-[300px] flex flex-col items-center justify-center text-center">
                                             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                                                 <Clock size={32} className="text-gray-400" />
                                             </div>
@@ -672,33 +672,44 @@ export default function ProfilePage() {
                                             <p className="text-gray-500 text-sm max-w-xs mt-2">
                                                 You have no pending volunteer or event applications at the moment.
                                             </p>
-                                        </>
-                                    ) : (
-                                        <div className="w-full space-y-4 text-left">
-                                            {pendingApplications.map((app, index) => (
-                                                <div key={app.id || `app-${index}`} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-2xl hover:bg-gray-100 transition-colors group">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm overflow-hidden shrink-0">
-                                                            <img src={app.image} className="w-full h-full object-cover" alt={app.title} />
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-bold text-gray-900 leading-tight">{app.title}</h4>
-                                                            <p className="text-xs text-gray-500 font-medium">{app.date} • {app.location}</p>
-                                                        </div>
-                                                    </div>
-                                                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700">
-                                                        {app.status}
-                                                    </span>
-                                                </div>
-                                            ))}
+                                            <Link
+                                                href="/events"
+                                                className="mt-6 px-6 py-2.5 bg-indigo-600 text-white rounded-full font-semibold text-sm hover:bg-indigo-700 transition-colors"
+                                            >
+                                                Browse Events
+                                            </Link>
                                         </div>
+                                    ) : (
+                                        <>
+                                            <div className="w-full space-y-4">
+                                                {pendingApplications.map((app, index) => (
+                                                    <div key={app.id || `app-${index}`} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-2xl hover:bg-gray-100 transition-colors group">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 bg-white rounded-xl shadow-sm overflow-hidden shrink-0">
+                                                                <img src={app.image} className="w-full h-full object-cover" alt={app.title} />
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="font-bold text-gray-900 leading-tight">{app.title}</h4>
+                                                                <p className="text-xs text-gray-500 font-medium">{app.date} • {app.location}</p>
+                                                            </div>
+                                                        </div>
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${app.status === 'Approved' ? 'bg-amber-100 text-amber-700' : 'bg-amber-100 text-amber-700'
+                                                            }`}>
+                                                            {app.status}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="text-center mt-6">
+                                                <Link
+                                                    href="/events"
+                                                    className="px-6 py-2.5 bg-indigo-600 text-white rounded-full font-semibold text-sm hover:bg-indigo-700 transition-colors"
+                                                >
+                                                    Browse Events
+                                                </Link>
+                                            </div>
+                                        </>
                                     )}
-                                    <Link
-                                        href="/events"
-                                        className="mt-6 px-6 py-2.5 bg-indigo-600 text-white rounded-full font-semibold text-sm hover:bg-indigo-700 transition-colors"
-                                    >
-                                        Browse Events
-                                    </Link>
                                 </div>
                             </div>
                         )}
