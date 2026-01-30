@@ -16,7 +16,11 @@ import {
     TrendingUp,
     CheckCircle2,
     Users,
-    Zap
+    Zap,
+    Filter,
+    Search,
+    CheckSquare,
+    X
 } from 'lucide-react';
 import { VOLUNTEER_ACTIVITIES, USER_ASSIGNMENTS, MOCK_GOOGLE_EVENTS } from '@/lib/mockData';
 
@@ -71,6 +75,13 @@ export default function CalendarPage() {
 
     const [enrolledIds, setEnrolledIds] = useState<string[]>([]);
     const [customIdentities, setCustomIdentities] = useState<Record<string, { color: string; label?: string }>>({});
+
+    // Filter State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterStatus, setFilterStatus] = useState<'all' | 'registered' | 'available' | 'google'>('all');
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [filterLocation, setFilterLocation] = useState('');
+    const [isFilterOpen, setIsFilterOpen] = useState(true);
 
     // Define available tag colors
     const tagColors = [
@@ -205,6 +216,34 @@ export default function CalendarPage() {
     };
 
     const goToToday = () => setCurrentDate(new Date());
+
+    // Filter Logic
+    const combinedEvents = [...activities, ...googleEvents];
+
+    // Extract unique categories for filter
+    const categories = Array.from(new Set(activities.map(act => act.category))).filter(Boolean);
+
+    const filteredEvents = combinedEvents.filter(event => {
+        // 1. Search Filter
+        const matchesSearch = !searchQuery ||
+            event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            event.location?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        // 2. Status Filter
+        let matchesStatus = true;
+        if (filterStatus === 'registered') matchesStatus = !!event.isEnrolled;
+        else if (filterStatus === 'available') matchesStatus = !event.isEnrolled && !event.isExternal;
+        else if (filterStatus === 'google') matchesStatus = !!event.isExternal;
+
+        // 3. Category Filter
+        const eventCategory = (event.category || '').toLowerCase();
+        const matchesCategory = selectedCategories.length === 0 || selectedCategories.some(cat => eventCategory === cat.toLowerCase());
+
+        // 4. Location Filter
+        const matchesLocation = !filterLocation || event.location?.toLowerCase().includes(filterLocation.toLowerCase());
+
+        return matchesSearch && matchesStatus && matchesCategory && matchesLocation;
+    });
 
     const handleSync = async () => {
         setIsSyncing(true);
@@ -392,6 +431,12 @@ export default function CalendarPage() {
                             </button>
                         </div>
                         <button
+                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                            className={`p-2 rounded-xl border transition-all ${isFilterOpen ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white border-gray-100 text-gray-400 hover:text-emerald-600'}`}
+                        >
+                            <Filter size={18} />
+                        </button>
+                        <button
                             onClick={handleSync}
                             disabled={isSyncing}
                             className={`flex items-center gap-2 px-4 py-2 bg-gray-900 text-white font-bold rounded-xl text-xs hover:bg-gray-800 transition-all ${isSyncing ? 'opacity-70' : ''}`}
@@ -443,7 +488,7 @@ export default function CalendarPage() {
                             {selectedView === 'Month' ? (
                                 <div className="grid grid-cols-7 gap-3 flex-1">
                                     {calendarData.map((day, i) => {
-                                        const dayEvents = [...activities, ...googleEvents].filter(e => e.fullDate === day.fullDate);
+                                        const dayEvents = filteredEvents.filter(e => e.fullDate === day.fullDate);
                                         return (
                                             <div
                                                 key={i}
@@ -494,7 +539,7 @@ export default function CalendarPage() {
                                             ></div>
                                         ))}
                                         {calendarData.map((day, colIndex) => {
-                                            const dayEvents = [...activities, ...googleEvents].filter(e => e.fullDate === day.fullDate);
+                                            const dayEvents = filteredEvents.filter(e => e.fullDate === day.fullDate);
                                             const conflicts = getConflicts(dayEvents);
 
                                             return (
@@ -547,138 +592,207 @@ export default function CalendarPage() {
             </div>
 
             {/* Sidebar (Span 3) */}
-            <div className="w-full xl:w-80 flex flex-col gap-6 shrink-0 h-full overflow-y-auto custom-scrollbar pr-1">
-                {/* Next Mission Card */}
-                <div className="bg-gray-900 rounded-3xl text-white shadow-xl shadow-gray-200/50 relative overflow-hidden group">
-                    {/* Hero Image */}
-                    {nextMission && (
-                        <div className="relative h-32 w-full overflow-hidden">
-                            <img
-                                src={nextMission.image_url || nextMission.image}
-                                alt={nextMission.title}
-                                className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-900/50 to-gray-900" />
-                        </div>
-                    )}
-                    <div className="p-6 pt-4 -mt-8 relative z-10">
-                        <span className="inline-block px-3 py-1 bg-emerald-500 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
-                            Next Mission
-                        </span>
-                        {nextMission ? (
-                            <>
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className={`w-2 h-2 rounded-full animate-pulse ${getEventIdentity(nextMission).bg === 'bg-white' ? 'bg-blue-400' : 'bg-white'}`} />
-                                    <h3 className="text-xl font-black line-clamp-2 leading-tight">{nextMission.title}</h3>
-                                </div>
-                                <div className="space-y-3 mt-4">
-                                    <div className="flex items-center gap-3 text-gray-400">
-                                        <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                                            <CalendarIcon size={14} className="text-emerald-400" />
-                                        </div>
-                                        <span className="text-xs font-bold">{new Date(nextMission.start_time).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-gray-400">
-                                        <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                                            <Clock size={14} className="text-emerald-400" />
-                                        </div>
-                                        <span className="text-xs font-bold">
-                                            {new Date(nextMission.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(nextMission.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-gray-400">
-                                        <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                                            <MapPin size={14} className="text-emerald-400" />
-                                        </div>
-                                        <span className="text-xs font-bold truncate">{nextMission.location?.split('(')[0]}</span>
-                                    </div>
-                                </div>
+            <AnimatePresence>
+                {isFilterOpen && (
+                    <motion.div
+                        initial={{ width: 0, opacity: 0, x: 20 }}
+                        animate={{ width: '320px', opacity: 1, x: 0 }}
+                        exit={{ width: 0, opacity: 0, x: 20 }}
+                        className="w-full xl:w-80 flex flex-col gap-6 shrink-0 h-full overflow-y-auto custom-scrollbar pr-1"
+                    >
+                        {/* Filters Section */}
+                        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                                    <Filter size={16} className="text-emerald-500" />
+                                    Filters
+                                </h4>
                                 <button
-                                    onClick={() => router.push(`/events/${nextMission.id}`)}
-                                    className="w-full mt-6 py-3 bg-white text-gray-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-black/10"
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        setFilterStatus('all');
+                                        setSelectedCategories([]);
+                                        setFilterLocation('');
+                                    }}
+                                    className="text-[10px] font-bold text-gray-400 hover:text-emerald-600 uppercase tracking-widest"
                                 >
-                                    View Details
+                                    Reset
                                 </button>
-                            </>
-                        ) : (
-                            <p className="text-gray-400 text-xs italic">No upcoming missions found.</p>
-                        )}
-                    </div>
-                </div>
+                            </div>
 
-                {/* Monthly Stats */}
-                <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-6">
-                    <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
-                        <TrendingUp size={16} className="text-emerald-500" />
-                        Month Progress
-                    </h4>
+                            {/* Search */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Search</label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Event or location..."
+                                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-2xl text-xs font-bold text-gray-900 placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Missions</span>
-                            <span className="text-2xl font-black text-gray-900">{enrolledCount}</span>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Hours</span>
-                            <span className="text-2xl font-black text-gray-900">{totalHours}h</span>
-                        </div>
-                    </div>
+                            {/* Registration Status */}
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Status</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { id: 'all', label: 'All', icon: <Users size={12} /> },
+                                        { id: 'registered', label: 'Registered', icon: <CheckCircle2 size={12} /> },
+                                        { id: 'available', label: 'Available', icon: <Clock size={12} /> },
+                                        { id: 'google', label: 'Google', icon: <Zap size={12} /> }
+                                    ].map((status) => (
+                                        <button
+                                            key={status.id}
+                                            onClick={() => setFilterStatus(status.id as any)}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold border transition-all ${filterStatus === status.id
+                                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-md'
+                                                : 'bg-white text-gray-500 border-gray-100 hover:border-emerald-200'
+                                                }`}
+                                        >
+                                            {status.icon}
+                                            {status.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
-                    <div className="space-y-4 pt-2">
-                        <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-gray-500">Service Goal</span>
-                            <span className="font-black text-emerald-600">85%</span>
+                            {/* Categories */}
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Categories</label>
+                                <div className="space-y-1 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                    {categories.map((cat) => (
+                                        <label key={cat} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group">
+                                            <div className={`w-4 h-4 rounded-lg border flex items-center justify-center transition-colors ${selectedCategories.includes(cat) ? 'bg-emerald-500 border-emerald-500' : 'border-gray-200 group-hover:border-emerald-300'}`}>
+                                                {selectedCategories.includes(cat) && <CheckSquare size={10} className="text-white" />}
+                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                className="hidden"
+                                                checked={selectedCategories.includes(cat)}
+                                                onChange={() => {
+                                                    setSelectedCategories(prev =>
+                                                        prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+                                                    );
+                                                }}
+                                            />
+                                            <span className="text-[11px] font-bold text-gray-600 capitalize">{cat}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                        <div className="h-3 bg-gray-50 rounded-full overflow-hidden border border-gray-100">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: '85%' }}
-                                className="h-full bg-emerald-500 rounded-full shadow-inner"
-                            />
-                        </div>
-                    </div>
 
-                    <div className="pt-2">
-                        <div className="bg-emerald-50 rounded-2xl p-4 flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-100">
-                                <CheckCircle2 size={18} className="text-white" />
-                            </div>
-                            <div>
-                                <p className="text-[11px] font-black text-emerald-800 uppercase tracking-tight">On Track!</p>
-                                <p className="text-[10px] text-emerald-600 font-bold leading-tight mt-0.5">Doing great this month, keep it up!</p>
+                        {/* Next Mission Card */}
+                        <div className="bg-gray-900 rounded-3xl text-white shadow-xl shadow-gray-200/50 relative overflow-hidden group shrink-0">
+                            {/* Hero Image */}
+                            {nextMission && (
+                                <div className="relative h-32 w-full overflow-hidden">
+                                    <img
+                                        src={nextMission.image_url || nextMission.image}
+                                        alt={nextMission.title}
+                                        className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-900/50 to-gray-900" />
+                                </div>
+                            )}
+                            <div className="p-6 pt-4 -mt-8 relative z-10">
+                                <span className="inline-block px-3 py-1 bg-emerald-500 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
+                                    Next Mission
+                                </span>
+                                {nextMission ? (
+                                    <>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className={`w-2 h-2 rounded-full animate-pulse ${getEventIdentity(nextMission).bg === 'bg-white' ? 'bg-blue-400' : 'bg-white'}`} />
+                                            <h3 className="text-xl font-black line-clamp-2 leading-tight">{nextMission.title}</h3>
+                                        </div>
+                                        <div className="space-y-3 mt-4">
+                                            <div className="flex items-center gap-3 text-gray-400">
+                                                <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                                                    <CalendarIcon size={14} className="text-emerald-400" />
+                                                </div>
+                                                <span className="text-xs font-bold">{new Date(nextMission.start_time).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-gray-400">
+                                                <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                                                    <Clock size={14} className="text-emerald-400" />
+                                                </div>
+                                                <span className="text-xs font-bold">
+                                                    {new Date(nextMission.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(nextMission.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-gray-400">
+                                                <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                                                    <MapPin size={14} className="text-emerald-400" />
+                                                </div>
+                                                <span className="text-xs font-bold truncate">{nextMission.location?.split('(')[0]}</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => router.push(`/events/${nextMission.id}`)}
+                                            className="w-full mt-6 py-3 bg-white text-gray-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-black/10"
+                                        >
+                                            View Details
+                                        </button>
+                                    </>
+                                ) : (
+                                    <p className="text-gray-400 text-xs italic">No upcoming missions found.</p>
+                                )}
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                {/* Quick Shortcuts */}
-                <div className="flex flex-col gap-3 mt-auto">
-                    <button className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-all group">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                                <Plus size={18} className="text-blue-500" />
-                            </div>
-                            <div className="text-left">
-                                <p className="text-xs font-black text-gray-900">Add Outside Event</p>
-                                <p className="text-[10px] text-gray-400 font-bold">Sync personal tasks</p>
-                            </div>
-                        </div>
-                        <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500" />
-                    </button>
-                    <button className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-all group">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
-                                <Users size={18} className="text-purple-500" />
-                            </div>
-                            <div className="text-left">
-                                <p className="text-xs font-black text-gray-900">Team Calendar</p>
-                                <p className="text-[10px] text-gray-400 font-bold">Coordination hub</p>
+                        {/* Monthly Stats */}
+                        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-6 shrink-0">
+                            <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                                <TrendingUp size={16} className="text-emerald-500" />
+                                Month Progress
+                            </h4>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Missions</span>
+                                    <span className="text-2xl font-black text-gray-900">{enrolledCount}</span>
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Hours</span>
+                                    <span className="text-2xl font-black text-gray-900">{totalHours}h</span>
+                                </div>
                             </div>
                         </div>
-                        <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500" />
-                    </button>
-                </div>
-            </div>
+
+                        {/* Quick Shortcuts */}
+                        <div className="flex flex-col gap-3 mt-auto">
+                            <button className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-all group">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                                        <Plus size={18} className="text-blue-500" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-xs font-black text-gray-900">Add Outside Event</p>
+                                        <p className="text-[10px] text-gray-400 font-bold">Sync personal tasks</p>
+                                    </div>
+                                </div>
+                                <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500" />
+                            </button>
+                            <button className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-all group">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                                        <Users size={18} className="text-purple-500" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-xs font-black text-gray-900">Team Calendar</p>
+                                        <p className="text-[10px] text-gray-400 font-bold">Coordination hub</p>
+                                    </div>
+                                </div>
+                                <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500" />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Event Customization Popover */}
             <AnimatePresence>
