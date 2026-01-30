@@ -26,6 +26,7 @@ export default function EventsPage() {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [hasFetched, setHasFetched] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'asc' });
@@ -40,10 +41,11 @@ export default function EventsPage() {
     const [selectedWeek, setSelectedWeek] = useState(0); // 0 to 4 (approx 4 weeks)
 
     useEffect(() => {
-        if (session?.accessToken) {
+        // Only fetch once when we have a session and haven't fetched yet
+        if (session?.accessToken && !hasFetched) {
             fetchActivities();
         }
-    }, [session]);
+    }, [session?.accessToken, hasFetched]);
 
     const fetchActivities = async () => {
         try {
@@ -60,6 +62,7 @@ export default function EventsPage() {
 
             const data = await res.json();
             setActivities(data);
+            setHasFetched(true);
         } catch (err) {
             console.error(err);
             setError('Failed to load events');
@@ -270,8 +273,8 @@ export default function EventsPage() {
                                                 direction: prev.key === option.key ? (prev.direction === 'asc' ? 'desc' : 'asc') : 'desc'
                                             }))}
                                             className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${sortConfig.key === option.key
-                                                    ? 'bg-white shadow-sm text-indigo-600'
-                                                    : 'text-gray-500 hover:text-gray-700'
+                                                ? 'bg-white shadow-sm text-indigo-600'
+                                                : 'text-gray-500 hover:text-gray-700'
                                                 }`}
                                         >
                                             {option.label}

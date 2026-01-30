@@ -62,6 +62,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const [attendees, setAttendees] = useState<Attendee[]>([]);
     const [responses, setResponses] = useState<FormResponse[]>([]);
     const [loading, setLoading] = useState(true);
+    const [hasFetched, setHasFetched] = useState(false);
     const [activeTab, setActiveTab] = useState<'volunteers' | 'attendance' | 'responses'>('volunteers');
     const [isGeneratingForm, setIsGeneratingForm] = useState(false);
     const [generatedForm, setGeneratedForm] = useState<any>(null);
@@ -77,10 +78,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const [sortConfig, setSortConfig] = useState<{ key: keyof Volunteer | 'user', direction: 'asc' | 'desc' }>({ key: 'applied_at', direction: 'desc' });
 
     useEffect(() => {
-        if (session?.accessToken && id) {
+        // Only fetch once when we have a session and haven't fetched yet
+        if (session?.accessToken && id && !hasFetched) {
             fetchData();
         }
-    }, [session, id]);
+    }, [session?.accessToken, id, hasFetched]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -101,6 +103,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 setAttendees(attData.attendees || []);
             }
             if (respRes.ok) setResponses(await respRes.json());
+            setHasFetched(true);
         } catch (err) {
             console.error("Failed to fetch event details:", err);
         } finally {
