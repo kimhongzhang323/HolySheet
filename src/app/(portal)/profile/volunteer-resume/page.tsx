@@ -7,8 +7,58 @@ import { motion } from 'framer-motion';
 import {
     Award, Calendar, Clock, MapPin, Mail, Phone,
     ArrowLeft, Download, CheckCircle2, Star,
-    ShieldCheck, GraduationCap, Building2, ExternalLink
+    ShieldCheck, GraduationCap, Building2, ExternalLink, Edit3
 } from 'lucide-react';
+
+// Mock resume data for demonstration
+const MOCK_RESUME_DATA = {
+    name: 'John Doe',
+    hours: 156,
+    missions: 23,
+    rank: 'Top 5%',
+    bio: 'Passionate community volunteer with over 3 years of experience in social services, education outreach, and environmental conservation. Dedicated to creating meaningful impact through hands-on involvement and leadership in volunteer initiatives across Singapore.',
+    skills: [
+        'Community Outreach', 'Event Coordination', 'First Aid Certified',
+        'Public Speaking', 'Mandarin (Fluent)', 'Team Leadership',
+        'Youth Mentoring', 'Digital Literacy Training', 'Crisis Support'
+    ],
+    achievements: [
+        { name: 'Community Champion', description: 'Completed 100+ volunteer hours in community service' },
+        { name: 'Rising Star', description: 'Recognized for exceptional dedication in first year' },
+        { name: 'Team Leader', description: 'Successfully led 5+ volunteer missions' },
+        { name: 'Impact Maker', description: 'Touched 500+ lives through volunteer work' },
+        { name: 'First Aid Hero', description: 'Certified in CPR and emergency response' }
+    ],
+    experience: [
+        {
+            role: 'Volunteer Coordinator',
+            organization: 'Lions Befrienders',
+            period: '2024 - Present',
+            description: 'Lead a team of 15 volunteers for weekly senior home visits. Organized monthly community events reaching 200+ elderly residents.'
+        },
+        {
+            role: 'Digital Ambassador',
+            organization: 'IMDA Digital Readiness Programme',
+            period: '2023 - 2024',
+            description: 'Taught smartphone basics and digital skills to 150+ seniors across 30 workshop sessions.'
+        },
+        {
+            role: 'Beach Cleanup Leader',
+            organization: 'Beach Lovers Singapore',
+            period: '2022 - Present',
+            description: 'Organized and led monthly beach cleanup initiatives. Collected over 500kg of marine debris with 200+ volunteers.'
+        }
+    ],
+    volunteerHistory: [
+        { title: 'CNY Hamper Packing', location: 'Toa Payoh Hub', date: '2026-01-30', hours: 4 },
+        { title: 'Senior Home Visit', location: 'Ang Mo Kio', date: '2026-01-15', hours: 3 },
+        { title: 'Coding Workshop for Kids', location: 'Science Centre', date: '2026-01-12', hours: 3 },
+        { title: 'Beach Cleanup @ East Coast', location: 'East Coast Park', date: '2025-12-28', hours: 4 },
+        { title: 'Food Bank Distribution', location: 'Woodlands CC', date: '2025-12-15', hours: 3 },
+        { title: 'Digital Skills Workshop', location: 'Jurong Library', date: '2025-12-08', hours: 2 },
+        { title: 'Community Garden Day', location: 'Pasir Ris', date: '2025-11-20', hours: 3 }
+    ]
+};
 
 export default function VolunteerResumePage() {
     const { data: session } = useSession();
@@ -18,30 +68,33 @@ export default function VolunteerResumePage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!session?.user) return;
-            try {
-                const [statsRes, historyRes] = await Promise.all([
-                    fetch('/api/user/stats'),
-                    fetch('/api/user/activities?type=history')
-                ]);
-
-                if (statsRes.ok) {
-                    const data = await statsRes.json();
-                    setStats(data);
+            // Use mock data for demonstration
+            setStats({
+                name: session?.user?.name || MOCK_RESUME_DATA.name,
+                hours: MOCK_RESUME_DATA.hours,
+                missions: MOCK_RESUME_DATA.missions,
+                bio: MOCK_RESUME_DATA.bio,
+                skills: MOCK_RESUME_DATA.skills,
+                achievements: MOCK_RESUME_DATA.achievements,
+                resume_json: {
+                    summary: MOCK_RESUME_DATA.bio,
+                    skills: MOCK_RESUME_DATA.skills,
+                    experience: MOCK_RESUME_DATA.experience
                 }
-
-                if (historyRes.ok) {
-                    const data = await historyRes.json();
-                    setHistory(data.activities || []);
-                }
-            } catch (error) {
-                console.error("Error fetching resume data:", error);
-            } finally {
-                setLoading(false);
-            }
+            });
+            setHistory(MOCK_RESUME_DATA.volunteerHistory.map(h => ({
+                activity: {
+                    title: h.title,
+                    location: h.location,
+                    start_time: h.date
+                },
+                hours: h.hours
+            })));
+            setLoading(false);
         };
 
-        fetchData();
+        // Simulate loading delay
+        setTimeout(fetchData, 500);
     }, [session]);
 
     if (loading) {
@@ -64,13 +117,22 @@ export default function VolunteerResumePage() {
                         <ArrowLeft size={18} />
                         Back to Profile
                     </Link>
-                    <button
-                        onClick={() => window.print()}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-md active:scale-95"
-                    >
-                        <Download size={16} />
-                        Download PDF
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/profile/edit-resume"
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-all border border-gray-200 active:scale-95"
+                        >
+                            <Edit3 size={16} />
+                            Edit Resume
+                        </Link>
+                        <button
+                            onClick={() => window.print()}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-md active:scale-95"
+                        >
+                            <Download size={16} />
+                            Download PDF
+                        </button>
+                    </div>
                 </div>
 
                 {/* Main Resume Card */}

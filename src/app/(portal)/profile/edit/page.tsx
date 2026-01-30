@@ -193,8 +193,8 @@ export default function EditProfilePage() {
                         <div className="w-28 h-28 rounded-2xl overflow-hidden bg-gradient-to-br from-orange-400 to-pink-500 p-0.5">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                                src={formData.avatar}
-                                alt={formData.name}
+                                src={formData.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'}
+                                alt={formData.name || 'Profile'}
                                 className="w-full h-full rounded-2xl object-cover bg-white"
                             />
                         </div>

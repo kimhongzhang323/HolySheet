@@ -516,13 +516,13 @@ export default function EventDetailPage() {
                                         <div
                                             key={req.id || i}
                                             className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isAutoChecked
-                                                    ? 'bg-emerald-50 border-emerald-200'
-                                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                                ? 'bg-emerald-50 border-emerald-200'
+                                                : 'bg-white border-gray-200 hover:border-gray-300'
                                                 }`}
                                         >
                                             <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${isAutoChecked
-                                                    ? 'bg-emerald-500 text-white'
-                                                    : 'bg-gray-100 border-2 border-gray-300'
+                                                ? 'bg-emerald-500 text-white'
+                                                : 'bg-gray-100 border-2 border-gray-300'
                                                 }`}>
                                                 {isAutoChecked && <CheckCircle size={14} />}
                                             </div>
@@ -560,6 +560,34 @@ export default function EventDetailPage() {
                                 <div className="p-3 bg-green-50 rounded-2xl text-green-600 shrink-0"><Users size={20} /></div>
                                 <div><p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Volunteers</p><p className="font-bold text-gray-900 leading-tight">{activity.volunteers_needed || 0} spots / {activity.capacity || 0} cap</p></div>
                             </div>
+                        </div>
+
+                        {/* Embedded Map */}
+                        <div className="mt-6 pt-6 border-t border-gray-100">
+                            <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                <MapPin size={16} className="text-blue-500" />
+                                Event Location
+                            </h3>
+                            <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+                                <iframe
+                                    width="100%"
+                                    height="200"
+                                    style={{ border: 0 }}
+                                    loading="lazy"
+                                    allowFullScreen
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY || 'AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8'}&q=${encodeURIComponent(activity.location + ', Singapore')}&zoom=15`}
+                                ></iframe>
+                            </div>
+                            <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location + ', Singapore')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 mt-3 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                            >
+                                <MapPin size={14} />
+                                Open in Google Maps
+                            </a>
                         </div>
 
                         <div className="mt-10 pt-8 border-t border-gray-50 flex flex-col gap-4">
