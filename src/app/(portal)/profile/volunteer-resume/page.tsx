@@ -9,6 +9,7 @@ import {
     ArrowLeft, Download, CheckCircle2, Star,
     ShieldCheck, GraduationCap, Building2, ExternalLink, Edit3
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 // Mock resume data for demonstration
 const MOCK_RESUME_DATA = {
@@ -97,6 +98,152 @@ export default function VolunteerResumePage() {
         setTimeout(fetchData, 500);
     }, [session]);
 
+    // Generate professional PDF resume
+    const generatePDF = () => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 20;
+        let y = 20;
+
+        // Helper function to add section header
+        const addSectionHeader = (title: string) => {
+            y += 8;
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(16, 185, 129); // Emerald color
+            doc.text(title.toUpperCase(), margin, y);
+            y += 2;
+            doc.setDrawColor(229, 231, 235); // Gray line
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 8;
+        };
+
+        // Header - Name
+        doc.setFontSize(28);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(17, 24, 39); // Gray-900
+        const name = stats?.name || session?.user?.name || 'Volunteer';
+        doc.text(name, margin, y);
+        y += 10;
+
+        // Title
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(107, 114, 128); // Gray-500
+        doc.text('Senior Volunteer • Verified by HolySheet', margin, y);
+        y += 8;
+
+        // Contact info line
+        const email = session?.user?.email || 'volunteer@example.com';
+        const location = stats?.location || 'Singapore';
+        doc.setFontSize(9);
+        doc.text(`${email}  |  ${location}`, margin, y);
+        y += 6;
+
+        // Stats bar
+        y += 4;
+        doc.setFillColor(240, 253, 244); // Emerald-50
+        doc.roundedRect(margin, y, pageWidth - 2 * margin, 18, 3, 3, 'F');
+        y += 12;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(5, 150, 105); // Emerald-600
+        const statsText = `${stats?.hours || 0} Hours   |   ${stats?.missions || 0} Missions   |   ${stats?.achievements?.length || 0} Badges   |   Top 5% Rank`;
+        doc.text(statsText, pageWidth / 2, y, { align: 'center' });
+        y += 12;
+
+        // Professional Summary
+        addSectionHeader('Professional Summary');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(75, 85, 99); // Gray-600
+        const summary = stats?.bio || MOCK_RESUME_DATA.bio;
+        const summaryLines = doc.splitTextToSize(summary, pageWidth - 2 * margin);
+        doc.text(summaryLines, margin, y);
+        y += summaryLines.length * 5 + 4;
+
+        // Skills
+        addSectionHeader('Skills');
+        const skills = stats?.skills || MOCK_RESUME_DATA.skills;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(55, 65, 81); // Gray-700
+        const skillsText = skills.join('  •  ');
+        const skillLines = doc.splitTextToSize(skillsText, pageWidth - 2 * margin);
+        doc.text(skillLines, margin, y);
+        y += skillLines.length * 5 + 4;
+
+        // Experience
+        addSectionHeader('Volunteer Experience');
+        const experience = stats?.resume_json?.experience || MOCK_RESUME_DATA.experience;
+        experience.forEach((exp: any) => {
+            if (y > 250) {
+                doc.addPage();
+                y = 20;
+            }
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(17, 24, 39);
+            doc.text(exp.role, margin, y);
+
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(16, 185, 129);
+            doc.text(exp.period, pageWidth - margin, y, { align: 'right' });
+            y += 5;
+
+            doc.setTextColor(107, 114, 128);
+            doc.text(exp.organization, margin, y);
+            y += 5;
+
+            if (exp.description) {
+                doc.setTextColor(75, 85, 99);
+                const descLines = doc.splitTextToSize(exp.description, pageWidth - 2 * margin);
+                doc.text(descLines, margin, y);
+                y += descLines.length * 4 + 6;
+            }
+        });
+
+        // Volunteer History
+        addSectionHeader('Recent Volunteer Activities');
+        const historyData = history.length > 0 ? history : MOCK_RESUME_DATA.volunteerHistory.map(h => ({
+            activity: { title: h.title, location: h.location, start_time: h.date },
+            hours: h.hours
+        }));
+
+        historyData.slice(0, 5).forEach((item: any) => {
+            if (y > 270) {
+                doc.addPage();
+                y = 20;
+            }
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(17, 24, 39);
+            doc.text(`• ${item.activity?.title || 'Mission'}`, margin, y);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(107, 114, 128);
+            const date = item.activity?.start_time ? new Date(item.activity.start_time).toLocaleDateString() : '-';
+            doc.text(date, pageWidth - margin, y, { align: 'right' });
+            y += 4;
+
+            doc.setFontSize(9);
+            doc.text(`   ${item.activity?.location || 'Singapore'}`, margin, y);
+            y += 6;
+        });
+
+        // Footer
+        y = doc.internal.pageSize.getHeight() - 15;
+        doc.setFontSize(8);
+        doc.setTextColor(156, 163, 175);
+        doc.text('Verified Digital Resume by HolySheet', pageWidth / 2, y, { align: 'center' });
+        y += 4;
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, y, { align: 'center' });
+
+        // Save the PDF
+        doc.save(`${name.replace(/\s+/g, '_')}_Volunteer_Resume.pdf`);
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -126,7 +273,7 @@ export default function VolunteerResumePage() {
                             Edit Resume
                         </Link>
                         <button
-                            onClick={() => window.print()}
+                            onClick={generatePDF}
                             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-md active:scale-95"
                         >
                             <Download size={16} />
