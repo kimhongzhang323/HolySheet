@@ -10,7 +10,7 @@ import {
     X, AlertCircle, FileText, Send, Phone, Mail, User, ToggleRight,
     Upload, Image as ImageIcon, Sparkles
 } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { VOLUNTEER_ACTIVITIES, USER_APPLICATIONS } from '@/lib/mockData';
 
 interface FormField {
     label: string;
@@ -70,26 +70,24 @@ export default function EventDetailPage() {
         async function fetchActivity() {
             try {
                 setIsLoading(true);
-                const { data, error } = await supabase
-                    .from('activities')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 500));
 
-                if (error) throw error;
-                if (data) {
-                    setActivity(data);
+                const activityData = VOLUNTEER_ACTIVITIES.find((a: any) => (a._id || a.id) === id) as any;
+
+                if (activityData) {
+                    setActivity({
+                        ...activityData,
+                        id: activityData._id || activityData.id
+                    } as VolunteerActivity);
 
                     // Check if user already applied
-                    if (session?.user?.id) {
-                        const { data: app } = await supabase
-                            .from('applications')
-                            .select('status')
-                            .eq('activity_id', id)
-                            .eq('user_id', session.user.id)
-                            .single();
+                    if (session?.user?.email) {
+                        const existingApp = USER_APPLICATIONS.find((app: any) => app.title.includes(activityData.title.split(' ')[0])); // Simple match for mock
 
-                        if (app) setApplicationStatus(app.status as any);
+                        if (existingApp) {
+                            setApplicationStatus(existingApp.status.toLowerCase() as any);
+                        }
                     }
                 }
             } catch (err) {
@@ -200,22 +198,12 @@ export default function EventDetailPage() {
         }
 
         setIsSubmitting(true);
+        setIsSubmitting(true);
         try {
-            const response = await fetch('/api/applications', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    activity_id: id,
-                    form_data: formData,
-                    portfolio: portfolioFile
-                })
-            });
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to submit application');
-            }
-
+            // Success
             setApplicationStatus('pending');
             setShowApplicationModal(false);
         } catch (err: any) {
@@ -230,13 +218,8 @@ export default function EventDetailPage() {
         if (!window.confirm('Are you sure you want to withdraw your application?')) return;
 
         try {
-            const { error } = await supabase
-                .from('applications')
-                .delete()
-                .eq('activity_id', id)
-                .eq('user_id', session?.user?.id);
-
-            if (error) throw error;
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 800));
             setApplicationStatus(null);
         } catch (err) {
             console.error("Withdraw error:", err);

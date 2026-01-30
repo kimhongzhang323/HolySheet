@@ -30,15 +30,14 @@ export default function FeedbackPage() {
 
         setIsSubmitting(true);
         try {
-            const res = await fetch('/api/feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type, rating, message, image_url: imageUrl }),
-            });
-
-            if (res.ok) {
-                setSubmitted(true);
-            }
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 800));
+            // Success
+            setSubmitted(true);
+            setType('suggestion');
+            setRating(5);
+            setMessage('');
+            setImageUrl('');
         } catch (error) {
             console.error("Feedback error:", error);
         } finally {
@@ -116,8 +115,8 @@ export default function FeedbackPage() {
                                     type="button"
                                     onClick={() => setType(item.id)}
                                     className={`flex flex-col items-center gap-3 p-5 rounded-[24px] border-2 transition-all group ${isSelected
-                                            ? (item.id === 'compliment' ? 'bg-pink-600 border-pink-700 shadow-pink-100' : 'bg-gray-900 border-gray-900 shadow-gray-200') + ' shadow-xl'
-                                            : 'bg-white border-gray-100 hover:border-gray-200'
+                                        ? (item.id === 'compliment' ? 'bg-pink-600 border-pink-700 shadow-pink-100' : 'bg-gray-900 border-gray-900 shadow-gray-200') + ' shadow-xl'
+                                        : 'bg-white border-gray-100 hover:border-gray-200'
                                         }`}
                                 >
                                     <div className={`p-3 rounded-xl transition-colors ${isSelected ? 'bg-white/10' : item.bg

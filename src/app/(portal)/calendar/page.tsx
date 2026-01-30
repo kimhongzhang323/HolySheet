@@ -17,7 +17,7 @@ import {
     Users,
     Zap
 } from 'lucide-react';
-import { VOLUNTEER_ACTIVITIES } from '@/lib/mockData';
+import { VOLUNTEER_ACTIVITIES, USER_ASSIGNMENTS, MOCK_GOOGLE_EVENTS } from '@/lib/mockData';
 
 const getConflicts = (events: any[]) => {
     if (events.length < 2) return [];
@@ -83,29 +83,16 @@ export default function CalendarPage() {
         async function fetchFeed() {
             setLoading(true);
             try {
-                // 1. Fetch Enrollments
-                const enrollRes = await fetch('/api/user/activities?type=upcoming');
-                let registeredIds: string[] = [];
-                if (enrollRes.ok) {
-                    const enrollData = await enrollRes.json();
-                    registeredIds = (enrollData.activities || [])
-                        .filter((a: any) => a.status === 'confirmed' || a.status === 'approved')
-                        .map((a: any) => a.activity_id || a.id);
-                    setEnrolledIds(registeredIds);
-                }
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 800));
 
-                // 2. Fetch All Activities
-                const res = await fetch('/api/activities/feed');
-                let rawData = [];
+                // 1. Get Enrolled IDs from Mock Assignments
+                // Assuming USER_ASSIGNMENTS are all 'confirmed' or 'approved'
+                const registeredIds = USER_ASSIGNMENTS.map(a => a.id);
+                setEnrolledIds(registeredIds as string[]);
 
-                if (res.ok) {
-                    const data = await res.json();
-                    rawData = Array.isArray(data) ? data : (data?.activities || []);
-                }
-
-                if (rawData.length === 0) {
-                    rawData = VOLUNTEER_ACTIVITIES;
-                }
+                // 2. Use Mock Activities
+                const rawData = VOLUNTEER_ACTIVITIES;
 
                 // Process and normalize events for calendar
                 const processed = rawData.map((act: any) => {
@@ -222,27 +209,23 @@ export default function CalendarPage() {
         setSyncAlert(null);
 
         try {
-            const res = await fetch('/api/calendar/sync');
-            if (res.ok) {
-                const data = await res.json();
-                const fetchedEvents = (data.events || []).map((e: any) => ({
-                    ...e,
-                    isExternal: true,
-                    fullDate: e.date,
-                    startHour: e.start
-                }));
-                setGoogleEvents(fetchedEvents);
-                setSyncAlert({
-                    type: 'success',
-                    message: `Successfully synced ${fetchedEvents.length} events from Google Calendar!`
-                });
-            } else {
-                const error = await res.json();
-                setSyncAlert({
-                    type: 'error',
-                    message: error.error || 'Failed to sync with Google Calendar'
-                });
-            }
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Use Mock Google Events
+            const fetchedEvents = MOCK_GOOGLE_EVENTS.map((e: any) => ({
+                ...e,
+                isExternal: true,
+                fullDate: e.date,
+                startHour: e.start
+            }));
+
+            setGoogleEvents(fetchedEvents);
+            setSyncAlert({
+                type: 'success',
+                message: `Successfully synced ${fetchedEvents.length} events from Google Calendar!`
+            });
+
         } catch (error) {
             console.error("Sync error:", error);
             setSyncAlert({

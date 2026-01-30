@@ -81,6 +81,24 @@ export default function LoginPage() {
                         </div>
                     )}
 
+                    {/* Quick Login for Demo */}
+                    <div className="grid grid-cols-2 gap-3 mb-2">
+                        <button
+                            type="button"
+                            onClick={() => { setEmail('admin@holysheet.com'); setPassword('password123'); }}
+                            className="px-3 py-2 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors"
+                        >
+                            Mock Admin
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setEmail('user@holysheet.com'); setPassword('password123'); }}
+                            className="px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                        >
+                            Mock User
+                        </button>
+                    </div>
+
                     {/* Email/Password Form */}
                     <form onSubmit={handleEmailLogin} className="space-y-4">
                         {/* Email Field */}

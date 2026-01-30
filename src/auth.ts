@@ -29,6 +29,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
 
+                // Hardcoded Mock Accounts for Testing
+                if (credentials.email === 'admin@holysheet.com' && credentials.password === 'password123') {
+                    return {
+                        id: 'mock-admin-id',
+                        email: 'admin@holysheet.com',
+                        name: 'Admin User',
+                        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
+                        role: 'admin',
+                        supabaseAccessToken: 'mock-admin-token'
+                    };
+                }
+
+                if (credentials.email === 'user@holysheet.com' && credentials.password === 'password123') {
+                    return {
+                        id: 'mock-user-id',
+                        email: 'user@holysheet.com',
+                        name: 'John Doe',
+                        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+                        role: 'user',
+                        supabaseAccessToken: 'mock-user-token'
+                    };
+                }
+
                 // Query the 'users' table directly
                 const { data: user, error } = await supabase
                     .from('users')
@@ -62,6 +85,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     supabaseAccessToken: "custom-table-token" // Placeholder as we aren't using Supabase Auth sessions
                 };
             }
+
         }),
     ],
     // session: { strategy: "jwt" }, // Default

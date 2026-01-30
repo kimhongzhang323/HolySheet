@@ -7,7 +7,7 @@ import ActivityCard from '@/components/ActivityCard';
 import TicketCard from '@/components/TicketCard';
 import MiniCalendar from '@/components/MiniCalendar';
 import DatyAssistant from '@/components/DatyAssistant';
-import { VOLUNTEER_ACTIVITIES } from '@/lib/mockData';
+import { VOLUNTEER_ACTIVITIES, USER_ASSIGNMENTS, USER_APPLICATIONS, USER_INTERESTS } from '@/lib/mockData';
 import { Sparkles, User, Heart, Shield, GraduationCap, Leaf, Coffee, Briefcase, MapPin, Clock, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import DashboardMap from '@/components/DashboardMap';
@@ -50,17 +50,19 @@ export default function PortalPage() {
     // Save causes
     const saveCauses = async () => {
         try {
-            const res = await fetch('/api/user/interests', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ interests: selectedCauses }),
-            });
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // const res = await fetch('/api/user/interests', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify({ interests: selectedCauses }),
+            // });
 
-            if (res.ok) {
-                setOriginalCauses([...selectedCauses]);
-                setShowSaveSuccess(true);
-                setTimeout(() => setShowSaveSuccess(false), 3000);
-            }
+            // if (res.ok) {
+            setOriginalCauses([...selectedCauses]);
+            setShowSaveSuccess(true);
+            setTimeout(() => setShowSaveSuccess(false), 3000);
+            // }
         } catch (error) {
             console.error('Failed to save interests', error);
         }
@@ -96,71 +98,17 @@ export default function PortalPage() {
     ];
 
     useEffect(() => {
-        async function fetchFeed() {
-            try {
-                const res = await fetch('/api/activities/feed');
-                if (res.ok) {
-                    const data = await res.json();
-                    const rawData = data.activities || [];
-                    setActivities(rawData as Activity[]);
-                }
-            } catch (error) {
-                console.error('Failed to fetch feed', error);
-            } finally {
-                setLoading(false);
-            }
-        }
+        // Simulate data loading
+        const timer = setTimeout(() => {
+            setActivities(VOLUNTEER_ACTIVITIES as unknown as Activity[]);
+            setAssignments(USER_ASSIGNMENTS);
+            setApplications(USER_APPLICATIONS);
+            setSelectedCauses(USER_INTERESTS);
+            setOriginalCauses(USER_INTERESTS);
+            setLoading(false);
+        }, 800);
 
-        async function fetchAssignments() {
-            try {
-                const res = await fetch('/api/user/activities?type=upcoming');
-                if (res.ok) {
-                    const data = await res.json();
-                    const upcoming = (data.activities || []).map((item: any) => ({
-                        id: item.id || item.activity_id,
-                        category: item.activity?.category || 'Volunteer',
-                        title: `${item.activity?.title || 'Mission'} • ${item.activity?.location || 'TBD'}`,
-                        date: item.activity?.start_time ? new Date(item.activity.start_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD',
-                        time: item.activity?.start_time ? new Date(item.activity.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '09:00',
-                        image: item.activity?.image_url || 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=600&fit=crop',
-                        status: item.status
-                    }));
-
-                    setAssignments(upcoming.filter((a: any) => a.status === 'confirmed' || a.status === 'approved'));
-                    setApplications(upcoming.filter((a: any) => a.status === 'pending').map((a: any) => ({
-                        id: a.id,
-                        title: a.title.split(' • ')[0],
-                        date: `Applied ${a.date}`,
-                        status: 'Pending',
-                        color: 'text-amber-600',
-                        bg: 'bg-amber-50'
-                    })));
-                }
-            } catch (error) {
-                console.error('Failed to fetch assignments', error);
-            }
-        }
-
-        async function fetchInterests() {
-            try {
-                const res = await fetch('/api/user/interests');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.interests) {
-                        setSelectedCauses(data.interests);
-                        setOriginalCauses(data.interests);
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to fetch interests', error);
-            }
-        }
-
-        if (session) {
-            fetchFeed();
-            fetchAssignments();
-            fetchInterests();
-        }
+        return () => clearTimeout(timer);
     }, [session]);
 
     return (

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 // Mock user data
-// Mock user data replaced by API fetch
+import { VOLUNTEER_ACTIVITIES, USER_ASSIGNMENTS, USER_APPLICATIONS } from '@/lib/mockData';
 const DEFAULT_USER = {
     name: 'Volunteer',
     email: '',
@@ -142,76 +142,75 @@ export default function ProfilePage() {
             if (!session?.user) return;
 
             try {
-                // 1. Fetch Stats & Profile Info
-                const statsRes = await fetch('/api/user/stats');
-                if (statsRes.ok) {
-                    const data = await statsRes.json();
-                    setStats(prev => ({
-                        ...prev,
-                        volunteerEvents: data.missions || 0,
-                        totalHours: data.hours || 0,
-                    }));
-                    setProfile(prev => ({
-                        ...prev,
-                        name: data.name || session.user?.name || prev.name,
-                        email: session.user?.email || prev.email,
-                        avatar: data.image || session.user?.image || prev.avatar,
-                        bio: data.bio || prev.bio,
-                        phone: data.phone || prev.phone,
-                        location: data.location || prev.location,
-                        joinedDate: data.joinedDate ? new Date(data.joinedDate).toLocaleDateString() : prev.joinedDate,
-                        skills: data.skills || []
-                    }));
-                    if (data.achievements) setAchievements(data.achievements);
-                }
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 600));
 
-                // 2. Fetch Upcoming Activities
-                const upcomingRes = await fetch('/api/user/activities?type=upcoming');
-                if (upcomingRes.ok) {
-                    const data = await upcomingRes.json();
-                    const allUpcoming = data.activities || [];
-                    setUpcomingEvents(allUpcoming.filter((a: any) => a.status === 'confirmed' || a.status === 'approved'));
-                    setPendingApplications(allUpcoming.filter((a: any) => a.status === 'pending').map((item: any) => ({
-                        id: item.id || item.activity_id,
-                        title: item.activity?.title || 'Unknown Activity',
-                        location: item.activity?.location || 'Unknown Location',
-                        date: item.activity?.start_time ? new Date(item.activity.start_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
-                        status: 'Pending',
-                        image: item.activity?.image_url || 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&q=80'
-                    })));
-                }
+                // 1. Stats & Profile Info - Mocked
+                setStats(prev => ({
+                    ...prev,
+                    volunteerEvents: USER_ASSIGNMENTS.length,
+                    totalHours: 12, // Hardcoded for demo
+                }));
+                // In a real app we'd merge session user with DB user. Here just use session.
+                setProfile(prev => ({
+                    ...prev,
+                    name: session.user?.name || prev.name,
+                    email: session.user?.email || prev.email,
+                    avatar: session.user?.image || prev.avatar,
+                    skills: ['Teamwork', 'Communication'] // Mock skills
+                }));
+                setAchievements(MOCK_BADGES); // Use the static mock badges for now
 
-                // 3. Fetch History
-                const historyRes = await fetch('/api/user/activities?type=history');
-                if (historyRes.ok) {
-                    const data = await historyRes.json();
-                    const mappedHistory = (data.activities || []).map((item: any) => ({
-                        id: item.id || item.activity_id, // ensure ID
-                        title: item.activity?.title || 'Unknown Activity',
-                        location: item.activity?.location || 'Unknown Location',
-                        date: item.activity?.start_time ? new Date(item.activity.start_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
-                        status: item.status === 'attended' ? 'On Time' : (item.status === 'confirmed' ? 'Upcoming' : item.status), // Map status to UI labels
-                        checkIn: '09:00', // Mock check-in times for now as backend doesn't store exact check-in yet
-                        checkOut: '13:00',
-                        image: item.activity?.image_url || 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&q=80'
-                    }));
-                    setHistoryEvents(mappedHistory);
-                }
+                // 2. Upcoming Activities & History
+                // Split USER_ASSIGNMENTS into upcoming vs history relative to now
+                const now = new Date();
 
-                // 4. Fetch Dynamic Applications
-                const appsRes = await fetch('/api/applications');
-                if (appsRes.ok) {
-                    const data = await appsRes.json();
-                    const dynamicApps = (data.applications || []).map((app: any) => ({
-                        id: app.id,
-                        title: app.activities?.title || 'Unknown Activity',
-                        location: app.activities?.location || 'Unknown Location',
-                        date: app.activities?.start_time ? new Date(app.activities.start_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
-                        status: app.status,
-                        image: app.activities?.image_url || 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&q=80'
-                    }));
-                    setPendingApplications(prev => [...prev.filter(a => a.status.toLowerCase() !== 'pending'), ...dynamicApps]);
-                }
+                // For demo purposes, let's just split the static USER_ASSIGNMENTS or use them as is.
+                // Assuming USER_ASSIGNMENTS are 'tasks' or 'activities'.
+                // Let's rely on date fields if they exist, or just arbitrary split.
+
+                // We'll treat USER_ASSIGNMENTS as confirmed upcoming for now for simplicity
+                const allAssignments = USER_ASSIGNMENTS.map((item: any) => {
+                    // Find full activity details if possible
+                    const actDetails = VOLUNTEER_ACTIVITIES.find((v: any) => v.id === item.id || v._id === item.id) || {};
+                    return { ...item, ...actDetails };
+                });
+
+                const upcoming = allAssignments.slice(0, 3).map((item: any) => ({
+                    ...item,
+                    status: 'confirmed',
+                    activity: {
+                        title: item.title,
+                        start_time: item.date || item.start_time,
+                        image_url: item.image || item.image_url
+                    }
+                }));
+
+                setUpcomingEvents(upcoming);
+
+                // Mock history separately since USER_ASSIGNMENTS might be sparse
+                const history = MOCK_EVENT_HISTORY.map(h => ({
+                    ...h,
+                    activity: {
+                        title: h.title,
+                        location: h.location,
+                        start_time: h.date, // loose mapping
+                        image_url: h.image
+                    }
+                }));
+                setHistoryEvents(history);
+
+
+                // 3. Applications
+                const dynamicApps = USER_APPLICATIONS.map((app: any) => ({
+                    id: app.id,
+                    title: app.title,
+                    location: 'Singapore', // Mock
+                    date: app.date || 'TBD',
+                    status: app.status,
+                    image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=400&fit=crop'
+                }));
+                setPendingApplications(dynamicApps);
 
             } catch (error) {
                 console.error("Error fetching profile data:", error);

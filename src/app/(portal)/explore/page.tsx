@@ -29,22 +29,10 @@ export default function ExplorePage() {
         async function fetchFeed() {
             try {
                 // Wait for session to be available if needed, or proceed
-                const token = (session as any)?.accessToken;
-                const headers: HeadersInit = token
-                    ? { 'Authorization': `Bearer ${token}` }
-                    : {};
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 500));
 
-                const res = await fetch('/api/activities/feed', { headers });
-                let rawData = [];
-                if (res.ok) {
-                    const data = await res.json();
-                    rawData = Array.isArray(data) ? data : (data?.activities || []);
-                }
-
-                // If empty or failed, use mock EVENTS
-                if (rawData.length === 0) {
-                    rawData = VOLUNTEER_ACTIVITIES;
-                }
+                const rawData = VOLUNTEER_ACTIVITIES;
 
                 // Normalize data for the UI
                 const normalized = rawData.map((act: any) => ({
@@ -58,14 +46,7 @@ export default function ExplorePage() {
 
                 setActivities(normalized as Activity[]);
             } catch (error) {
-                console.error('Failed to fetch feed', error);
-                // Last resort fallback
-                setActivities(VOLUNTEER_ACTIVITIES.map((act: any) => ({
-                    ...act,
-                    id: act._id,
-                    image_url: act.image,
-                    start_time: act.start_time
-                })) as Activity[]);
+                console.error('Failed to load explore data', error);
             } finally {
                 setLoading(false);
             }

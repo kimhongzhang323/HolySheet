@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MapPin, X, QrCode, Users, Heart, Sparkles, SlidersHorizontal, ChevronDown, Building2, Palette, Clock, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+// import { supabase } from '@/lib/supabaseClient';
 
 // Constants
 const CATEGORIES = [
@@ -24,6 +24,8 @@ const ACTIVITY_TYPES = [
     'Excursion',
     'Training Support',
 ];
+
+import { VOLUNTEER_ACTIVITIES } from '@/lib/mockData';
 
 const ENGAGEMENT_FREQUENCIES = [
     'All Engagements',
@@ -91,24 +93,23 @@ export default function EventsPage() {
         async function fetchActivities() {
             try {
                 setIsLoading(true);
-                const { data, error } = await supabase
-                    .from('activities')
-                    .select('*')
-                    .order('start_time', { ascending: true });
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 600));
 
-                if (error) throw error;
+                const data = VOLUNTEER_ACTIVITIES;
 
                 if (data) {
                     const mappedActivities = data.map((act: any) => {
                         const startDate = new Date(act.start_time);
                         return {
                             ...act,
+                            id: act._id || act.id,
                             date: startDate.getDate().toString(),
                             month: startDate.toLocaleString('default', { month: 'long' }).toUpperCase(),
                             year: startDate.getFullYear().toString(),
                         };
                     });
-                    setActivities(mappedActivities);
+                    setActivities(mappedActivities as unknown as VolunteerActivity[]);
                 }
             } catch (err) {
                 console.error('Error fetching activities:', err);
