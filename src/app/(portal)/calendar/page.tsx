@@ -208,6 +208,57 @@ export default function CalendarPage() {
         setCalendarData(data);
     }, [currentDate, selectedView]);
 
+    const handleQuickRegister = async (eventId: string) => {
+        try {
+            setLoading(true);
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            setEnrolledIds(prev => [...prev, eventId]);
+            setActivities(prev => prev.map(act =>
+                act.id === eventId ? { ...act, isEnrolled: true } : act
+            ));
+
+            setSyncAlert({
+                type: 'success',
+                message: 'Successfully registered for activity!'
+            });
+            setSelectedEvent(null);
+        } catch (error) {
+            console.error("Registration error:", error);
+            setSyncAlert({
+                type: 'error',
+                message: 'Failed to register. Please try again.'
+            });
+        } finally {
+            setLoading(false);
+            setTimeout(() => setSyncAlert(null), 5000);
+        }
+    };
+
+    const handleUnregister = async (eventId: string) => {
+        try {
+            setLoading(true);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            setEnrolledIds(prev => prev.filter(id => id !== eventId));
+            setActivities(prev => prev.map(act =>
+                act.id === eventId ? { ...act, isEnrolled: false } : act
+            ));
+
+            setSyncAlert({
+                type: 'success',
+                message: 'Successfully unregistered from activity.'
+            });
+            setSelectedEvent(null);
+        } catch (error) {
+            console.error("Unregistration error:", error);
+        } finally {
+            setLoading(false);
+            setTimeout(() => setSyncAlert(null), 5000);
+        }
+    };
+
     const navigate = (direction: 'prev' | 'next') => {
         const newDate = new Date(currentDate);
         if (selectedView === 'Week') newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
@@ -247,7 +298,7 @@ export default function CalendarPage() {
         const matchesLocation = !filterLocation || event.location?.toLowerCase().includes(filterLocation.toLowerCase());
 
         // 5. Engagement Level Filter
-        const matchesEngagement = selectedEngagementLevels.length === 0 || 
+        const matchesEngagement = selectedEngagementLevels.length === 0 ||
             (event.engagement_frequency && selectedEngagementLevels.includes(event.engagement_frequency));
 
         return matchesSearch && matchesStatus && matchesCategory && matchesLocation && matchesEngagement;
@@ -859,78 +910,103 @@ export default function CalendarPage() {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-white rounded-[32px] w-full max-w-md shadow-2xl relative overflow-hidden"
+                            className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl relative overflow-hidden"
                         >
+                            {/* Event Image Header */}
+                            <div className="relative h-48 w-full overflow-hidden">
+                                <img
+                                    src={selectedEvent.image_url || selectedEvent.image || 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&q=80'}
+                                    alt={selectedEvent.title}
+                                    className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/20" />
+                                <button
+                                    onClick={() => setSelectedEvent(null)}
+                                    className="absolute top-4 right-4 p-2 bg-black/20 backdrop-blur-md rounded-xl text-white hover:bg-black/40 transition-all"
+                                >
+                                    <X size={20} />
+                                </button>
+                                <div className="absolute bottom-4 left-6">
+                                    <span className={`px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${getEventIdentity(selectedEvent).text}`}>
+                                        {getEventIdentity(selectedEvent).label || (selectedEvent.category || 'General')}
+                                    </span>
+                                </div>
+                            </div>
+
                             <div className="p-8">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div>
-                                        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 ${getEventIdentity(selectedEvent).light
-                                            }`}>
-                                            Edit Identity
-                                        </span>
-                                        <h3 className="text-2xl font-black text-gray-900 leading-tight">
-                                            {selectedEvent.title}
-                                        </h3>
-                                    </div>
-                                    <button
-                                        onClick={() => setSelectedEvent(null)}
-                                        className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                                    >
-                                        <Plus size={24} className="rotate-45 text-gray-400" />
-                                    </button>
+                                <div className="mb-6">
+                                    <h3 className="text-2xl font-black text-gray-900 leading-tight mb-2">
+                                        {selectedEvent.title}
+                                    </h3>
+                                    <p className="text-xs font-bold text-gray-400 flex items-center gap-1.5 uppercase tracking-wider">
+                                        organized by <span className="text-emerald-600 underline cursor-pointer">{selectedEvent.organizer || 'HolySheet Community'}</span>
+                                    </p>
                                 </div>
 
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest block mb-3">
-                                            Identity Color
-                                        </label>
-                                        <div className="flex flex-wrap gap-3">
-                                            {tagColors.map((color) => (
-                                                <button
-                                                    key={color.name}
-                                                    onClick={() => {
-                                                        const current = customIdentities[selectedEvent.id] || {};
-                                                        setCustomIdentities({
-                                                            ...customIdentities,
-                                                            [selectedEvent.id]: { ...current, color: color.name }
-                                                        });
-                                                    }}
-                                                    className={`w-10 h-10 rounded-2xl transition-all ${color.bg} ${(customIdentities[selectedEvent.id]?.color === color.name || (!customIdentities[selectedEvent.id] && color.name === 'Emerald' && selectedEvent.isEnrolled))
-                                                        ? 'ring-4 ring-offset-2 ring-gray-900 scale-110'
-                                                        : 'opacity-40 hover:opacity-100 hover:scale-105'
-                                                        }`}
-                                                />
-                                            ))}
+                                <div className="grid grid-cols-2 gap-4 mb-8">
+                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                                            <CalendarIcon size={14} className="text-emerald-500" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-black text-gray-400 uppercase leading-none mb-1">Date</span>
+                                            <span className="text-xs font-black text-gray-800">{new Date(selectedEvent.start_time).toLocaleDateString()}</span>
                                         </div>
                                     </div>
-
-                                    <div>
-                                        <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest block mb-3">
-                                            Custom Label (Optional)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Lead, Critical, Fun"
-                                            defaultValue={customIdentities[selectedEvent.id]?.label || ''}
-                                            onChange={(e) => {
-                                                const current = customIdentities[selectedEvent.id] || { color: selectedEvent.isEnrolled ? 'Emerald' : 'Blue' };
-                                                setCustomIdentities({
-                                                    ...customIdentities,
-                                                    [selectedEvent.id]: { ...current, label: e.target.value }
-                                                });
-                                            }}
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                                        />
+                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                                            <Clock size={14} className="text-emerald-500" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-black text-gray-400 uppercase leading-none mb-1">Time</span>
+                                            <span className="text-xs font-black text-gray-800">
+                                                {new Date(selectedEvent.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-2 flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                                            <MapPin size={14} className="text-emerald-500" />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[9px] font-black text-gray-400 uppercase leading-none mb-1">Location</span>
+                                            <span className="text-xs font-black text-gray-800 truncate">{selectedEvent.location || 'Singapore'}</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="mt-8 flex gap-3">
+                                <div className="mb-8">
+                                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">About this mission</h4>
+                                    <p className="text-xs font-bold text-gray-600 line-clamp-3 leading-relaxed">
+                                        {selectedEvent.description || 'Join us for this meaningful activity and make a difference in your community!'}
+                                    </p>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    {selectedEvent.isEnrolled ? (
+                                        <button
+                                            onClick={() => handleUnregister(selectedEvent.id)}
+                                            disabled={loading}
+                                            className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-gray-200 transition-all flex items-center justify-center gap-2 group"
+                                        >
+                                            <X size={14} className="group-hover:scale-110 transition-transform" />
+                                            {loading ? 'Processing...' : 'Unregister'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleQuickRegister(selectedEvent.id)}
+                                            disabled={loading || selectedEvent.isExternal}
+                                            className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200/50 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:bg-gray-400"
+                                        >
+                                            <Plus size={14} className="group-hover:scale-110 transition-transform" />
+                                            {loading ? 'Registering...' : selectedEvent.isExternal ? 'Google Event' : 'Quick Register'}
+                                        </button>
+                                    )}
                                     <button
-                                        onClick={() => setSelectedEvent(null)}
-                                        className="flex-1 py-4 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-xl shadow-gray-200"
+                                        onClick={() => router.push(`/events/${selectedEvent.id}`)}
+                                        className="p-4 bg-gray-900 text-white rounded-2xl hover:bg-gray-800 transition-all shadow-lg shadow-gray-200"
                                     >
-                                        Save Changes
+                                        <ChevronRight size={18} />
                                     </button>
                                 </div>
                             </div>
