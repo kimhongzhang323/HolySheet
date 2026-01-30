@@ -9,6 +9,7 @@ import Link from 'next/link';
 import AIResponseAnalysis from '@/components/admin/AIResponseAnalysis';
 import EditEventDialog from '@/components/admin/EditEventDialog';
 import BroadcastDialog from '@/components/admin/BroadcastDialog';
+import { ADMIN_MOCK_ACTIVITIES, ADMIN_MOCK_VOLUNTEERS } from '@/lib/adminMockData';
 
 
 interface Activity {

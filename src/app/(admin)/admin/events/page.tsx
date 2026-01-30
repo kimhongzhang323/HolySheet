@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Calendar, MapPin, Users, Clock, Filter, Plus, Search, MoreVertical, Loader2, AlertCircle, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 import CreateActivityModal from '@/components/CreateActivityModal';
+import { ADMIN_MOCK_ACTIVITIES } from '@/lib/adminMockData';
 
 interface Activity {
     id: string;
@@ -52,23 +53,17 @@ export default function EventsPage() {
     const fetchActivities = async () => {
         try {
             setLoading(true);
-            if (!session?.accessToken) return;
-
-            const res = await fetch('/api/admin/activities', {
-                headers: {
-                    'Authorization': `Bearer ${session.accessToken}`
-                }
-            });
-
-            if (!res.ok) throw new Error('Failed to fetch activities');
-
-            const data = await res.json();
-            setActivities(data);
-            setHasFetched(true);
+            // Mock delay
+            setTimeout(() => {
+                // Map mock data to Activity interface if necessary, or cast as any if structure is close enough
+                // The mock data has all required fields plus some extras
+                setActivities(ADMIN_MOCK_ACTIVITIES as unknown as Activity[]);
+                setHasFetched(true);
+                setLoading(false);
+            }, 800);
         } catch (err) {
             console.error(err);
             setError('Failed to load events');
-        } finally {
             setLoading(false);
         }
     };

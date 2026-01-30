@@ -21,6 +21,7 @@ import {
     Home,
     MoreHorizontal
 } from 'lucide-react';
+import { ADMIN_MOCK_ACTIVITIES } from '@/lib/adminMockData';
 
 export default function JointAttendancePage() {
     const { data: session } = useSession();
@@ -37,13 +38,9 @@ export default function JointAttendancePage() {
 
     const fetchActivities = async () => {
         try {
-            const res = await fetch('/api/admin/activities', {
-                headers: {
-                    'Authorization': `Bearer ${session?.accessToken}`
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
+            // Mock fetch
+            setTimeout(() => {
+                const data = ADMIN_MOCK_ACTIVITIES;
                 const formattedEvents = data.map((act: any) => ({
                     id: act.id,
                     title: act.title,
@@ -55,11 +52,12 @@ export default function JointAttendancePage() {
                         description: act.description,
                         location: act.location,
                         volunteers_registered: act.volunteers_registered || 0,
-                        volunteers_needed: act.volunteers_needed || 0
+                        volunteers_needed: act.volunteers_needed || 0,
+                        engagement_level: act.engagement_level || 'Medium'
                     }
                 }));
                 setEvents(formattedEvents);
-            }
+            }, 500);
         } catch (error) {
             console.error("Failed to fetch activities:", error);
         }
@@ -144,9 +142,15 @@ export default function JointAttendancePage() {
         }
 
         // Simpler "Text Bar" style matching Portal
+        const engagementColor =
+            props.engagement_level === 'High' ? 'bg-red-400' :
+                props.engagement_level === 'Medium' ? 'bg-yellow-400' :
+                    props.engagement_level === 'Low' ? 'bg-green-400' : 'bg-gray-400';
+
         return (
-            <div className={`px-1.5 py-0.5 md:py-1 rounded-sm md:rounded-md text-[10px] md:text-xs w-full ${colors} cursor-pointer hover:opacity-80 transition-opacity truncate font-medium`}>
-                {eventInfo.event.title}
+            <div className={`px-1.5 py-0.5 md:py-1 rounded-sm md:rounded-md text-[10px] md:text-xs w-full ${colors} cursor-pointer hover:opacity-80 transition-opacity truncate font-medium flex items-center gap-1.5`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${engagementColor} shrink-0`}></div>
+                <span className="truncate">{eventInfo.event.title}</span>
             </div>
         );
     };
@@ -157,6 +161,8 @@ export default function JointAttendancePage() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [filterLocation, setFilterLocation] = useState('');
     const [filterStatus, setFilterStatus] = useState('all'); // all, needs_volunteers, full
+
+    const [filterEngagement, setFilterEngagement] = useState<string[]>([]);
 
     // Extract unique types for checkboxes
     const uniqueTypes = Array.from(new Set(events.map(e => e.extendedProps?.rawType))).filter(Boolean);
@@ -187,7 +193,9 @@ export default function JointAttendancePage() {
             matchesStatus = (props?.volunteers_registered || 0) >= (props?.volunteers_needed || 0);
         }
 
-        return matchesSearch && matchesType && matchesLocation && matchesStatus;
+        const matchesEngagement = filterEngagement.length === 0 || filterEngagement.includes(props?.engagement_level);
+
+        return matchesSearch && matchesType && matchesLocation && matchesStatus && matchesEngagement;
     });
 
     return (
@@ -419,6 +427,41 @@ export default function JointAttendancePage() {
                             {uniqueTypes.length === 0 && (
                                 <div className="text-sm text-gray-400 italic p-2">No activity types found</div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Engagement Level Filter */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Engagement Level</label>
+                            <button
+                                onClick={() => setFilterEngagement([])}
+                                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700"
+                            >
+                                RESET
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {['High', 'Medium', 'Low'].map(level => (
+                                <label key={level} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={filterEngagement.includes(level)}
+                                        onChange={() => {
+                                            setFilterEngagement(prev =>
+                                                prev.includes(level)
+                                                    ? prev.filter(l => l !== level)
+                                                    : [...prev, level]
+                                            );
+                                        }}
+                                        className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700">{level} Intensity</span>
+                                    {level === 'High' && <span className="ml-auto w-2 h-2 rounded-full bg-red-400"></span>}
+                                    {level === 'Medium' && <span className="ml-auto w-2 h-2 rounded-full bg-yellow-400"></span>}
+                                    {level === 'Low' && <span className="ml-auto w-2 h-2 rounded-full bg-green-400"></span>}
+                                </label>
+                            ))}
                         </div>
                     </div>
 

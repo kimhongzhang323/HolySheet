@@ -13,6 +13,14 @@ import {
     PieChart, Pie, Cell, Legend, BarChart, Bar
 } from 'recharts';
 import RegionalHeatMap from '@/components/admin/RegionalHeatMap';
+import {
+    ADMIN_MOCK_STATS,
+    ADMIN_MOCK_TRENDS_7D,
+    ADMIN_MOCK_TRENDS_30D,
+    ADMIN_MOCK_TRENDS_6M,
+    ADMIN_MOCK_DISTRIBUTION,
+    ADMIN_MOCK_ACTIVITIES
+} from '@/lib/adminMockData';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
 
@@ -47,36 +55,22 @@ export default function AdminDashboard() {
     }, [session, timeRange]);
 
     const fetchData = async () => {
-        if (!session?.accessToken) return;
         setLoading(true);
-        try {
-            // 1. Fetch Chart Stats
-            const statsRes = await fetch(`/api/admin/reports/stats?time_range=${timeRange}`, {
-                headers: { 'Authorization': `Bearer ${session.accessToken}` }
-            });
+        // Mock data fetch
+        setTimeout(() => {
+            setStats(ADMIN_MOCK_STATS);
 
-            if (statsRes.ok) {
-                const data = await statsRes.json();
-                setStats(data.stats);
-                setTrendData(data.participation_trends);
-                setDistributionData(data.activity_distribution);
-            }
+            // Handle time range for trends (Mock logic)
+            let trends = ADMIN_MOCK_TRENDS_6M;
+            if (timeRange === '7d') trends = ADMIN_MOCK_TRENDS_7D;
+            else if (timeRange === '30d') trends = ADMIN_MOCK_TRENDS_30D;
 
-            // 2. Fetch Recent Activities (re-using existing endpoint or filtered list)
-            const actRes = await fetch('/api/admin/activities', {
-                headers: { 'Authorization': `Bearer ${session.accessToken}` }
-            });
-            if (actRes.ok) {
-                const acts = await actRes.json();
-                // Taking top 5 most recent upcoming
-                setRecentActivities(acts.slice(0, 5));
-            }
+            setTrendData(trends);
+            setDistributionData(ADMIN_MOCK_DISTRIBUTION);
+            setRecentActivities(ADMIN_MOCK_ACTIVITIES.slice(0, 5));
 
-        } catch (error) {
-            console.error("Dashboard fetch error:", error);
-        } finally {
             setLoading(false);
-        }
+        }, 800);
     };
 
     return (

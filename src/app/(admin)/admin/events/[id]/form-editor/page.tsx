@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { ArrowLeft, Plus, Trash2, Save, Loader2, GripVertical, CheckCircle, X, Type, List as ListIcon, CheckSquare, Calendar as CalendarIcon, Phone, Monitor, Smartphone, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ADMIN_MOCK_ACTIVITIES } from '@/lib/adminMockData';
 
 interface FormField {
     label: string;
