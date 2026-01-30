@@ -65,6 +65,7 @@ export default function EventDetailPage() {
     const [formData, setFormData] = useState<Record<string, string>>({});
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [portfolioFile, setPortfolioFile] = useState<{ fileName: string; fileType: 'pdf' | 'image'; fileUrl: string } | null>(null);
+    const [isApplyForOther, setIsApplyForOther] = useState(false);
 
     useEffect(() => {
         async function fetchActivity() {
@@ -100,6 +101,18 @@ export default function EventDetailPage() {
         }
     }, [id, session]);
 
+    // Initialize/Sync Form Data when modal opens
+    useEffect(() => {
+        if (showApplicationModal && session?.user && !isApplyForOther) {
+            setFormData(prev => ({
+                ...prev,
+                'Your Full Name': prev['Your Full Name'] || session.user.name || '',
+                'Your Email': prev['Your Email'] || session.user.email || '',
+                'Your Contact': prev['Your Contact'] || '+65 9123 4567' // Set a default for easier double-checking
+            }));
+        }
+    }, [showApplicationModal, session, isApplyForOther]);
+
     const handleFormChange = (label: string, value: string) => {
         setFormData(prev => ({ ...prev, [label]: value }));
     };
@@ -120,39 +133,68 @@ export default function EventDetailPage() {
             activity?.volunteer_form?.fields.forEach(field => {
                 const label = field.label.toLowerCase();
 
-                // Generate contextual mock responses based on field label
-                if (label.includes('name') || label.includes('full name')) {
-                    mockSuggestions[field.label] = userName;
-                } else if (label.includes('email')) {
-                    mockSuggestions[field.label] = userEmail;
-                } else if (label.includes('phone') || label.includes('contact')) {
-                    mockSuggestions[field.label] = '+65 9123 4567';
-                } else if (label.includes('motivation') || label.includes('why')) {
-                    mockSuggestions[field.label] = `I am passionate about contributing to ${activity?.title || 'this initiative'} and believe my skills can make a meaningful impact. I'm eager to learn, collaborate with fellow volunteers, and support the community.`;
-                } else if (label.includes('experience') || label.includes('background')) {
-                    mockSuggestions[field.label] = `I have previous volunteering experience in community service and event coordination. I am comfortable working with diverse groups and have strong communication skills.`;
-                } else if (label.includes('skill') || label.includes('abilities')) {
-                    mockSuggestions[field.label] = 'Communication, Teamwork, Problem-solving, Time Management';
-                } else if (label.includes('availability') || label.includes('schedule')) {
-                    mockSuggestions[field.label] = 'Weekends and public holidays. Flexible timing.';
-                } else if (label.includes('dietary') || label.includes('food')) {
-                    mockSuggestions[field.label] = 'No dietary restrictions';
-                } else if (label.includes('emergency') || label.includes('contact person')) {
-                    mockSuggestions[field.label] = 'Family Member - +65 8765 4321';
-                } else if (label.includes('t-shirt') || label.includes('size')) {
-                    mockSuggestions[field.label] = 'M';
-                } else if (label.includes('expectation') || label.includes('hope')) {
-                    mockSuggestions[field.label] = `I hope to gain hands-on experience, meet like-minded individuals, and contribute positively to ${activity?.organizer || 'the organization'}'s mission.`;
-                } else if (label.includes('how did you') || label.includes('hear about')) {
-                    mockSuggestions[field.label] = 'Social media and word of mouth from friends';
-                } else if (field.type === 'textarea') {
-                    mockSuggestions[field.label] = `I am excited to participate in ${activity?.title || 'this activity'} and contribute my time and effort to support the community.`;
-                } else if (field.type === 'select' && field.options?.length) {
-                    mockSuggestions[field.label] = field.options[0]; // Select first option
-                } else if (field.type === 'text') {
-                    mockSuggestions[field.label] = userName;
+                // If applying for someone else, generate dummy but realistic data
+                if (isApplyForOther) {
+                    if (label.includes('name')) mockSuggestions[field.label] = 'John Doe';
+                    else if (label.includes('email')) mockSuggestions[field.label] = 'john.doe@example.com';
+                    else if (label.includes('phone') || label.includes('contact')) mockSuggestions[field.label] = '+65 8888 7777';
+                    else if (label.includes('motivation') || label.includes('why') || label.includes('reason') || label.includes('experience')) {
+                        mockSuggestions[field.label] = `I am applying on behalf of my friend John who is very interested in ${activity?.title || 'this activity'}. They have a strong background in community service and are eager to help.`;
+                    } else if (label.includes('dialect') || label.includes('language')) {
+                        mockSuggestions[field.label] = 'Mandarin, Cantonese';
+                    } else if (field.type === 'select' && field.options?.length) {
+                        mockSuggestions[field.label] = field.options[0];
+                    } else if (field.type === 'text') {
+                        mockSuggestions[field.label] = 'Interested Volunteer';
+                    }
+                } else {
+                    // Generate contextual mock responses based on field label for Myself
+                    if (label.includes('name') || label.includes('full name')) {
+                        mockSuggestions[field.label] = userName;
+                    } else if (label.includes('email')) {
+                        mockSuggestions[field.label] = userEmail;
+                    } else if (label.includes('phone') || label.includes('contact')) {
+                        mockSuggestions[field.label] = '+65 9123 4567';
+                    } else if (label.includes('motivation') || label.includes('why')) {
+                        mockSuggestions[field.label] = `I am passionate about contributing to ${activity?.title || 'this initiative'} and believe my skills can make a meaningful impact. I'm eager to learn, collaborate with fellow volunteers, and support the community.`;
+                    } else if (label.includes('experience') || label.includes('background')) {
+                        mockSuggestions[field.label] = `I have previous volunteering experience in community service and event coordination. I am comfortable working with diverse groups and have strong communication skills.`;
+                    } else if (label.includes('skill') || label.includes('abilities')) {
+                        mockSuggestions[field.label] = 'Communication, Teamwork, Problem-solving, Time Management';
+                    } else if (label.includes('availability') || label.includes('schedule')) {
+                        mockSuggestions[field.label] = 'Weekends and public holidays. Flexible timing.';
+                    } else if (label.includes('dietary') || label.includes('food')) {
+                        mockSuggestions[field.label] = 'No dietary restrictions';
+                    } else if (label.includes('emergency') || label.includes('contact person')) {
+                        mockSuggestions[field.label] = 'Family Member - +65 8765 4321';
+                    } else if (label.includes('t-shirt') || label.includes('size')) {
+                        mockSuggestions[field.label] = 'M';
+                    } else if (label.includes('expectation') || label.includes('hope')) {
+                        mockSuggestions[field.label] = `I hope to gain hands-on experience, meet like-minded individuals, and contribute positively to ${activity?.organizer || 'the organization'}'s mission.`;
+                    } else if (label.includes('how did you') || label.includes('hear about')) {
+                        mockSuggestions[field.label] = 'Social media and word of mouth from friends';
+                    } else if (field.type === 'textarea') {
+                        mockSuggestions[field.label] = `I am excited to participate in ${activity?.title || 'this activity'} and contribute my time and effort to support the community.`;
+                    } else if (field.type === 'select' && field.options?.length) {
+                        mockSuggestions[field.label] = field.options[0]; // Select first option
+                    } else if (field.type === 'text') {
+                        mockSuggestions[field.label] = userName;
+                    }
                 }
             });
+
+            // Also autofill personal details based on mode
+            if (isApplyForOther) {
+                mockSuggestions['Person\'s Full Name'] = 'John Doe';
+                mockSuggestions['Person\'s Contact'] = '8888 7777';
+                mockSuggestions['Person\'s Email'] = 'john.doe@example.com';
+                mockSuggestions['Relationship to You'] = 'Friend';
+                mockSuggestions['Person\'s Bio'] = 'John is an enthusiastic volunteer with experience in environmental projects and is very reliable.';
+            } else {
+                mockSuggestions['Your Full Name'] = userName;
+                mockSuggestions['Your Email'] = userEmail;
+                mockSuggestions['Your Contact'] = '+65 9123 4567';
+            }
 
             setFormData(prev => ({ ...prev, ...mockSuggestions }));
         } catch (error) {
@@ -184,6 +226,17 @@ export default function EventDetailPage() {
         const missingFields = activity?.volunteer_form?.fields
             .filter(f => f.required && !formData[f.label])
             .map(f => f.label);
+
+        if (isApplyForOther) {
+            if (!formData['Person\'s Full Name']) missingFields?.push('Person\'s Full Name');
+            if (!formData['Person\'s Contact']) missingFields?.push('Person\'s Contact');
+            if (!formData['Person\'s Email']) missingFields?.push('Person\'s Email');
+            if (!formData['Relationship to You']) missingFields?.push('Relationship to You');
+        } else {
+            if (!formData['Your Full Name']) missingFields?.push('Your Full Name');
+            if (!formData['Your Contact']) missingFields?.push('Your Contact');
+            if (!formData['Your Email']) missingFields?.push('Your Email');
+        }
 
         if (missingFields && missingFields.length > 0) {
             alert(`Please fill in the following required fields: ${missingFields.join(', ')}`);
@@ -322,8 +375,135 @@ export default function EventDetailPage() {
                             <div className="overflow-y-auto pr-2 space-y-6 flex-1">
                                 <div className="bg-gray-50 rounded-2xl p-4">
                                     <h3 className="font-semibold text-gray-900 mb-1">{activity.title}</h3>
-                                    <p className="text-sm text-gray-500">{schedule}</p>
+                                    <div className="flex items-center justify-between mt-3">
+                                        <p className="text-sm text-gray-500">{schedule}</p>
+                                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200">
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Myself</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsApplyForOther(!isApplyForOther)}
+                                                className={`w-10 h-5 rounded-full relative transition-colors ${isApplyForOther ? 'bg-indigo-500' : 'bg-gray-300'}`}
+                                            >
+                                                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isApplyForOther ? 'left-6' : 'left-1'}`} />
+                                            </button>
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Other</span>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {isApplyForOther ? (
+                                    <motion.div
+                                        key="other-form"
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        className="space-y-4 p-5 bg-indigo-50/50 rounded-2xl border border-indigo-100"
+                                    >
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <User size={16} className="text-indigo-500" />
+                                            <h4 className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Other Person's Details</h4>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="col-span-2">
+                                                <label className="block text-[10px] font-bold text-indigo-600 uppercase mb-1.5 ml-1">Full Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData['Person\'s Full Name'] || ''}
+                                                    onChange={(e) => handleFormChange('Person\'s Full Name', e.target.value)}
+                                                    placeholder="Enter full name"
+                                                    className="w-full px-4 py-2 bg-white border border-indigo-100 rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-gray-400"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-indigo-600 uppercase mb-1.5 ml-1">Contact No.</label>
+                                                <input
+                                                    type="tel"
+                                                    value={formData['Person\'s Contact'] || ''}
+                                                    onChange={(e) => handleFormChange('Person\'s Contact', e.target.value)}
+                                                    placeholder="9123 4567"
+                                                    className="w-full px-4 py-2 bg-white border border-indigo-100 rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-gray-400"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-indigo-600 uppercase mb-1.5 ml-1">Email Address</label>
+                                                <input
+                                                    type="email"
+                                                    value={formData['Person\'s Email'] || ''}
+                                                    onChange={(e) => handleFormChange('Person\'s Email', e.target.value)}
+                                                    placeholder="john@example.com"
+                                                    className="w-full px-4 py-2 bg-white border border-indigo-100 rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-gray-400"
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <label className="block text-[10px] font-bold text-indigo-600 uppercase mb-1.5 ml-1">Relationship</label>
+                                                <select
+                                                    value={formData['Relationship to You'] || ''}
+                                                    onChange={(e) => handleFormChange('Relationship to You', e.target.value)}
+                                                    className="w-full px-4 py-2 bg-white border border-indigo-100 rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                                >
+                                                    <option value="">Select Relationship</option>
+                                                    <option value="Friend">Friend</option>
+                                                    <option value="Family">Family</option>
+                                                    <option value="Colleague">Colleague</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <label className="block text-[10px] font-bold text-indigo-600 uppercase mb-1.5 ml-1">Bio / Background</label>
+                                                <textarea
+                                                    value={formData['Person\'s Bio'] || ''}
+                                                    onChange={(e) => handleFormChange('Person\'s Bio', e.target.value)}
+                                                    placeholder="Tell us a bit about them..."
+                                                    rows={2}
+                                                    className="w-full px-4 py-2 bg-white border border-indigo-100 rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-indigo-100 outline-none transition-all resize-none placeholder:text-gray-400"
+                                                />
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ) : (
+                                    <motion.div
+                                        key="myself-form"
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        className="space-y-4 p-5 bg-green-50/30 rounded-2xl border border-green-100"
+                                    >
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <User size={16} className="text-green-600" />
+                                            <h4 className="text-xs font-bold text-green-700 uppercase tracking-wider">Your Details</h4>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="col-span-2">
+                                                <label className="block text-[10px] font-bold text-green-600 uppercase mb-1.5 ml-1">Full Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData['Your Full Name'] || session?.user?.name || ''}
+                                                    onChange={(e) => handleFormChange('Your Full Name', e.target.value)}
+                                                    placeholder="Your full name"
+                                                    className="w-full px-4 py-2 bg-white border border-green-100 rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-green-100 outline-none transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-green-600 uppercase mb-1.5 ml-1">Contact No.</label>
+                                                <input
+                                                    type="tel"
+                                                    value={formData['Your Contact'] || ''}
+                                                    onChange={(e) => handleFormChange('Your Contact', e.target.value)}
+                                                    placeholder="Enter contact number"
+                                                    className="w-full px-4 py-2 bg-white border border-green-100 rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-green-100 outline-none transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-green-600 uppercase mb-1.5 ml-1">Email Address</label>
+                                                <input
+                                                    type="email"
+                                                    value={formData['Your Email'] || session?.user?.email || ''}
+                                                    onChange={(e) => handleFormChange('Your Email', e.target.value)}
+                                                    placeholder="Your email"
+                                                    className="w-full px-4 py-2 bg-white border border-green-100 rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-green-100 outline-none transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
 
                                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 mb-6">
                                     <div className="flex items-center gap-3">
