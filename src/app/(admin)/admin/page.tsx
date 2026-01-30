@@ -12,6 +12,7 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend, BarChart, Bar
 } from 'recharts';
+import RegionalHeatMap from '@/components/admin/RegionalHeatMap';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
 
@@ -255,6 +256,11 @@ export default function AdminDashboard() {
                         ))}
                     </div>
                 </div>
+            </div>
+
+            {/* Regional Volunteer Map */}
+            <div className="mb-8">
+                <RegionalHeatMap />
             </div>
 
             {/* Recent Table (Simplified) */}

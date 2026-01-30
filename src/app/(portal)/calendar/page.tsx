@@ -81,6 +81,7 @@ export default function CalendarPage() {
     const [filterStatus, setFilterStatus] = useState<'all' | 'registered' | 'available' | 'google'>('all');
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [filterLocation, setFilterLocation] = useState('');
+    const [selectedEngagementLevels, setSelectedEngagementLevels] = useState<string[]>([]);
     const [isFilterOpen, setIsFilterOpen] = useState(true);
 
     // Define available tag colors
@@ -223,6 +224,9 @@ export default function CalendarPage() {
     // Extract unique categories for filter
     const categories = Array.from(new Set(activities.map(act => act.category))).filter(Boolean);
 
+    // Extract unique engagement levels
+    const engagementLevels = Array.from(new Set(activities.map(act => act.engagement_frequency))).filter(Boolean);
+
     const filteredEvents = combinedEvents.filter(event => {
         // 1. Search Filter
         const matchesSearch = !searchQuery ||
@@ -242,7 +246,11 @@ export default function CalendarPage() {
         // 4. Location Filter
         const matchesLocation = !filterLocation || event.location?.toLowerCase().includes(filterLocation.toLowerCase());
 
-        return matchesSearch && matchesStatus && matchesCategory && matchesLocation;
+        // 5. Engagement Level Filter
+        const matchesEngagement = selectedEngagementLevels.length === 0 || 
+            (event.engagement_frequency && selectedEngagementLevels.includes(event.engagement_frequency));
+
+        return matchesSearch && matchesStatus && matchesCategory && matchesLocation && matchesEngagement;
     });
 
     const handleSync = async () => {
@@ -293,31 +301,32 @@ export default function CalendarPage() {
             };
         }
 
-        // High contrast branding for registered/unregistered
-        if (event.isEnrolled) {
-            return {
-                bg: 'bg-emerald-500/90',
-                text: 'text-white',
-                border: 'border-emerald-600 shadow-lg shadow-emerald-50',
-                light: 'bg-emerald-50 text-emerald-700',
-                label: 'Registered'
-            };
-        }
-
+        // Google Calendar Events - Blue with distinct styling
         if (event.isExternal) {
             return {
                 bg: 'bg-blue-500/90',
                 text: 'text-white',
                 border: 'border-blue-600 shadow-md',
                 light: 'bg-blue-50 text-blue-700',
-                label: 'Google Calendar'
+                label: '📅 Google'
             };
         }
 
-        // Categorized colors for available missions
+        // Registered Events - Emerald/Green with high contrast
+        if (event.isEnrolled) {
+            return {
+                bg: 'bg-emerald-500/90',
+                text: 'text-white',
+                border: 'border-emerald-600 shadow-lg shadow-emerald-50',
+                light: 'bg-emerald-50 text-emerald-700',
+                label: '✓ Registered'
+            };
+        }
+
+        // Available events - categorized colors with dashed borders
         const cat = (event.category || '').toLowerCase();
 
-        if (cat === 'community') {
+        if (cat === 'community' || cat === 'hub') {
             return {
                 bg: 'bg-amber-100/90',
                 text: 'text-amber-800',
@@ -327,7 +336,7 @@ export default function CalendarPage() {
             };
         }
 
-        if (cat === 'education') {
+        if (cat === 'education' || cat === 'skills') {
             return {
                 bg: 'bg-purple-100/90',
                 text: 'text-purple-800',
@@ -337,13 +346,23 @@ export default function CalendarPage() {
             };
         }
 
-        if (cat === 'environmental' || cat === 'environment') {
+        if (cat === 'environmental' || cat === 'environment' || cat === 'outings') {
             return {
                 bg: 'bg-teal-100/90',
                 text: 'text-teal-800',
                 border: 'border-teal-200 border-dashed',
                 light: 'bg-teal-50 text-teal-600',
-                label: 'Environmental'
+                label: 'Outing'
+            };
+        }
+
+        if (cat === 'befriending') {
+            return {
+                bg: 'bg-rose-100/90',
+                text: 'text-rose-800',
+                border: 'border-rose-200 border-dashed',
+                light: 'bg-rose-50 text-rose-600',
+                label: 'Befriending'
             };
         }
 
@@ -613,6 +632,7 @@ export default function CalendarPage() {
                                         setFilterStatus('all');
                                         setSelectedCategories([]);
                                         setFilterLocation('');
+                                        setSelectedEngagementLevels([]);
                                     }}
                                     className="text-[10px] font-bold text-gray-400 hover:text-emerald-600 uppercase tracking-widest"
                                 >
@@ -680,6 +700,36 @@ export default function CalendarPage() {
                                                 }}
                                             />
                                             <span className="text-[11px] font-bold text-gray-600 capitalize">{cat}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Engagement Levels */}
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Engagement Level</label>
+                                <div className="space-y-1 pr-2">
+                                    {[
+                                        { id: 'adhoc', label: 'Ad-hoc' },
+                                        { id: 'once_week', label: 'Once a Week' },
+                                        { id: 'twice_week', label: 'Twice a Week' },
+                                        { id: 'three_plus_week', label: '3+ per Week' }
+                                    ].map((level) => (
+                                        <label key={level.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group">
+                                            <div className={`w-4 h-4 rounded-lg border flex items-center justify-center transition-colors ${selectedEngagementLevels.includes(level.id) ? 'bg-emerald-500 border-emerald-500' : 'border-gray-200 group-hover:border-emerald-300'}`}>
+                                                {selectedEngagementLevels.includes(level.id) && <CheckSquare size={10} className="text-white" />}
+                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                className="hidden"
+                                                checked={selectedEngagementLevels.includes(level.id)}
+                                                onChange={() => {
+                                                    setSelectedEngagementLevels(prev =>
+                                                        prev.includes(level.id) ? prev.filter(l => l !== level.id) : [...prev, level.id]
+                                                    );
+                                                }}
+                                            />
+                                            <span className="text-[11px] font-bold text-gray-600">{level.label}</span>
                                         </label>
                                     ))}
                                 </div>

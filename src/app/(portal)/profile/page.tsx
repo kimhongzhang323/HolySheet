@@ -323,7 +323,7 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* Gamified Tier Progression */}
+                {/* Engagement Level Progress */}
                 <div className="bg-gradient-to-r from-gray-50 via-white to-gray-50 rounded-3xl p-6 relative overflow-hidden border border-gray-200 shadow-sm">
                     {/* Background Decoration */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-emerald-100/50 to-transparent rounded-full blur-3xl" />
@@ -337,8 +337,8 @@ export default function ProfilePage() {
                                     <Award size={24} className="text-white" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Current Tier</p>
-                                    <h3 className="text-xl font-black text-gray-900">Silver Volunteer</h3>
+                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Engagement Level</p>
+                                    <h3 className="text-xl font-black text-gray-900">Once a Week</h3>
                                 </div>
                             </div>
                             <div className="text-right">
@@ -350,7 +350,7 @@ export default function ProfilePage() {
                         {/* Progress Bar */}
                         <div className="mb-4">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-gray-500">Progress to <span className="text-amber-600">Gold Volunteer</span></span>
+                                <span className="text-xs font-bold text-gray-500">Progress to <span className="text-amber-600">Twice a Week</span></span>
                                 <span className="text-xs font-black text-emerald-600">{Math.min(100, Math.round((stats.totalHours / 50) * 100))}%</span>
                             </div>
                             <div className="h-4 bg-gray-200 rounded-full overflow-hidden border border-gray-300/50">
@@ -366,23 +366,23 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* Tier Milestones */}
+                        {/* Engagement Level Milestones */}
                         <div className="flex items-center justify-between text-[10px] font-bold">
                             <div className="flex items-center gap-1.5">
                                 <div className="w-3 h-3 rounded-full bg-gray-400 border-2 border-gray-300" />
-                                <span className="text-gray-500">Bronze</span>
+                                <span className="text-gray-500">Ad-hoc</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 border-2 border-gray-500 shadow-sm" />
-                                <span className="text-gray-800 font-black">Silver</span>
+                                <div className="w-3 h-3 rounded-full bg-gradient-to-br from-emerald-300 to-emerald-400 border-2 border-emerald-500 shadow-sm" />
+                                <span className="text-gray-800 font-black">Once/Week</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <div className="w-3 h-3 rounded-full bg-amber-400/50 border-2 border-amber-500/50" />
-                                <span className="text-amber-600">Gold</span>
+                                <span className="text-amber-600">Twice/Week</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <div className="w-3 h-3 rounded-full bg-purple-400/30 border-2 border-purple-400/40" />
-                                <span className="text-purple-500">Platinum</span>
+                                <span className="text-purple-500">3+ /Week</span>
                             </div>
                         </div>
                     </div>

@@ -25,6 +25,7 @@ interface Activity {
     volunteers_registered: number;
     activity_type: string;
     status: string;
+    skills_required?: string[];
     volunteer_form?: any;
 }
 
@@ -42,6 +43,7 @@ interface Attendee {
     id: string;
     name: string;
     email: string;
+    checked_in_at?: string;
 }
 
 interface FormResponse {
@@ -63,7 +65,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const [responses, setResponses] = useState<FormResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [hasFetched, setHasFetched] = useState(false);
-    const [activeTab, setActiveTab] = useState<'volunteers' | 'attendance' | 'responses'>('volunteers');
+    const [activeTab, setActiveTab] = useState<'volunteers' | 'attendance'>('volunteers');
     const [isGeneratingForm, setIsGeneratingForm] = useState(false);
     const [generatedForm, setGeneratedForm] = useState<any>(null);
     const [isDynamicView, setIsDynamicView] = useState(false);
@@ -74,8 +76,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const [broadcastQR, setBroadcastQR] = useState<string | null>(null);
     const [expandedResponses, setExpandedResponses] = useState<Set<string>>(new Set());
 
-    // Sorting State
     const [sortConfig, setSortConfig] = useState<{ key: keyof Volunteer | 'user', direction: 'asc' | 'desc' }>({ key: 'applied_at', direction: 'desc' });
+    const [aiApproveEnabled, setAiApproveEnabled] = useState(false);
+    const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
+    const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
 
     useEffect(() => {
         // Only fetch once when we have a session and haven't fetched yet
@@ -455,95 +459,27 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === 'attendance' ? 'bg-indigo-50' : 'bg-gray-50'}`}>{attendees.length}</span>
                         {activeTab === 'attendance' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full" />}
                     </button>
-                    <button
-                        onClick={() => setActiveTab('responses')}
-                        className={`py-5 px-4 text-sm font-bold transition-all relative ${activeTab === 'responses' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-                    >
-                        Form Responses
-                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === 'responses' ? 'bg-indigo-50' : 'bg-gray-50'}`}>{responses.length}</span>
-                        {activeTab === 'responses' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full" />}
-                    </button>
 
-                    {activeTab === 'responses' && (
+                    {/* AI Approve Toggle - shows when volunteers tab is active */}
+                    {activeTab === 'volunteers' && (
                         <div className="ml-auto flex items-center gap-3 pr-4">
-                            {/* Export Dropdown */}
-                            <div className="relative group">
-                                <button className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100">
-                                    <Download size={14} />
-                                    Export ▾
-                                </button>
-                                <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-xl border border-gray-100 p-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-30">
-                                    <button
-                                        onClick={() => {
-                                            if (responses.length === 0) { alert('No responses to export'); return; }
-                                            const allFields = new Set<string>();
-                                            responses.forEach(r => Object.keys(r.responses).forEach(k => allFields.add(k)));
-                                            const fields = ['User Name', 'Email', 'Submitted At', ...Array.from(allFields)];
-                                            const csvRows = [fields.join(',')];
-                                            responses.forEach(r => {
-                                                const row = [
-                                                    `"${r.user_name}"`,
-                                                    `"${r.user_email}"`,
-                                                    `"${new Date(r.submitted_at).toLocaleString()}"`,
-                                                    ...Array.from(allFields).map(f => `"${String(r.responses[f] || '').replace(/"/g, '""')}"`)
-                                                ];
-                                                csvRows.push(row.join(','));
-                                            });
-                                            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-                                            const url = URL.createObjectURL(blob);
-                                            const link = document.createElement('a');
-                                            link.href = url;
-                                            link.download = `form-responses-${activity?.title || 'export'}-${new Date().toISOString().split('T')[0]}.csv`;
-                                            link.click();
-                                            URL.revokeObjectURL(url);
-                                        }}
-                                        className="w-full text-left px-3 py-2 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                    >
-                                        📄 Export CSV
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            if (responses.length === 0) { alert('No responses to export'); return; }
-                                            const XLSX = (await import('xlsx')).default;
-                                            const allFields = new Set<string>();
-                                            responses.forEach(r => Object.keys(r.responses).forEach(k => allFields.add(k)));
-                                            const data = responses.map(r => ({
-                                                'User Name': r.user_name,
-                                                'Email': r.user_email,
-                                                'Submitted At': new Date(r.submitted_at).toLocaleString(),
-                                                ...Object.fromEntries(Array.from(allFields).map(f => [f, r.responses[f] || '']))
-                                            }));
-                                            const ws = XLSX.utils.json_to_sheet(data);
-                                            const wb = XLSX.utils.book_new();
-                                            XLSX.utils.book_append_sheet(wb, ws, 'Responses');
-                                            XLSX.writeFile(wb, `form-responses-${activity?.title || 'export'}-${new Date().toISOString().split('T')[0]}.xlsx`);
-                                        }}
-                                        className="w-full text-left px-3 py-2 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                    >
-                                        📊 Export Excel
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="flex bg-gray-100 p-1 rounded-xl">
-                                <button
-                                    onClick={() => setIsDynamicView(false)}
-                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${!isDynamicView ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-                                >
-                                    Table View
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (analysisData) setIsDynamicView(true);
-                                        else handleAnalyzeResponses();
-                                    }}
-                                    disabled={isAnalyzing}
-                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${isDynamicView ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-                                >
-                                    {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                    Dynamic View
-                                </button>
-                            </div>
+                            <span className="text-xs font-medium text-gray-500">AI Auto-Approve</span>
+                            <button
+                                onClick={() => setAiApproveEnabled(!aiApproveEnabled)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${aiApproveEnabled ? 'bg-indigo-600' : 'bg-gray-200'
+                                    }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${aiApproveEnabled ? 'translate-x-6' : 'translate-x-1'
+                                        }`}
+                                />
+                            </button>
+                            {aiApproveEnabled && (
+                                <span className="flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold">
+                                    <Sparkles size={12} />
+                                    AI Active
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>
@@ -591,15 +527,21 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                                             </div>
                                         </th>
                                         <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skills</th>
+                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Meets Requirements</th>
+                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
                                     {sortedVolunteers.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-8 py-12 text-center text-gray-400 text-sm">No volunteers registered yet</td>
+                                            <td colSpan={7} className="px-8 py-12 text-center text-gray-400 text-sm">No volunteers registered yet</td>
                                         </tr>
                                     ) : sortedVolunteers.map((vol) => (
-                                        <tr key={vol.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <tr
+                                            key={vol.id}
+                                            onClick={() => setSelectedVolunteer(vol)}
+                                            className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                                        >
                                             <td className="px-8 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
@@ -632,19 +574,72 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                                                     ))}
                                                 </div>
                                             </td>
+                                            <td className="px-8 py-4">
+                                                {(() => {
+                                                    const requiredSkills = activity?.skills_required || [];
+                                                    const volunteerSkills = vol.skills || [];
+                                                    const matchingSkills = requiredSkills.filter(skill =>
+                                                        volunteerSkills.some(vs => vs.toLowerCase().includes(skill.toLowerCase()) || skill.toLowerCase().includes(vs.toLowerCase()))
+                                                    );
+                                                    const meetsRequirements = requiredSkills.length === 0 || matchingSkills.length >= Math.ceil(requiredSkills.length / 2);
+                                                    return meetsRequirements ? (
+                                                        <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wide text-green-600 bg-green-50 px-2 py-1 rounded-full w-fit">
+                                                            <CheckCircle2 size={12} />
+                                                            Yes
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wide text-amber-600 bg-amber-50 px-2 py-1 rounded-full w-fit">
+                                                            <Clock size={12} />
+                                                            Partial
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+                                            <td className="px-8 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    {(vol.status === 'pending' || vol.status === 'PENDING') ? (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    // TODO: Implement approve API call
+                                                                    alert('Volunteer approved!');
+                                                                }}
+                                                                className="p-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all"
+                                                                title="Approve"
+                                                            >
+                                                                <CheckCircle2 size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    // TODO: Implement reject API call
+                                                                    alert('Volunteer rejected!');
+                                                                }}
+                                                                className="p-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-all"
+                                                                title="Reject"
+                                                            >
+                                                                <XCircle size={14} />
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">—</span>
+                                                    )}
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-                    ) : activeTab === 'attendance' ? (
+                    ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50/50">
                                     <tr>
                                         <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">User</th>
                                         <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
+                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Check-in Time</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
@@ -653,7 +648,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                                             <td colSpan={3} className="px-8 py-12 text-center text-gray-400 text-sm">No attendance recorded yet</td>
                                         </tr>
                                     ) : attendees.map((att) => (
-                                        <tr key={att.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <tr
+                                            key={att.id}
+                                            onClick={() => setSelectedAttendee(att)}
+                                            className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                                        >
                                             <td className="px-8 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
@@ -672,93 +671,15 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                                                 </div>
                                             </td>
                                             <td className="px-8 py-4">
-                                                <button className="text-xs font-bold text-indigo-600 hover:underline">View Profile</button>
+                                                <span className="text-sm text-gray-500">
+                                                    {att.checked_in_at ? new Date(att.checked_in_at).toLocaleString() : 'N/A'}
+                                                </span>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-                    ) : (
-                        isDynamicView && analysisData ? (
-                            <AIResponseAnalysis data={analysisData} />
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead className="bg-gray-50/50">
-                                        <tr>
-                                            <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">User</th>
-                                            <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Submitted At</th>
-                                            <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Responses</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {responses.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={3} className="px-8 py-12 text-center text-gray-400 text-sm">No form responses yet</td>
-                                            </tr>
-                                        ) : responses.map((resp) => {
-                                            const isExpanded = expandedResponses.has(resp.id);
-                                            const responseEntries = Object.entries(resp.responses);
-                                            const hasMore = responseEntries.length > 2;
-
-                                            return (
-                                                <tr key={resp.id} className="hover:bg-gray-50/50 transition-colors">
-                                                    <td className="px-8 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                                                                <Mail size={14} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-bold text-gray-900">{resp.user_name}</p>
-                                                                <p className="text-xs text-gray-500">{resp.user_email}</p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-4">
-                                                        <span className="text-sm text-gray-500">
-                                                            {new Date(resp.submitted_at).toLocaleString()}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-8 py-4">
-                                                        <div className="text-xs space-y-1.5">
-                                                            {(isExpanded ? responseEntries : responseEntries.slice(0, 2)).map(([q, a], i) => (
-                                                                <p key={i} className={isExpanded ? '' : 'line-clamp-1'}>
-                                                                    <span className="font-bold text-gray-500">{q}:</span>{' '}
-                                                                    <span className="text-gray-700">{String(a)}</span>
-                                                                </p>
-                                                            ))}
-                                                            {hasMore && (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setExpandedResponses(prev => {
-                                                                            const next = new Set(prev);
-                                                                            if (isExpanded) {
-                                                                                next.delete(resp.id);
-                                                                            } else {
-                                                                                next.add(resp.id);
-                                                                            }
-                                                                            return next;
-                                                                        });
-                                                                    }}
-                                                                    className="text-indigo-600 font-bold hover:underline flex items-center gap-1 mt-1"
-                                                                >
-                                                                    {isExpanded ? (
-                                                                        <>Show less ↑</>
-                                                                    ) : (
-                                                                        <>+{responseEntries.length - 2} more answers ↓</>
-                                                                    )}
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )
                     )}
                 </div>
             </div>
@@ -782,6 +703,151 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     onSend={handleBroadcast}
                     qrCode={broadcastQR}
                 />
+            )}
+
+            {/* Volunteer Detail Modal */}
+            {selectedVolunteer && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white text-xl font-bold">
+                                    {selectedVolunteer.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold">{selectedVolunteer.name}</h2>
+                                    <p className="text-white/80 text-sm">{selectedVolunteer.email}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-gray-50 p-4 rounded-xl">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Role</p>
+                                    <p className="text-sm font-bold text-gray-900">{selectedVolunteer.role}</p>
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded-xl">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Applied</p>
+                                    <p className="text-sm font-bold text-gray-900">
+                                        {selectedVolunteer.applied_at
+                                            ? new Date(selectedVolunteer.applied_at).toLocaleDateString('en-US', {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric'
+                                            })
+                                            : 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-xl">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Status</p>
+                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${selectedVolunteer.status === 'confirmed' || selectedVolunteer.status === 'CONFIRMED'
+                                    ? 'bg-green-100 text-green-700'
+                                    : selectedVolunteer.status === 'pending' || selectedVolunteer.status === 'PENDING'
+                                        ? 'bg-amber-100 text-amber-700'
+                                        : 'bg-gray-100 text-gray-700'
+                                    }`}>
+                                    {selectedVolunteer.status === 'confirmed' || selectedVolunteer.status === 'CONFIRMED' ? (
+                                        <CheckCircle2 size={14} />
+                                    ) : (
+                                        <Clock size={14} />
+                                    )}
+                                    {selectedVolunteer.status.toUpperCase()}
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-xl">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Skills</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {(selectedVolunteer.skills || []).length > 0 ? (
+                                        selectedVolunteer.skills.map((skill, i) => (
+                                            <span key={i} className="px-3 py-1 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-lg">
+                                                {skill}
+                                            </span>
+                                        ))
+                                    ) : (
+                                        <span className="text-sm text-gray-400">No skills listed</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="border-t border-gray-100 p-4 flex items-center gap-3">
+                            <button
+                                onClick={() => setSelectedVolunteer(null)}
+                                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Attendee Detail Modal */}
+            {selectedAttendee && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white text-xl font-bold">
+                                    {selectedAttendee.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold">{selectedAttendee.name}</h2>
+                                    <p className="text-white/80 text-sm">{selectedAttendee.email}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 space-y-4">
+                            <div className="bg-gray-50 p-4 rounded-xl">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Attendance Status</p>
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                                    <CheckCircle2 size={14} />
+                                    CHECKED IN
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-xl">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Check-in Time</p>
+                                <p className="text-sm font-bold text-gray-900">
+                                    {selectedAttendee.checked_in_at
+                                        ? new Date(selectedAttendee.checked_in_at).toLocaleString('en-US', {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })
+                                        : 'N/A'}
+                                </p>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-xl">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Event</p>
+                                <p className="text-sm font-bold text-gray-900">{activity?.title || 'N/A'}</p>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="border-t border-gray-100 p-4 flex items-center gap-3">
+                            <button
+                                onClick={() => setSelectedAttendee(null)}
+                                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
