@@ -97,32 +97,69 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
     const handleAIGenerateField = async (index: number) => {
         if (!aiPrompt.trim()) return;
         setAiLoading(true);
-        try {
-            const res = await fetch('/api/admin/ai/generate-field', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.accessToken || 'admin@holysheet.com'}`
-                },
-                body: JSON.stringify({ prompt: aiPrompt })
-            });
-            if (res.ok) {
-                const generatedField = await res.json();
-                if (generatedField.label) {
-                    handleUpdateField(index, generatedField);
-                    setAiFieldIndex(null);
-                    setAiPrompt('');
-                } else if (generatedField.error) {
-                    alert(generatedField.error);
-                }
-            } else {
-                alert("Failed to generate field.");
+
+        // Mock AI generation
+        setTimeout(() => {
+            let mockField: Partial<FormField> = {
+                label: aiPrompt, // Use the prompt as label by default
+                type: 'text',
+                required: true
+            };
+
+            const promptLower = aiPrompt.toLowerCase();
+
+            if (promptLower.includes('experience') || promptLower.includes('tell us') || promptLower.includes('why')) {
+                mockField = {
+                    label: "Can you describe your relevant experience?",
+                    type: 'textarea',
+                    required: true
+                };
+            } else if (promptLower.includes('phone') || promptLower.includes('contact')) {
+                mockField = {
+                    label: "What is your contact number?",
+                    type: 'tel',
+                    required: true
+                };
+            } else if (promptLower.includes('date') || promptLower.includes('when') || promptLower.includes('birthday') || promptLower.includes('dob')) {
+                mockField = {
+                    label: "Select a date",
+                    type: 'date',
+                    required: true
+                };
+            } else if (promptLower.includes('diet') || promptLower.includes('food')) {
+                mockField = {
+                    label: "Do you have any dietary restrictions?",
+                    type: 'text',
+                    required: false
+                };
+            } else if (promptLower.includes('size') || promptLower.includes('shirt')) {
+                mockField = {
+                    label: "T-Shirt Size",
+                    type: 'select',
+                    required: true,
+                    options: ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+                };
+            } else if (promptLower.includes('gender')) {
+                mockField = {
+                    label: "Gender",
+                    type: 'select',
+                    required: true,
+                    options: ['Male', 'Female', 'Prefer not to say', 'Other']
+                };
+            } else if (promptLower.includes('agree') || promptLower.includes('terms')) {
+                mockField = {
+                    label: "I agree to the terms and conditions",
+                    type: 'checkbox',
+                    required: true,
+                    options: ['Yes']
+                };
             }
-        } catch (err) {
-            console.error("AI Generation failed:", err);
-        } finally {
+
+            handleUpdateField(index, mockField);
+            setAiFieldIndex(null);
+            setAiPrompt('');
             setAiLoading(false);
-        }
+        }, 1000);
     };
 
     const handleSave = async () => {

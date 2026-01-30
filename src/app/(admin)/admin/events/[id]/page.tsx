@@ -4,7 +4,7 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Calendar, MapPin, Users, Clock, ArrowLeft, CheckCircle2, XCircle, User, Loader2, Mail, Network, Type, Sparkles, Edit2, ArrowUpDown, Megaphone, Download } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, ArrowLeft, CheckCircle2, XCircle, User, Loader2, Mail, Network, Type, Sparkles, Edit2, ArrowUpDown, Megaphone, Download, FileText, Star } from 'lucide-react';
 import Link from 'next/link';
 import AIResponseAnalysis from '@/components/admin/AIResponseAnalysis';
 import EditEventDialog from '@/components/admin/EditEventDialog';
@@ -138,27 +138,59 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         return 0;
     });
 
-    const handleGenerateAIForm = async () => {
-        if (!activity) return;
+    const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+
+    const handleGenerateAIForm = () => {
+        setIsTemplateModalOpen(true);
+    };
+
+    const handleSelectTemplate = (type: 'simple' | 'standard' | 'detailed') => {
+        setIsTemplateModalOpen(false);
         setIsGeneratingForm(true);
-        try {
-            const res = await fetch('/api/admin/ai/generate-form', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.accessToken || 'admin@holysheet.com'}`
-                },
-                body: JSON.stringify({ topic: activity.title + ": " + activity.description })
-            });
-            if (res.ok) {
-                const form = await res.json();
-                setGeneratedForm(form);
+
+        // Simulate AI delay
+        setTimeout(() => {
+            let mockForm;
+
+            if (type === 'simple') {
+                mockForm = {
+                    title: "Quick Registration",
+                    description: "Sign up quickly to join our event!",
+                    fields: [
+                        { label: "Name", type: "text", required: true, options: [] },
+                        { label: "Contact Number", type: "text", required: true, options: [] },
+                        { label: "Dietary Requirements", type: "text", required: false, options: [] }
+                    ]
+                };
+            } else if (type === 'standard') {
+                mockForm = {
+                    title: "Volunteer Application",
+                    description: "Join us in making a difference! Please fill out this form to apply.",
+                    fields: [
+                        { label: "Why do you want to volunteer?", type: "textarea", required: true, options: [] },
+                        { label: "Previous Experience", type: "select", required: true, options: ["None", "1-2 years", "3-5 years", "5+ years"] },
+                        { label: "Dietary Restrictions", type: "text", required: false, options: [] },
+                        { label: "Emergency Contact", type: "text", required: true, options: [] }
+                    ]
+                };
+            } else {
+                mockForm = {
+                    title: "Detailed Volunteer Application",
+                    description: "We'd love to get to know you better. Please complete this detailed application.",
+                    fields: [
+                        { label: "Motivation Statement", type: "textarea", required: true, options: [] },
+                        { label: "Relevant Skills", type: "checkbox", required: true, options: ["First Aid", "Event Planning", "Photography", "Logistics", "Translation"] },
+                        { label: "Availability", type: "select", required: true, options: ["Weekdays", "Weekends", "Evenings", "Flexible"] },
+                        { label: "Previous Leadership Roles", type: "textarea", required: false, options: [] },
+                        { label: "Emergency Contact Name", type: "text", required: true, options: [] },
+                        { label: "Emergency Contact Number", type: "text", required: true, options: [] }
+                    ]
+                };
             }
-        } catch (err) {
-            console.error("AI Generation failed:", err);
-        } finally {
+
+            setGeneratedForm(mockForm);
             setIsGeneratingForm(false);
-        }
+        }, 1000);
     };
 
     const handleSaveForm = async () => {
@@ -391,6 +423,65 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
             </div>
 
+            {isTemplateModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-indigo-600">
+                                <Sparkles size={32} />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose a Form Template</h2>
+                            <p className="text-gray-500">Select a starting point for your volunteer application form.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                            <button
+                                onClick={() => handleSelectTemplate('simple')}
+                                className="p-6 rounded-2xl border-2 border-gray-100 hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
+                            >
+                                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <FileText size={20} />
+                                </div>
+                                <h3 className="font-bold text-gray-900 mb-1">Simple</h3>
+                                <p className="text-xs text-gray-500 leading-relaxed">Basic contact info and dietary needs. Quick and easy.</p>
+                            </button>
+
+                            <button
+                                onClick={() => handleSelectTemplate('standard')}
+                                className="p-6 rounded-2xl border-2 border-indigo-500 bg-indigo-50 text-left relative ring-4 ring-indigo-500/10"
+                            >
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                    Recommended
+                                </div>
+                                <div className="w-10 h-10 rounded-full bg-indigo-200 text-indigo-700 flex items-center justify-center mb-4">
+                                    <Star size={20} />
+                                </div>
+                                <h3 className="font-bold text-gray-900 mb-1">Standard</h3>
+                                <p className="text-xs text-gray-600 leading-relaxed">Includes motivation, experience, and specific requirements.</p>
+                            </button>
+
+                            <button
+                                onClick={() => handleSelectTemplate('detailed')}
+                                className="p-6 rounded-2xl border-2 border-gray-100 hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
+                            >
+                                <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <Clock size={20} />
+                                </div>
+                                <h3 className="font-bold text-gray-900 mb-1">Detailed</h3>
+                                <p className="text-xs text-gray-500 leading-relaxed">Comprehensive background check, skills, and availability.</p>
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setIsTemplateModalOpen(false)}
+                            className="w-full py-3 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition-all"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {generatedForm && (
                 <div className="mb-8 bg-indigo-50 border border-indigo-100 rounded-3xl p-8 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm">
                     <div className="flex justify-between items-center mb-6">
@@ -499,15 +590,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                                                 <ArrowUpDown size={12} className={`opacity-0 group-hover:opacity-100 ${sortConfig.key === 'user' ? 'opacity-100 text-indigo-600' : ''}`} />
                                             </div>
                                         </th>
-                                        <th
-                                            onClick={() => handleSort('role')}
-                                            className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors group"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Role
-                                                <ArrowUpDown size={12} className={`opacity-0 group-hover:opacity-100 ${sortConfig.key === 'role' ? 'opacity-100 text-indigo-600' : ''}`} />
-                                            </div>
-                                        </th>
+
                                         <th
                                             onClick={() => handleSort('applied_at')}
                                             className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors group"
@@ -553,9 +636,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-4">
-                                                <span className="text-sm font-medium text-gray-600">{vol.role}</span>
-                                            </td>
+
                                             <td className="px-8 py-4">
                                                 <span className="text-sm text-gray-500">
                                                     {vol.applied_at ? new Date(vol.applied_at).toLocaleDateString() : 'N/A'}
