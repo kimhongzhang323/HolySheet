@@ -2,21 +2,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { auth } from "@/auth";
-import { ADMIN_MOCK_STATS, ADMIN_MOCK_TRENDS, ADMIN_MOCK_DISTRIBUTION } from '@/lib/adminMockData';
+import {
+    ADMIN_MOCK_STATS,
+    ADMIN_MOCK_TRENDS_7D,
+    ADMIN_MOCK_TRENDS_30D,
+    ADMIN_MOCK_TRENDS_6M,
+    ADMIN_MOCK_DISTRIBUTION
+} from '@/lib/adminMockData';
 
-// Mock response for demo
-const MOCK_RESPONSE = {
-    stats: ADMIN_MOCK_STATS,
-    activity_distribution: ADMIN_MOCK_DISTRIBUTION,
-    participation_trends: ADMIN_MOCK_TRENDS
-};
+// Helper to get correct mock trends based on time range
+function getMockTrends(timeRange: string) {
+    switch (timeRange) {
+        case '7d': return ADMIN_MOCK_TRENDS_7D;
+        case '30d': return ADMIN_MOCK_TRENDS_30D;
+        default: return ADMIN_MOCK_TRENDS_6M;
+    }
+}
+
+// Create mock response based on time range
+function createMockResponse(timeRange: string) {
+    return {
+        stats: ADMIN_MOCK_STATS,
+        activity_distribution: ADMIN_MOCK_DISTRIBUTION,
+        participation_trends: getMockTrends(timeRange)
+    };
+}
 
 export async function GET(req: NextRequest) {
     try {
+        const searchParams = req.nextUrl.searchParams;
+        const time_range = searchParams.get('time_range') || '6m';
+
         const session = await auth();
         if (!session?.user?.email) {
             console.log("No session. Returning mock stats for demo.");
-            return NextResponse.json(MOCK_RESPONSE);
+            return NextResponse.json(createMockResponse(time_range));
         }
 
         // Verify Admin/Staff Role
@@ -28,11 +48,8 @@ export async function GET(req: NextRequest) {
 
         if (userError || !currentUser || !['admin', 'staff'].includes(currentUser.role)) {
             console.log("Access forbidden. Returning mock stats for demo.");
-            return NextResponse.json(MOCK_RESPONSE);
+            return NextResponse.json(createMockResponse(time_range));
         }
-
-        const searchParams = req.nextUrl.searchParams;
-        const time_range = searchParams.get('time_range') || '6m';
 
         // 1. Overall Stats
         const { count: total_volunteers } = await supabase
@@ -52,7 +69,7 @@ export async function GET(req: NextRequest) {
         // If no activities, return mock data
         if (!allActivities || allActivities.length === 0) {
             console.log("No activities found. Returning mock stats.");
-            return NextResponse.json(MOCK_RESPONSE);
+            return NextResponse.json(createMockResponse(time_range));
         }
 
         const typeMap: Record<string, number> = {};
@@ -141,11 +158,12 @@ export async function GET(req: NextRequest) {
                 active_now: 5,
             },
             activity_distribution: activity_distribution.length > 0 ? activity_distribution : ADMIN_MOCK_DISTRIBUTION,
-            participation_trends: hasRealData ? chart_data : ADMIN_MOCK_TRENDS
+            participation_trends: hasRealData ? chart_data : getMockTrends(time_range)
         });
 
     } catch (error: any) {
         console.error("Admin Stats Error:", error);
-        return NextResponse.json(MOCK_RESPONSE);
+        return NextResponse.json(createMockResponse('6m'));
     }
 }
+
