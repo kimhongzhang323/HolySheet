@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import '../globals.css';
 import TopBar from '@/components/TopBar';
+import SpeechButton from '@/components/SpeechButton';
 
 export const metadata: Metadata = {
     title: 'Dashboard - JomCare',
@@ -21,6 +22,9 @@ export default function PortalLayout({
             <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 md:px-8 py-8">
                 {children}
             </main>
+
+            {/* Speech-to-Action Accessibility Button */}
+            <SpeechButton />
         </div>
     );
 }

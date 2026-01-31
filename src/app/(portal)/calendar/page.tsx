@@ -23,6 +23,7 @@ import {
     X
 } from 'lucide-react';
 import { VOLUNTEER_ACTIVITIES, USER_ASSIGNMENTS, MOCK_GOOGLE_EVENTS } from '@/lib/mockData';
+import QRCode from 'react-qr-code';
 
 const getConflicts = (events: any[]) => {
     if (events.length < 2) return [];
@@ -83,6 +84,7 @@ export default function CalendarPage() {
     const [filterLocation, setFilterLocation] = useState('');
     const [selectedEngagementLevels, setSelectedEngagementLevels] = useState<string[]>([]);
     const [isFilterOpen, setIsFilterOpen] = useState(true);
+    const [showQRModal, setShowQRModal] = useState(false);
 
     // Define available tag colors
     const tagColors = [
@@ -833,11 +835,48 @@ export default function CalendarPage() {
                                             </div>
                                         </div>
                                         <button
-                                            onClick={() => router.push(`/events/${nextMission.id}`)}
-                                            className="w-full mt-6 py-3 bg-white text-gray-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-black/10"
+                                            onClick={() => window.open('tel:+6512345678')}
+                                            className="w-full mt-6 py-3 bg-white text-gray-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2"
                                         >
-                                            View Details
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                                            </svg>
+                                            Contact My Caregiver
                                         </button>
+
+                                        {/* Quick Action Buttons - QR and Map */}
+                                        <div className="grid grid-cols-2 gap-3 mt-3">
+                                            <button
+                                                onClick={() => setShowQRModal(true)}
+                                                className="flex items-center justify-center gap-2 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-xs font-bold transition-all border border-white/20"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <rect width="5" height="5" x="3" y="3" rx="1" />
+                                                    <rect width="5" height="5" x="16" y="3" rx="1" />
+                                                    <rect width="5" height="5" x="3" y="16" rx="1" />
+                                                    <path d="M21 16h-3a2 2 0 0 0-2 2v3" />
+                                                    <path d="M21 21v.01" />
+                                                    <path d="M12 7v3a2 2 0 0 1-2 2H7" />
+                                                    <path d="M3 12h.01" />
+                                                    <path d="M12 3h.01" />
+                                                    <path d="M12 16v.01" />
+                                                    <path d="M16 12h1" />
+                                                    <path d="M21 12v.01" />
+                                                    <path d="M12 21v-1" />
+                                                </svg>
+                                                Open QR
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const location = nextMission.location || 'Singapore';
+                                                    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`, '_blank');
+                                                }}
+                                                className="flex items-center justify-center gap-2 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-xs font-bold transition-all border border-white/20"
+                                            >
+                                                <MapPin size={16} />
+                                                Open Map
+                                            </button>
+                                        </div>
                                     </>
                                 ) : (
                                     <p className="text-gray-400 text-xs italic">No upcoming missions found.</p>
@@ -1008,6 +1047,71 @@ export default function CalendarPage() {
                                     >
                                         <ChevronRight size={18} />
                                     </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* QR Code Modal */}
+            <AnimatePresence>
+                {showQRModal && nextMission && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setShowQRModal(false)}
+                        />
+                        {/* Modal */}
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="relative bg-white rounded-3xl p-8 shadow-2xl max-w-sm w-full text-center"
+                        >
+                            {/* Close button */}
+                            <button
+                                onClick={() => setShowQRModal(false)}
+                                className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            >
+                                <X size={20} className="text-gray-500" />
+                            </button>
+
+                            {/* Title */}
+                            <h3 className="text-lg font-black text-gray-900 mb-2">Your Event QR Code</h3>
+                            <p className="text-sm text-gray-500 mb-6">{nextMission.title}</p>
+
+                            {/* QR Code */}
+                            <div className="bg-white p-6 rounded-2xl border-2 border-gray-100 inline-block mb-6">
+                                <QRCode
+                                    value={`jomcare://event/${nextMission.id}?user=${session?.user?.id || 'guest'}`}
+                                    size={180}
+                                    level="H"
+                                />
+                            </div>
+
+                            {/* Instructions */}
+                            <p className="text-xs text-gray-400 mb-4">
+                                Show this QR code to the event organizer to check in
+                            </p>
+
+                            {/* Event Details */}
+                            <div className="bg-gray-50 rounded-2xl p-4 text-left space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <CalendarIcon size={14} className="text-emerald-500" />
+                                    {new Date(nextMission.start_time).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <Clock size={14} className="text-emerald-500" />
+                                    {new Date(nextMission.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <MapPin size={14} className="text-emerald-500" />
+                                    {nextMission.location?.split('(')[0]}
                                 </div>
                             </div>
                         </motion.div>

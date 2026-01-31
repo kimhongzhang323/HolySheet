@@ -25,7 +25,7 @@ export default function TopBar() {
                 {/* Left: Logo & Nav */}
                 <div className="flex items-center gap-12">
                     {/* Logo */}
-                    <Link href="/dashboard" className="flex items-center gap-3 group">
+                    <Link href="/calendar" className="flex items-center gap-3 group">
                         <img src="/logo.png" alt="JomCare" className="w-10 h-10 group-hover:scale-105 transition-transform" />
                         <span className="font-bold text-xl tracking-tight text-gray-900 hidden sm:block">JomCare</span>
                     </Link>

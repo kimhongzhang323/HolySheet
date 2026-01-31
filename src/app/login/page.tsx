@@ -21,7 +21,7 @@ export default function LoginPage() {
             if (role === 'admin' || role === 'staff') {
                 router.push('/admin');
             } else {
-                router.push('/dashboard');
+                router.push('/calendar');
             }
         }
     }, [session, status, router]);
