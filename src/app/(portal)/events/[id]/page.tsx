@@ -11,6 +11,7 @@ import {
     Upload, Image as ImageIcon, Sparkles
 } from 'lucide-react';
 import { VOLUNTEER_ACTIVITIES, USER_APPLICATIONS } from '@/lib/mockData';
+import { checkIsClashing, VolunteerActivity } from '@/lib/eventUtils';
 
 interface FormField {
     label: string;
@@ -25,29 +26,6 @@ interface FormStructure {
     fields: FormField[];
 }
 
-interface VolunteerActivity {
-    id: string;
-    title: string;
-    type?: string;
-    activityType?: string;
-    category: string;
-    description: string;
-    fullDescription?: string;
-    location: string;
-    start_time: string;
-    end_time: string;
-    image_url: string;
-    requirements?: string[];
-    requiresPortfolio?: boolean;
-    volunteer_form?: FormStructure;
-    volunteers_needed?: number;
-    capacity?: number;
-    organizer?: string;
-    organizer_label?: string;
-    schedule?: string;
-    activity_type?: string;
-    tags?: string[];
-}
 
 export default function EventDetailPage() {
     const params = useParams();
@@ -60,6 +38,7 @@ export default function EventDetailPage() {
     const [showApplicationModal, setShowApplicationModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [applicationStatus, setApplicationStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+    const [isClashing, setIsClashing] = useState(false);
 
     // Dynamic Form Data
     const [formData, setFormData] = useState<Record<string, string>>({});
@@ -88,6 +67,19 @@ export default function EventDetailPage() {
                             setApplicationStatus(existingApp.status.toLowerCase() as any);
                         }
                     }
+
+                    // Check for schedule clashes
+                    const enrolledActivities = VOLUNTEER_ACTIVITIES.filter((a: any) => a.isEnrolled).map((a: any) => ({
+                        ...a,
+                        id: a._id || a.id
+                    })) as VolunteerActivity[];
+
+                    const clashing = checkIsClashing({
+                        ...activityData,
+                        id: activityData._id || activityData.id
+                    } as VolunteerActivity, enrolledActivities);
+
+                    setIsClashing(clashing);
                 }
             } catch (err) {
                 console.error("Error fetching activity:", err);
@@ -130,7 +122,7 @@ export default function EventDetailPage() {
             const userName = session.user.name || 'Volunteer';
             const userEmail = session.user.email || '';
 
-            activity?.volunteer_form?.fields.forEach(field => {
+            activity?.volunteer_form?.fields.forEach((field: FormField) => {
                 const label = field.label.toLowerCase();
 
                 // If applying for someone else, generate dummy but realistic data
@@ -224,8 +216,8 @@ export default function EventDetailPage() {
 
         // Check required fields
         const missingFields = activity?.volunteer_form?.fields
-            .filter(f => f.required && !formData[f.label])
-            .map(f => f.label);
+            .filter((f: FormField) => f.required && !formData[f.label])
+            .map((f: FormField) => f.label);
 
         if (isApplyForOther) {
             if (!formData['Person\'s Full Name']) missingFields?.push('Person\'s Full Name');
@@ -531,7 +523,7 @@ export default function EventDetailPage() {
                                 </div>
 
                                 <div className="space-y-4">
-                                    {activity.volunteer_form?.fields.map((field, idx) => (
+                                    {activity.volunteer_form?.fields.map((field: FormField, idx: number) => (
                                         <div key={idx}>
                                             <label className="block text-sm font-medium text-gray-700 mb-1.5 pl-1">
                                                 {field.label} {field.required && <span className="text-red-500">*</span>}
@@ -552,7 +544,7 @@ export default function EventDetailPage() {
                                                     className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:bg-white transition-all text-sm text-gray-900"
                                                 >
                                                     <option value="">Select an option</option>
-                                                    {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                    {field.options?.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
                                                 </select>
                                             ) : (
                                                 <input
@@ -777,6 +769,22 @@ export default function EventDetailPage() {
                                     {applicationStatus === 'pending' && (
                                         <button onClick={handleWithdrawApplication} className="text-xs font-bold text-red-600 hover:underline">Withdraw Application</button>
                                     )}
+                                </div>
+                            ) : isClashing ? (
+                                <div className="space-y-4">
+                                    <div className="rounded-3xl p-6 border border-red-200 bg-red-50 text-center">
+                                        <AlertCircle size={40} className="mx-auto mb-3 text-red-500" />
+                                        <h3 className="font-bold text-gray-900">Schedule Clash</h3>
+                                        <p className="text-sm text-red-600 opacity-80 mb-2">
+                                            This activity clashes with another session you're already enrolled in.
+                                        </p>
+                                    </div>
+                                    <button
+                                        disabled
+                                        className="w-full py-5 bg-gray-300 text-gray-500 rounded-2xl font-black tracking-widest uppercase cursor-not-allowed shadow-none"
+                                    >
+                                        Cannot Apply
+                                    </button>
                                 </div>
                             ) : (
                                 <button
