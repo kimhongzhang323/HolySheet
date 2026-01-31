@@ -27,6 +27,7 @@ interface Activity {
     volunteers_registered: number;
     activity_type: string;
     status: string;
+    requirements?: string[];
     skills_required?: string[];
     volunteer_form?: any;
 }

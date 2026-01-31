@@ -103,7 +103,12 @@ export default function AttendanceScanner({ isOpen, onClose, onScan }: Attendanc
 
     const handleClose = async () => {
         if (scanner.current) {
-            await scanner.current.stop();
+            try {
+                await scanner.current.stop();
+            } catch (err) {
+                console.warn("Scanner stop failed/already stopped", err);
+            }
+            scanner.current = null;
             scannerInitialized.current = false;
         }
         setScanning(false);
@@ -149,8 +154,8 @@ export default function AttendanceScanner({ isOpen, onClose, onScan }: Attendanc
                 {/* Message */}
                 {message && (
                     <div className={`mt-4 p-4 rounded-lg flex items-center gap-3 ${message.type === 'success'
-                            ? 'bg-green-500/20 border border-green-500'
-                            : 'bg-red-500/20 border border-red-500'
+                        ? 'bg-green-500/20 border border-green-500'
+                        : 'bg-red-500/20 border border-red-500'
                         }`}>
                         {message.type === 'success' ? (
                             <CheckCircle2 className="text-green-400" size={24} />
@@ -172,6 +177,14 @@ export default function AttendanceScanner({ isOpen, onClose, onScan }: Attendanc
                         <li>Hold steady until scanner beeps</li>
                         <li>Attendance will be marked automatically</li>
                     </ol>
+
+                    {/* Demo Button */}
+                    <button
+                        onClick={() => onScanSuccess("HOLYSHEET:ACTIVITY:demo-123:timestamp")}
+                        className="mt-4 w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-white/50 hover:text-white transition-colors uppercase tracking-wider font-bold"
+                    >
+                        Simulate Successful Scan (Demo)
+                    </button>
                 </div>
             </div>
         </div>

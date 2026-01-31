@@ -48,7 +48,17 @@ export default function AdminDashboard() {
     const [showScanner, setShowScanner] = useState(false);
     const handleScan = async (result: string) => {
         console.log('Scanned:', result);
-        return { success: true, message: 'Scan received' };
+        // Mock successful scan with caregiver info
+        return {
+            success: true,
+            message: 'Scan received',
+            userName: 'Alex Tan',
+            caregiver: {
+                name: 'Sarah Tan',
+                relation: 'Sister',
+                phone: '+65 9123 4567'
+            }
+        };
     };
 
     useEffect(() => {

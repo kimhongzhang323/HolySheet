@@ -296,10 +296,7 @@ export default function ProfilePage() {
                         <div className="space-y-1">
                             <h1 className="text-3xl font-bold text-gray-900 mb-2">{profile.name}</h1>
                             <div className="space-y-4">
-                                <div>
-                                    <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Role</p>
-                                    <p className="text-lg font-medium text-gray-700">Senior Volunteer</p>
-                                </div>
+
                             </div>
                         </div>
 
