@@ -100,7 +100,15 @@ export default function TopBar() {
                             </div>
                             <div className="hidden md:block text-left">
                                 <p className="text-sm font-bold text-gray-900 leading-none">{session?.user?.name || "Kim Ho"}</p>
-                                <p className="text-[10px] text-gray-500 font-medium mt-0.5 capitalize">{(session?.user as any)?.role || "Participant"}</p>
+                                <p className="text-[10px] text-gray-500 font-medium mt-0.5">
+                                    {((session?.user as any)?.role === 'participant' || (session?.user as any)?.role === 'user' || !(session?.user as any)?.role)
+                                        ? '❤️ Caregiver: Mrs. Tan Mei Ling'
+                                        : (session?.user as any)?.role === 'caregiver'
+                                            ? 'Caregiver'
+                                            : (session?.user as any)?.role === 'admin'
+                                                ? 'Admin'
+                                                : (session?.user as any)?.role}
+                                </p>
                             </div>
                             <ChevronDown size={14} className="text-gray-400 hidden md:block" />
                         </Link>

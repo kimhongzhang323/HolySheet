@@ -83,7 +83,8 @@ export default function CalendarPage() {
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [filterLocation, setFilterLocation] = useState('');
     const [selectedEngagementLevels, setSelectedEngagementLevels] = useState<string[]>([]);
-    const [isFilterOpen, setIsFilterOpen] = useState(true);
+    const [selectedDayEvents, setSelectedDayEvents] = useState<{ date: Date, events: any[] } | null>(null);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [showQRModal, setShowQRModal] = useState(false);
     const [feedback, setFeedback] = useState('');
 
@@ -342,7 +343,32 @@ export default function CalendarPage() {
         }
     };
 
+    const hasTimeConflict = (targetEvent: any) => {
+        if (!targetEvent) return false;
+        const targetStart = new Date(targetEvent.start_time).getTime();
+        const targetEnd = new Date(targetEvent.end_time).getTime();
+
+        return activities.some(act => {
+            if (!act.isEnrolled || act.id === targetEvent.id) return false;
+            const actStart = new Date(act.start_time).getTime();
+            const actEnd = new Date(act.end_time).getTime();
+
+            return (targetStart < actEnd && targetEnd > actStart);
+        });
+    };
+
     const getEventIdentity = (event: any) => {
+        // First check for conflicts
+        if (!event.isEnrolled && hasTimeConflict(event)) {
+            return {
+                bg: 'bg-red-500/90',
+                text: 'text-white',
+                border: 'border-red-600 shadow-md',
+                light: 'bg-red-50 text-red-700',
+                label: '⚠️ Conflict'
+            };
+        }
+
         const custom = customIdentities[event.id];
         if (custom) {
             const colorObj = tagColors.find(c => c.name === custom.color) || tagColors[0];
@@ -442,6 +468,8 @@ export default function CalendarPage() {
     const totalHours = activities
         .filter(act => act.isEnrolled)
         .reduce((sum, act) => sum + act.duration, 0);
+
+
 
     return (
         <div className="flex flex-col gap-6 min-h-[calc(100vh-140px)] relative">
@@ -655,10 +683,12 @@ export default function CalendarPage() {
                                                 <div
                                                     key={i}
                                                     onClick={() => {
-                                                        // On mobile, if there are events, show the first one
-                                                        if (dayEvents.length > 0 && window.innerWidth < 768) {
-                                                            setSelectedEvent(dayEvents[0]);
+                                                        // On mobile, show day summary modal
+                                                        if (window.innerWidth < 768) {
+                                                            setSelectedDayEvents({ date: new Date(day.fullDate), events: dayEvents });
                                                         }
+                                                        // Fallback for desktop testing dynamics
+                                                        // setSelectedEvent(dayEvents[0]); 
                                                     }}
                                                     className={`min-h-[60px] md:min-h-[110px] p-1 md:p-2 rounded-lg md:rounded-2xl border transition-all hover:border-emerald-100 hover:bg-emerald-50/10 flex flex-col gap-1 md:gap-2 cursor-pointer ${!day.isCurrentMonth ? 'opacity-25' : 'border-gray-50'
                                                         } ${day.isToday ? 'bg-emerald-50/30 ring-1 ring-emerald-100' : ''}`}
@@ -1069,6 +1099,96 @@ export default function CalendarPage() {
                     )}
                 </AnimatePresence>
 
+                {/* Day Detail Modal for Mobile */}
+                <AnimatePresence>
+                    {selectedDayEvents && (
+                        <div className="fixed inset-0 z-[120] md:hidden flex items-end">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setSelectedDayEvents(null)}
+                                className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+                            />
+                            <motion.div
+                                initial={{ y: '100%' }}
+                                animate={{ y: 0 }}
+                                exit={{ y: '100%' }}
+                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                                className="relative w-full bg-white rounded-t-[32px] p-6 shadow-2xl max-h-[85vh] overflow-hidden flex flex-col"
+                            >
+                                <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 shrink-0" />
+
+                                <div className="flex items-center justify-between mb-6 shrink-0">
+                                    <div>
+                                        <h3 className="text-xl font-black text-gray-900">
+                                            {selectedDayEvents.date.toLocaleDateString('en-US', { weekday: 'long' })}
+                                        </h3>
+                                        <p className="text-sm font-bold text-gray-400">
+                                            {selectedDayEvents.date.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedDayEvents(null)}
+                                        className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3 overflow-y-auto custom-scrollbar pb-6">
+                                    {selectedDayEvents.events.length > 0 ? (
+                                        selectedDayEvents.events.map(event => {
+                                            const identity = getEventIdentity(event);
+                                            const isConflict = !event.isEnrolled && hasTimeConflict(event);
+
+                                            return (
+                                                <div
+                                                    key={event.id}
+                                                    onClick={() => {
+                                                        setSelectedEvent(event);
+                                                        // Keep day list open behind it? Or close it? 
+                                                        // Let's keep it open so back navigation feels natural (closing selectedEvent reveals day list)
+                                                    }}
+                                                    className={`p-4 rounded-2xl border transition-all active:scale-95 ${identity.bg} ${identity.border} relative overflow-hidden`}
+                                                >
+                                                    <div className="flex items-start gap-4 relatie z-10">
+                                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${identity.light.split(' ')[0]}`}>
+                                                            {isConflict ? <Zap size={20} className={identity.text} /> : <CalendarIcon size={20} className={identity.text} />}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest bg-white/40 ${identity.text}`}>
+                                                                    {identity.label || event.category}
+                                                                </span>
+                                                                <span className={`text-[10px] font-bold ${identity.text} opacity-80`}>
+                                                                    {new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            </div>
+                                                            <h4 className={`text-sm font-black truncate mb-1 ${identity.text}`}>{event.title}</h4>
+                                                            <p className={`text-[11px] font-bold opacity-70 line-clamp-1 ${identity.text}`}>
+                                                                {event.location}
+                                                            </p>
+                                                        </div>
+                                                        <ChevronRight size={16} className={`self-center opacity-50 ${identity.text}`} />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="text-center py-12">
+                                            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+                                                <CalendarIcon size={24} />
+                                            </div>
+                                            <p className="text-sm font-bold text-gray-400">No missions scheduled for this day.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
                 {/* Event Customization Popover */}
                 <AnimatePresence>
                     {selectedEvent && (
@@ -1116,6 +1236,21 @@ export default function CalendarPage() {
                                             organized by <span className="text-emerald-600 underline cursor-pointer">{selectedEvent.organizer || 'HolySheet Community'}</span>
                                         </p>
                                     </div>
+
+                                    {/* Double Booking Warning */}
+                                    {hasTimeConflict(selectedEvent) && !selectedEvent.isEnrolled && (
+                                        <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-2xl flex items-start gap-3">
+                                            <div className="p-2 bg-orange-100 rounded-xl text-orange-600 shrink-0">
+                                                <Zap size={18} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-black text-orange-800">Schedule Conflict Detected</h4>
+                                                <p className="text-xs text-orange-700 mt-1 font-medium leading-relaxed">
+                                                    You already have another mission scheduled at this time. Please manage your schedule to prevent double registration.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="grid grid-cols-2 gap-4 mb-8">
                                         <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100">
@@ -1169,11 +1304,20 @@ export default function CalendarPage() {
                                         ) : (
                                             <button
                                                 onClick={() => handleQuickRegister(selectedEvent.id)}
-                                                disabled={loading || selectedEvent.isExternal}
-                                                className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200/50 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:bg-gray-400"
+                                                disabled={loading || selectedEvent.isExternal || hasTimeConflict(selectedEvent)}
+                                                className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200/50 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:bg-gray-400 disabled:shadow-none"
                                             >
-                                                <Plus size={14} className="group-hover:scale-110 transition-transform" />
-                                                {loading ? 'Registering...' : selectedEvent.isExternal ? 'Google Event' : 'Quick Register'}
+                                                {hasTimeConflict(selectedEvent) ? (
+                                                    <>
+                                                        <Zap size={14} className="group-hover:scale-110 transition-transform" />
+                                                        Unavailable
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Plus size={14} className="group-hover:scale-110 transition-transform" />
+                                                        {loading ? 'Registering...' : selectedEvent.isExternal ? 'Google Event' : 'Quick Register'}
+                                                    </>
+                                                )}
                                             </button>
                                         )}
                                         <button
