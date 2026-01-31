@@ -52,6 +52,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     };
                 }
 
+                // JomCare Demo Accounts
+                if (credentials.email === 'participant@jomcare.com' && credentials.password === 'password123') {
+                    return {
+                        id: 'mock-participant-id',
+                        email: 'participant@jomcare.com',
+                        name: 'Sarah Tan',
+                        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+                        role: 'participant',
+                        supabaseAccessToken: 'mock-participant-token'
+                    };
+                }
+
+                if (credentials.email === 'caregiver@jomcare.com' && credentials.password === 'password123') {
+                    return {
+                        id: 'mock-caregiver-id',
+                        email: 'caregiver@jomcare.com',
+                        name: 'Mary Lim',
+                        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mary',
+                        role: 'caregiver',
+                        supabaseAccessToken: 'mock-caregiver-token'
+                    };
+                }
+
+                if (credentials.email === 'admin@jomcare.com' && credentials.password === 'password123') {
+                    return {
+                        id: 'mock-jomcare-admin-id',
+                        email: 'admin@jomcare.com',
+                        name: 'JomCare Admin',
+                        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=JomCareAdmin',
+                        role: 'admin',
+                        supabaseAccessToken: 'mock-jomcare-admin-token'
+                    };
+                }
+
                 // Query the 'users' table directly
                 const { data: user, error } = await supabase
                     .from('users')

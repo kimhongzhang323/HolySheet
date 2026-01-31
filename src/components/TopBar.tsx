@@ -48,7 +48,7 @@ export default function TopBar() {
                                 : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
                                 }`}
                         >
-                            Volunteer
+                            {(session?.user as any)?.role === 'volunteer' ? 'Volunteer' : 'Events'}
                         </Link>
                         <Link
                             href="/calendar"
@@ -100,7 +100,7 @@ export default function TopBar() {
                             </div>
                             <div className="hidden md:block text-left">
                                 <p className="text-sm font-bold text-gray-900 leading-none">{session?.user?.name || "Kim Ho"}</p>
-                                <p className="text-[10px] text-gray-500 font-medium mt-0.5">Participant</p>
+                                <p className="text-[10px] text-gray-500 font-medium mt-0.5 capitalize">{(session?.user as any)?.role || "Participant"}</p>
                             </div>
                             <ChevronDown size={14} className="text-gray-400 hidden md:block" />
                         </Link>
@@ -137,7 +137,7 @@ export default function TopBar() {
                             : 'text-gray-600 hover:bg-gray-50'
                             }`}
                     >
-                        Volunteer
+                        {(session?.user as any)?.role === 'volunteer' ? 'Volunteer' : 'Events'}
                     </Link>
                     <Link
                         href="/calendar"

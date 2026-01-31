@@ -11,10 +11,17 @@ interface SpeechButtonProps {
 
 // Define available commands with their patterns and actions
 const COMMANDS = [
+    // Registration commands
+    { patterns: ['register', 'sign up', 'book event', 'join event', 'register for event', 'register me'], action: 'register', target: null },
+    { patterns: ['confirm', 'yes', 'confirm registration', 'yes register'], action: 'confirm', target: null },
+    { patterns: ['cancel', 'no', 'cancel registration', 'nevermind'], action: 'cancel_register', target: null },
+    // Quick actions
     { patterns: ['open qr', 'scan qr', 'qr code', 'show qr', 'qr'], action: 'qr', target: null },
     { patterns: ['open map', 'open google map', 'show map', 'directions', 'navigate to location', 'where is it'], action: 'map', target: null },
+    { patterns: ['call caregiver', 'contact caregiver', 'call my caregiver', 'help me'], action: 'caregiver', target: null },
+    // Navigation
     { patterns: ['go to calendar', 'open calendar', 'show calendar', 'calendar'], action: 'navigate', target: '/calendar' },
-    { patterns: ['go to events', 'show events', 'view events', 'events'], action: 'navigate', target: '/events' },
+    { patterns: ['go to events', 'show events', 'view events', 'events', 'show all events'], action: 'navigate', target: '/events' },
     { patterns: ['go to profile', 'my profile', 'show profile', 'profile'], action: 'navigate', target: '/profile' },
     { patterns: ['help', 'what can you do', 'commands'], action: 'help', target: null },
 ];

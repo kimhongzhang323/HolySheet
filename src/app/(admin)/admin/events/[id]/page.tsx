@@ -4,7 +4,7 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Calendar, MapPin, Users, Clock, ArrowLeft, CheckCircle2, XCircle, User, Loader2, Mail, Network, Type, Sparkles, Edit2, ArrowUpDown, Megaphone, Download, FileText, Star } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, ArrowLeft, CheckCircle2, XCircle, User, Loader2, Mail, Network, Type, Sparkles, Edit2, ArrowUpDown, Megaphone, Download, FileText, Star, Heart, Phone, UserCheck, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import AIResponseAnalysis from '@/components/admin/AIResponseAnalysis';
 import EditEventDialog from '@/components/admin/EditEventDialog';
@@ -46,6 +46,23 @@ interface Attendee {
     name: string;
     email: string;
     checked_in_at?: string;
+    needs_support?: 'low' | 'moderate' | 'high';
+    interests?: string[];
+    caregiver?: {
+        name: string;
+        phone: string;
+        relationship: string;
+    } | null;
+}
+
+interface VolunteerMatch {
+    volunteerId: string;
+    volunteerName: string;
+    attendeeId: string;
+    attendeeName: string;
+    matchScore: number;
+    matchReason: string;
+    skills: string[];
 }
 
 interface FormResponse {
@@ -82,6 +99,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const [aiApproveEnabled, setAiApproveEnabled] = useState(false);
     const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
     const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
+
+    // AI Volunteer Matcher states
+    const [selectedAttendees, setSelectedAttendees] = useState<Set<string>>(new Set());
+    const [isMatching, setIsMatching] = useState(false);
+    const [volunteerMatches, setVolunteerMatches] = useState<Record<string, VolunteerMatch[]>>({});
+    const [showMatchResults, setShowMatchResults] = useState(false);
 
     useEffect(() => {
         // Only fetch once when we have a session and haven't fetched yet
@@ -310,6 +333,80 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 resolve();
             }, 1000);
         });
+    };
+
+    // AI Volunteer Matching functions
+    const handleSelectAttendee = (attendeeId: string) => {
+        const newSelected = new Set(selectedAttendees);
+        if (newSelected.has(attendeeId)) {
+            newSelected.delete(attendeeId);
+        } else {
+            newSelected.add(attendeeId);
+        }
+        setSelectedAttendees(newSelected);
+    };
+
+    const handleSelectAllAttendees = () => {
+        if (selectedAttendees.size === attendees.length) {
+            setSelectedAttendees(new Set());
+        } else {
+            setSelectedAttendees(new Set(attendees.map(a => a.id)));
+        }
+    };
+
+    const handleAIMatchVolunteers = async () => {
+        if (selectedAttendees.size === 0) {
+            alert('Please select at least one attendee to match volunteers.');
+            return;
+        }
+
+        setIsMatching(true);
+        try {
+            const res = await fetch('/api/admin/ai/match-volunteers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.accessToken || 'admin@holysheet.com'}`
+                },
+                body: JSON.stringify({
+                    attendeeIds: Array.from(selectedAttendees),
+                    activityId: id
+                })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setVolunteerMatches(data.matches);
+                setShowMatchResults(true);
+            } else {
+                alert('Failed to match volunteers. Please try again.');
+            }
+        } catch (err) {
+            console.error('AI Matching failed:', err);
+            alert('An error occurred during matching.');
+        } finally {
+            setIsMatching(false);
+        }
+    };
+
+    const getMatchScoreColor = (score: number) => {
+        if (score >= 80) return 'bg-green-100 text-green-700 border-green-200';
+        if (score >= 60) return 'bg-blue-100 text-blue-700 border-blue-200';
+        if (score >= 40) return 'bg-amber-100 text-amber-700 border-amber-200';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    };
+
+    const getSupportLevelBadge = (level?: string) => {
+        switch (level) {
+            case 'high':
+                return <span className="px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 rounded-full">High Support</span>;
+            case 'moderate':
+                return <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full">Moderate Support</span>;
+            case 'low':
+                return <span className="px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded-full">Low Support</span>;
+            default:
+                return null;
+        }
     };
 
     if (loading) {
@@ -767,52 +864,195 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                     )}
                     {activeTab === 'attendance' && (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-gray-50/50">
-                                    <tr>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">User</th>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                                        <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Check-in Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {attendees.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={3} className="px-8 py-12 text-center text-gray-400 text-sm">No attendance recorded yet</td>
-                                        </tr>
-                                    ) : attendees.map((att) => (
-                                        <tr
-                                            key={att.id}
-                                            onClick={() => setSelectedAttendee(att)}
-                                            className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                        <div>
+                            {/* AI Matcher Controls */}
+                            <div className="px-8 py-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-indigo-100">
+                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                            <Wand2 size={20} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-gray-900">AI Volunteer Matcher</h3>
+                                            <p className="text-xs text-gray-500">Select attendees to find the best volunteer matches</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs text-gray-500">
+                                            {selectedAttendees.size} of {attendees.length} selected
+                                        </span>
+                                        <button
+                                            onClick={handleSelectAllAttendees}
+                                            className="px-3 py-1.5 text-xs font-bold text-indigo-600 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-all"
                                         >
-                                            <td className="px-8 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
-                                                        <User size={14} />
+                                            {selectedAttendees.size === attendees.length ? 'Deselect All' : 'Select All'}
+                                        </button>
+                                        <button
+                                            onClick={handleAIMatchVolunteers}
+                                            disabled={isMatching || selectedAttendees.size === 0}
+                                            className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                        >
+                                            {isMatching ? (
+                                                <>
+                                                    <Loader2 size={14} className="animate-spin" />
+                                                    Matching...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles size={14} />
+                                                    Match Volunteers
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Match Results Panel */}
+                            {showMatchResults && Object.keys(volunteerMatches).length > 0 && (
+                                <div className="px-8 py-4 bg-green-50 border-b border-green-100">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <UserCheck size={18} className="text-green-600" />
+                                            <h4 className="text-sm font-bold text-green-800">AI Match Results</h4>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowMatchResults(false)}
+                                            className="text-xs text-green-600 hover:text-green-800 font-medium"
+                                        >
+                                            Hide Results
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {Object.entries(volunteerMatches).map(([attendeeId, matches]) => {
+                                            const attendee = attendees.find(a => a.id === attendeeId);
+                                            return (
+                                                <div key={attendeeId} className="bg-white rounded-xl p-4 border border-green-200 shadow-sm">
+                                                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                                                        <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-xs font-bold">
+                                                            {attendee?.name?.charAt(0) || '?'}
+                                                        </div>
+                                                        <span className="text-sm font-bold text-gray-900">{attendee?.name || 'Unknown'}</span>
+                                                        {attendee?.caregiver && (
+                                                            <Heart size={12} className="text-pink-500" />
+                                                        )}
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm font-bold text-gray-900">{att.name}</p>
-                                                        <p className="text-xs text-gray-500">{att.email}</p>
+                                                    <div className="space-y-2">
+                                                        {matches.slice(0, 3).map((match, idx) => (
+                                                            <div key={idx} className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-bold text-gray-400">#{idx + 1}</span>
+                                                                    <span className="text-xs font-medium text-gray-700">{match.volunteerName}</span>
+                                                                </div>
+                                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getMatchScoreColor(match.matchScore)}`}>
+                                                                    {match.matchScore}%
+                                                                </span>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-8 py-4">
-                                                <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wide text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full w-fit">
-                                                    <CheckCircle2 size={12} />
-                                                    Checked In
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-4">
-                                                <span className="text-sm text-gray-500">
-                                                    {att.checked_in_at ? new Date(att.checked_in_at).toLocaleString() : 'N/A'}
-                                                </span>
-                                            </td>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Attendance Table */}
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-gray-50/50">
+                                        <tr>
+                                            <th className="px-4 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-12">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedAttendees.size === attendees.length && attendees.length > 0}
+                                                    onChange={handleSelectAllAttendees}
+                                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                            </th>
+                                            <th className="px-4 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">User</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Support Level</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Caregiver</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Check-in Time</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">AI Match</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {attendees.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="px-8 py-12 text-center text-gray-400 text-sm">No attendance recorded yet</td>
+                                            </tr>
+                                        ) : attendees.map((att) => (
+                                            <tr
+                                                key={att.id}
+                                                className={`hover:bg-gray-50/50 transition-colors ${selectedAttendees.has(att.id) ? 'bg-indigo-50/50' : ''}`}
+                                            >
+                                                <td className="px-4 py-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedAttendees.has(att.id)}
+                                                        onChange={() => handleSelectAttendee(att.id)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-4 cursor-pointer" onClick={() => setSelectedAttendee(att)}>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                                            <User size={14} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-gray-900">{att.name}</p>
+                                                            <p className="text-xs text-gray-500">{att.email}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    {getSupportLevelBadge(att.needs_support)}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    {att.caregiver ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center">
+                                                                <Heart size={12} className="text-pink-600" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-medium text-gray-900">{att.caregiver.name}</p>
+                                                                <p className="text-[10px] text-gray-500">{att.caregiver.relationship}</p>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400 italic">No caregiver</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wide text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full w-fit">
+                                                        <CheckCircle2 size={12} />
+                                                        Checked In
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm text-gray-500">
+                                                        {att.checked_in_at ? new Date(att.checked_in_at).toLocaleString() : 'N/A'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    {volunteerMatches[att.id] && volunteerMatches[att.id].length > 0 ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border ${getMatchScoreColor(volunteerMatches[att.id][0].matchScore)}`}>
+                                                                {volunteerMatches[att.id][0].volunteerName} ({volunteerMatches[att.id][0].matchScore}%)
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">—</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
 
@@ -939,9 +1179,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             {
                 selectedAttendee && (
                     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
+                        <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
                             {/* Header */}
-                            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
+                            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white sticky top-0">
                                 <div className="flex items-center gap-4">
                                     <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white text-xl font-bold">
                                         {selectedAttendee.name.charAt(0).toUpperCase()}
@@ -949,34 +1189,120 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                                     <div>
                                         <h2 className="text-xl font-bold">{selectedAttendee.name}</h2>
                                         <p className="text-white/80 text-sm">{selectedAttendee.email}</p>
+                                        {selectedAttendee.needs_support && (
+                                            <div className="mt-1">
+                                                {getSupportLevelBadge(selectedAttendee.needs_support)}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Content */}
                             <div className="p-6 space-y-4">
-                                <div className="bg-gray-50 p-4 rounded-xl">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Attendance Status</p>
-                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
-                                        <CheckCircle2 size={14} />
-                                        CHECKED IN
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-gray-50 p-4 rounded-xl">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Attendance Status</p>
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                                            <CheckCircle2 size={14} />
+                                            CHECKED IN
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-xl">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Check-in Time</p>
+                                        <p className="text-sm font-bold text-gray-900">
+                                            {selectedAttendee.checked_in_at
+                                                ? new Date(selectedAttendee.checked_in_at).toLocaleString('en-US', {
+                                                    day: 'numeric',
+                                                    month: 'short',
+                                                    year: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })
+                                                : 'N/A'}
+                                        </p>
                                     </div>
                                 </div>
 
-                                <div className="bg-gray-50 p-4 rounded-xl">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Check-in Time</p>
-                                    <p className="text-sm font-bold text-gray-900">
-                                        {selectedAttendee.checked_in_at
-                                            ? new Date(selectedAttendee.checked_in_at).toLocaleString('en-US', {
-                                                day: 'numeric',
-                                                month: 'short',
-                                                year: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            })
-                                            : 'N/A'}
-                                    </p>
+                                {/* Interests */}
+                                {selectedAttendee.interests && selectedAttendee.interests.length > 0 && (
+                                    <div className="bg-gray-50 p-4 rounded-xl">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Interests</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedAttendee.interests.map((interest, i) => (
+                                                <span key={i} className="px-3 py-1 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-lg">
+                                                    {interest}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Caregiver Section */}
+                                <div className={`p-4 rounded-xl ${selectedAttendee.caregiver ? 'bg-pink-50 border border-pink-100' : 'bg-gray-50'}`}>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Heart size={16} className={selectedAttendee.caregiver ? 'text-pink-600' : 'text-gray-400'} />
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Caregiver Information</p>
+                                    </div>
+                                    {selectedAttendee.caregiver ? (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-pink-200 flex items-center justify-center text-pink-700 font-bold">
+                                                    {selectedAttendee.caregiver.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-900">{selectedAttendee.caregiver.name}</p>
+                                                    <p className="text-xs text-gray-500">{selectedAttendee.caregiver.relationship}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-gray-700 bg-white px-3 py-2 rounded-lg">
+                                                <Phone size={14} className="text-pink-600" />
+                                                <a href={`tel:${selectedAttendee.caregiver.phone}`} className="hover:text-pink-600 transition-colors">
+                                                    {selectedAttendee.caregiver.phone}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-400 italic">No caregiver assigned</p>
+                                    )}
                                 </div>
+
+                                {/* AI Match Results for this attendee */}
+                                {volunteerMatches[selectedAttendee.id] && volunteerMatches[selectedAttendee.id].length > 0 && (
+                                    <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Sparkles size={16} className="text-indigo-600" />
+                                            <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">AI Volunteer Matches</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {volunteerMatches[selectedAttendee.id].map((match, idx) => (
+                                                <div key={idx} className="bg-white p-3 rounded-lg border border-indigo-100">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center">
+                                                                {idx + 1}
+                                                            </span>
+                                                            <span className="text-sm font-bold text-gray-900">{match.volunteerName}</span>
+                                                        </div>
+                                                        <span className={`text-xs font-bold px-2 py-1 rounded-full border ${getMatchScoreColor(match.matchScore)}`}>
+                                                            {match.matchScore}% Match
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500">{match.matchReason}</p>
+                                                    {match.skills.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mt-2">
+                                                            {match.skills.slice(0, 3).map((skill, i) => (
+                                                                <span key={i} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                                                                    {skill}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="bg-gray-50 p-4 rounded-xl">
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Event</p>
@@ -985,7 +1311,16 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                             </div>
 
                             {/* Actions */}
-                            <div className="border-t border-gray-100 p-4 flex items-center gap-3">
+                            <div className="border-t border-gray-100 p-4 flex items-center gap-3 sticky bottom-0 bg-white">
+                                {selectedAttendee.caregiver && (
+                                    <a
+                                        href={`tel:${selectedAttendee.caregiver.phone}`}
+                                        className="flex-1 px-4 py-2 bg-pink-100 text-pink-700 rounded-xl font-bold text-sm hover:bg-pink-200 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Phone size={14} />
+                                        Call Caregiver
+                                    </a>
+                                )}
                                 <button
                                     onClick={() => setSelectedAttendee(null)}
                                     className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
