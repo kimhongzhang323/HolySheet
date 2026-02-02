@@ -15,6 +15,7 @@ interface Event {
     volunteers_needed: number;
     activity_type: string;
     status: string;
+    requirements?: string[];
 }
 
 interface EditEventDialogProps {
@@ -41,7 +42,8 @@ export default function EditEventDialog({ isOpen, onClose, event, onSave }: Edit
                 capacity: event.capacity,
                 volunteers_needed: event.volunteers_needed,
                 activity_type: event.activity_type,
-                status: event.status
+                status: event.status,
+                requirements: event.requirements
             });
         }
     }, [event]);
@@ -61,7 +63,7 @@ export default function EditEventDialog({ isOpen, onClose, event, onSave }: Edit
         }
     };
 
-    const handleChange = (field: keyof Event, value: string | number) => {
+    const handleChange = (field: keyof Event, value: string | number | string[]) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
@@ -114,6 +116,52 @@ export default function EditEventDialog({ isOpen, onClose, event, onSave }: Edit
                                 onChange={(e) => handleChange("description", e.target.value)}
                                 className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all resize-none"
                             />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Requirement Tags</label>
+                        <div className="space-y-3">
+                            {/* Tags Display */}
+                            <div className="flex flex-wrap gap-2">
+                                {formData.requirements?.map((req, index) => (
+                                    <span key={index} className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-bold border border-indigo-100 animate-in fade-in zoom-in duration-200">
+                                        {req}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newReqs = [...(formData.requirements || [])];
+                                                newReqs.splice(index, 1);
+                                                handleChange("requirements", newReqs);
+                                            }}
+                                            className="ml-1 p-0.5 hover:bg-indigo-200 rounded-full transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+
+                            {/* Tag Input */}
+                            <input
+                                type="text"
+                                placeholder="Type requirement and press Enter..."
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        const val = e.currentTarget.value.trim();
+                                        if (val) {
+                                            const currentReqs = formData.requirements || [];
+                                            if (!currentReqs.includes(val)) {
+                                                handleChange("requirements", [...currentReqs, val]);
+                                            }
+                                            e.currentTarget.value = '';
+                                        }
+                                    }
+                                }}
+                            />
+                            <p className="text-xs text-gray-400 font-medium">Press <kbd className="px-1 py-0.5 bg-gray-100 rounded border border-gray-200 text-gray-500 font-mono">Enter</kbd> to add a tag</p>
                         </div>
                     </div>
 

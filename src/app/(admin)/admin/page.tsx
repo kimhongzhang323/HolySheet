@@ -12,6 +12,15 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend, BarChart, Bar
 } from 'recharts';
+import RegionalHeatMap from '@/components/admin/RegionalHeatMap';
+import {
+    ADMIN_MOCK_STATS,
+    ADMIN_MOCK_TRENDS_7D,
+    ADMIN_MOCK_TRENDS_30D,
+    ADMIN_MOCK_TRENDS_6M,
+    ADMIN_MOCK_DISTRIBUTION,
+    ADMIN_MOCK_ACTIVITIES
+} from '@/lib/adminMockData';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
 
@@ -29,6 +38,7 @@ export default function AdminDashboard() {
     const [trendData, setTrendData] = useState<any[]>([]);
     const [distributionData, setDistributionData] = useState<any[]>([]);
     const [recentActivities, setRecentActivities] = useState<any[]>([]);
+    const [ongoingActivities, setOngoingActivities] = useState<any[]>([]);
     const [timeRange, setTimeRange] = useState('6m');
 
     // Form Generation State
@@ -38,7 +48,17 @@ export default function AdminDashboard() {
     const [showScanner, setShowScanner] = useState(false);
     const handleScan = async (result: string) => {
         console.log('Scanned:', result);
-        return { success: true, message: 'Scan received' };
+        // Mock successful scan with caregiver info
+        return {
+            success: true,
+            message: 'Scan received',
+            userName: 'Alex Tan',
+            caregiver: {
+                name: 'Sarah Tan',
+                relation: 'Sister',
+                phone: '+65 9123 4567'
+            }
+        };
     };
 
     useEffect(() => {
@@ -46,36 +66,32 @@ export default function AdminDashboard() {
     }, [session, timeRange]);
 
     const fetchData = async () => {
-        if (!session?.accessToken) return;
         setLoading(true);
-        try {
-            // 1. Fetch Chart Stats
-            const statsRes = await fetch(`/api/admin/reports/stats?time_range=${timeRange}`, {
-                headers: { 'Authorization': `Bearer ${session.accessToken}` }
+        // Mock data fetch
+        setTimeout(() => {
+            setStats(ADMIN_MOCK_STATS);
+
+            // Handle time range for trends (Mock logic)
+            let trends = ADMIN_MOCK_TRENDS_6M;
+            if (timeRange === '7d') trends = ADMIN_MOCK_TRENDS_7D;
+            else if (timeRange === '30d') trends = ADMIN_MOCK_TRENDS_30D;
+
+            setTrendData(trends);
+            setDistributionData(ADMIN_MOCK_DISTRIBUTION);
+            const now = new Date('2026-01-31T10:39:27+08:00'); // Use fixed "now" for mock demo consistency
+
+            const ongoing = ADMIN_MOCK_ACTIVITIES.filter(act => {
+                if (!act.start_time || !act.end_time) return false;
+                const start = new Date(act.start_time);
+                const end = new Date(act.end_time);
+                return start <= now && end >= now;
             });
 
-            if (statsRes.ok) {
-                const data = await statsRes.json();
-                setStats(data.stats);
-                setTrendData(data.participation_trends);
-                setDistributionData(data.activity_distribution);
-            }
+            setOngoingActivities(ongoing);
+            setRecentActivities(ADMIN_MOCK_ACTIVITIES.filter(act => !ongoing.some(o => o.id === act.id)).slice(0, 5));
 
-            // 2. Fetch Recent Activities (re-using existing endpoint or filtered list)
-            const actRes = await fetch('/api/admin/activities', {
-                headers: { 'Authorization': `Bearer ${session.accessToken}` }
-            });
-            if (actRes.ok) {
-                const acts = await actRes.json();
-                // Taking top 5 most recent upcoming
-                setRecentActivities(acts.slice(0, 5));
-            }
-
-        } catch (error) {
-            console.error("Dashboard fetch error:", error);
-        } finally {
             setLoading(false);
-        }
+        }, 800);
     };
 
     return (
@@ -105,6 +121,64 @@ export default function AdminDashboard() {
                     </button>
                 </div>
             </div>
+
+            {/* Happening Now - Prominent Banner */}
+            {ongoingActivities.length > 0 && (() => {
+                const liveEvent = ongoingActivities[0];
+                const now = new Date();
+                const start = new Date(liveEvent.start_time);
+                const end = new Date(liveEvent.end_time);
+                const totalDuration = end.getTime() - start.getTime();
+                const elapsed = now.getTime() - start.getTime();
+                const progress = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+                const remainingMinutes = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / 60000));
+
+                return (
+                    <div className="mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-6 shadow-lg border border-indigo-500/30 text-white relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-red-500 rounded-full animate-pulse">
+                                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider">Live Now</span>
+                                    </div>
+                                    <span className="text-white/70 text-sm">{remainingMinutes} min remaining</span>
+                                </div>
+                                <h2 className="text-2xl font-bold mb-1">{liveEvent.title}</h2>
+                                <p className="text-white/80 text-sm flex items-center gap-2">
+                                    <PlayCircle size={14} />
+                                    {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    <span className="text-white/50">|</span>
+                                    <span>{liveEvent.location || 'Location TBC'}</span>
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col items-end gap-2 md:w-64">
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Users size={16} />
+                                    <span className="font-bold text-xl">{liveEvent.attendance_count}</span>
+                                    <span className="text-white/70">/ {liveEvent.volunteers_registered} present</span>
+                                </div>
+                                <div className="w-full h-2.5 bg-white/20 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-emerald-400 rounded-full transition-all duration-1000"
+                                        style={{ width: `${(liveEvent.attendance_count / Math.max(1, liveEvent.volunteers_registered)) * 100}%` }}
+                                    ></div>
+                                </div>
+                                <button
+                                    onClick={() => router.push(`/admin/events/${liveEvent.id}`)}
+                                    className="mt-2 px-4 py-2 bg-white text-indigo-600 font-bold rounded-xl text-sm hover:bg-indigo-50 transition-colors flex items-center gap-1"
+                                >
+                                    View Details <ArrowRight size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Key Metrics Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -255,6 +329,11 @@ export default function AdminDashboard() {
                         ))}
                     </div>
                 </div>
+            </div>
+
+            {/* Regional Volunteer Map */}
+            <div className="mb-8">
+                <RegionalHeatMap />
             </div>
 
             {/* Recent Table (Simplified) */}

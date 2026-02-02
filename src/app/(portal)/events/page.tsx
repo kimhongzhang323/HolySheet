@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, X, QrCode, Users, Heart, Sparkles, SlidersHorizontal, ChevronDown, Building2, Palette, Clock, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { Search, MapPin, X, QrCode, Users, Heart, Sparkles, SlidersHorizontal, ChevronDown, Building2, Palette, Clock, CheckCircle2, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+// import { supabase } from '@/lib/supabaseClient';
 
 // Constants
 const CATEGORIES = [
@@ -25,6 +25,8 @@ const ACTIVITY_TYPES = [
     'Training Support',
 ];
 
+import { VOLUNTEER_ACTIVITIES } from '@/lib/mockData';
+
 const ENGAGEMENT_FREQUENCIES = [
     'All Engagements',
     'Ad Hoc',
@@ -44,28 +46,7 @@ const LOCATIONS = [
     'Various Locations',
 ];
 
-interface VolunteerActivity {
-    id: string;
-    title: string;
-    type?: string;
-    activity_type?: string;
-    category: string;
-    engagement_frequency?: string;
-    organizer?: string;
-    organizer_label?: string;
-    description?: string;
-    location?: string;
-    schedule?: string;
-    start_time: string;
-    end_time?: string;
-    image_url?: string;
-    tags?: string[];
-    volunteers_needed?: number;
-    // Computed fields for UI
-    date?: string;
-    month?: string;
-    year?: string;
-}
+import { checkIsClashing, VolunteerActivity } from '@/lib/eventUtils';
 
 export default function EventsPage() {
     const router = useRouter();
@@ -79,6 +60,8 @@ export default function EventsPage() {
     const [selectedActivityType, setSelectedActivityType] = useState('All Types');
     const [selectedLocation, setSelectedLocation] = useState('All Locations');
     const [selectedEngagement, setSelectedEngagement] = useState('All Engagements');
+    const [selectedBookingStatus, setSelectedBookingStatus] = useState('All Bookings');
+    const [selectedClashStatus, setSelectedClashStatus] = useState('All Status');
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [showQRModal, setShowQRModal] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -91,24 +74,21 @@ export default function EventsPage() {
         async function fetchActivities() {
             try {
                 setIsLoading(true);
-                const { data, error } = await supabase
-                    .from('activities')
-                    .select('*')
-                    .order('start_time', { ascending: true });
 
-                if (error) throw error;
+                const data = VOLUNTEER_ACTIVITIES;
 
                 if (data) {
                     const mappedActivities = data.map((act: any) => {
                         const startDate = new Date(act.start_time);
                         return {
                             ...act,
+                            id: act._id || act.id,
                             date: startDate.getDate().toString(),
                             month: startDate.toLocaleString('default', { month: 'long' }).toUpperCase(),
                             year: startDate.getFullYear().toString(),
                         };
                     });
-                    setActivities(mappedActivities);
+                    setActivities(mappedActivities as unknown as VolunteerActivity[]);
                 }
             } catch (err) {
                 console.error('Error fetching activities:', err);
@@ -136,6 +116,8 @@ export default function EventsPage() {
     };
 
     // Map engagement filter to value
+    const enrolledActivities = activities.filter(a => (a as any).isEnrolled);
+
     const getEngagementValue = (label: string) => {
         switch (label) {
             case 'Ad Hoc': return 'adhoc';
@@ -145,6 +127,7 @@ export default function EventsPage() {
             default: return null;
         }
     };
+
 
     // Filter activities
     const filteredActivities = activities.filter(activity => {
@@ -160,7 +143,19 @@ export default function EventsPage() {
         const engagementValue = getEngagementValue(selectedEngagement);
         const matchesEngagement = selectedEngagement === 'All Engagements' || activity.engagement_frequency === engagementValue;
 
-        return matchesSearch && matchesCategory && matchesActivityType && matchesLocation && matchesEngagement;
+        // Booking status filter
+        const matchesBooking = selectedBookingStatus === 'All Bookings' ||
+            (selectedBookingStatus === 'Booked' && (activity as any).isEnrolled) ||
+            (selectedBookingStatus === "Haven't Booked" && !(activity as any).isEnrolled);
+
+        // Clash status filter
+        const enrolledActivities = activities.filter(a => (a as any).isEnrolled);
+        const isClashing = checkIsClashing(activity, enrolledActivities);
+        const matchesClash = selectedClashStatus === 'All Status' ||
+            (selectedClashStatus === 'Clashing' && isClashing) ||
+            (selectedClashStatus === 'Non-clashing' && !isClashing);
+
+        return matchesSearch && matchesCategory && matchesActivityType && matchesLocation && matchesEngagement && matchesBooking && matchesClash;
     });
 
     // Get category color
@@ -186,13 +181,19 @@ export default function EventsPage() {
     };
 
     // Check if any filter is active
-    const hasActiveFilters = selectedActivityType !== 'All Types' || selectedLocation !== 'All Locations' || selectedEngagement !== 'All Engagements';
+    const hasActiveFilters = selectedActivityType !== 'All Types' ||
+        selectedLocation !== 'All Locations' ||
+        selectedEngagement !== 'All Engagements' ||
+        selectedBookingStatus !== 'All Bookings' ||
+        selectedClashStatus !== 'All Status';
 
     // Clear all filters
     const clearFilters = () => {
         setSelectedActivityType('All Types');
         setSelectedLocation('All Locations');
         setSelectedEngagement('All Engagements');
+        setSelectedBookingStatus('All Bookings');
+        setSelectedClashStatus('All Status');
     };
 
     // Pagination
@@ -202,7 +203,7 @@ export default function EventsPage() {
     // Reset page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, selectedCategory, selectedActivityType, selectedLocation, selectedEngagement]);
+    }, [searchQuery, selectedCategory, selectedActivityType, selectedLocation, selectedEngagement, selectedBookingStatus, selectedClashStatus]);
 
     // Calculate pagination
     const totalItems = filteredActivities.length;
@@ -275,7 +276,11 @@ export default function EventsPage() {
                     Filters
                     {hasActiveFilters && (
                         <span className="w-5 h-5 bg-green-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center">
-                            {(selectedActivityType !== 'All Types' ? 1 : 0) + (selectedLocation !== 'All Locations' ? 1 : 0) + (selectedEngagement !== 'All Engagements' ? 1 : 0)}
+                            {(selectedActivityType !== 'All Types' ? 1 : 0) +
+                                (selectedLocation !== 'All Locations' ? 1 : 0) +
+                                (selectedEngagement !== 'All Engagements' ? 1 : 0) +
+                                (selectedBookingStatus !== 'All Bookings' ? 1 : 0) +
+                                (selectedClashStatus !== 'All Status' ? 1 : 0)}
                         </span>
                     )}
                 </button>
@@ -342,18 +347,35 @@ export default function EventsPage() {
                                     </div>
                                 </div>
 
-                                {/* Location Filter */}
+                                {/* Booking Status Filter */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Booking Status</label>
                                     <div className="relative">
                                         <select
-                                            value={selectedLocation}
-                                            onChange={(e) => setSelectedLocation(e.target.value)}
+                                            value={selectedBookingStatus}
+                                            onChange={(e) => setSelectedBookingStatus(e.target.value)}
                                             className="w-full appearance-none px-4 py-2.5 bg-white border-2 border-gray-300 rounded-xl text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-400 pr-10 cursor-pointer"
                                         >
-                                            {LOCATIONS.map((loc: string) => (
-                                                <option key={loc} value={loc} className="text-gray-900 bg-white py-2">{loc}</option>
-                                            ))}
+                                            <option value="All Bookings">All Bookings</option>
+                                            <option value="Booked">Booked</option>
+                                            <option value="Haven't Booked">Haven't Booked</option>
+                                        </select>
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none" />
+                                    </div>
+                                </div>
+
+                                {/* Schedule Clash Filter */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Schedule Clashes</label>
+                                    <div className="relative">
+                                        <select
+                                            value={selectedClashStatus}
+                                            onChange={(e) => setSelectedClashStatus(e.target.value)}
+                                            className="w-full appearance-none px-4 py-2.5 bg-white border-2 border-gray-300 rounded-xl text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-400 pr-10 cursor-pointer"
+                                        >
+                                            <option value="All Status">All Status</option>
+                                            <option value="Clashing">Clashing</option>
+                                            <option value="Non-clashing">Non-clashing</option>
                                         </select>
                                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none" />
                                     </div>
@@ -383,112 +405,131 @@ export default function EventsPage() {
             )}
 
             {/* Activities Grid - Ticket Style Cards */}
-            {!isLoading && (
+            {!isLoading && filteredActivities.length > 0 && (
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {paginatedActivities.map((activity, index) => (
-                            <motion.div
-                                key={activity.id}
-                                layoutId={activity.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                onClick={() => router.push(`/events/${activity.id}`)}
-                                className="group cursor-pointer"
-                            >
-                                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 flex">
-                                    {/* Left: Activity Image */}
-                                    <motion.div
-                                        layoutId={`${activity.id}-image`}
-                                        className="w-32 md:w-40 shrink-0 relative overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300"
-                                    >
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img
-                                            src={activity.image_url}
-                                            alt={activity.title}
-                                            className="w-full h-full object-cover absolute inset-0 group-hover:scale-110 transition-transform duration-500"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                                        {/* Category Badge */}
-                                        {activity.category && (
-                                            <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getCategoryColor(activity.category)}`}>
-                                                {activity.category}
-                                            </div>
-                                        )}
-
-                                        {/* Engagement Frequency Badge */}
-                                        {activity.engagement_frequency && (
-                                            <div className={`absolute bottom-3 left-3 px-2 py-1 rounded-full text-[10px] font-bold ${getEngagementBadgeColor(activity.engagement_frequency)}`}>
-                                                <Clock size={10} className="inline mr-1" />
-                                                {getEngagementLabel(activity.engagement_frequency)}
-                                            </div>
-                                        )}
-                                    </motion.div>
-
-                                    {/* Middle: Content */}
-                                    <div className="flex-1 p-5 md:p-6">
-                                        {/* Title */}
-                                        <motion.h3
-                                            layoutId={`${activity.id}-title`}
-                                            className="text-xl font-bold text-gray-900 mb-1"
+                        {paginatedActivities.map((activity, index) => {
+                            const isClashing = checkIsClashing(activity, enrolledActivities);
+                            return (
+                                <motion.div
+                                    key={activity.id}
+                                    layoutId={activity.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                                    onClick={() => router.push(`/events/${activity.id}`)}
+                                    className="group cursor-pointer"
+                                >
+                                    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 flex">
+                                        {/* Left: Activity Image */}
+                                        <motion.div
+                                            layoutId={`${activity.id}-image`}
+                                            className="w-32 md:w-40 shrink-0 relative overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300"
                                         >
-                                            <span className="text-green-600">{activity.title}</span>{' '}
-                                            {activity.type && <span className="text-gray-400 font-normal">{activity.type}</span>}
-                                        </motion.h3>
+                                            <img
+                                                src={activity.image_url}
+                                                alt={activity.title}
+                                                className="w-full h-full object-cover absolute inset-0 group-hover:scale-110 transition-transform duration-500"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-                                        {/* Organizer */}
-                                        {activity.organizer && (
-                                            <p className="text-sm text-gray-500 mb-2">
-                                                {activity.organizer_label || 'Programme'}: <span className="text-gray-700">{activity.organizer}</span>
-                                            </p>
-                                        )}
-
-                                        {/* Location */}
-                                        <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
-                                            <MapPin size={12} className="text-gray-400" />
-                                            <span className={activity.location === 'To Be Confirmed' ? 'italic text-gray-400' : ''}>
-                                                {activity.location || 'Location TBC'}
-                                            </span>
-                                        </div>
-
-                                        {/* Schedule Row */}
-                                        {activity.schedule && (
-                                            <div className="text-sm text-gray-600 mb-3">
-                                                <span className="font-medium">{activity.schedule}</span>
-                                            </div>
-                                        )}
-
-                                        {/* Date and Spots Row */}
-                                        <div className="flex items-end gap-6">
-                                            <div>
-                                                <span className="text-4xl font-bold text-gray-900 leading-none">{activity.date}</span>
-                                                <span className="block text-xs text-green-500 font-medium mt-1">{activity.month} {activity.year}</span>
-                                            </div>
-                                            {activity.volunteers_needed !== undefined && (
-                                                <div className="flex items-center gap-1 text-sm">
-                                                    <Users size={14} className="text-green-500" />
-                                                    <span className="text-green-600 font-semibold">{activity.volunteers_needed} spots left</span>
+                                            {activity.category && (
+                                                <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getCategoryColor(activity.category)}`}>
+                                                    {activity.category}
                                                 </div>
                                             )}
-                                        </div>
-                                    </div>
 
-                                    {/* Right: QR Code / Join */}
-                                    <div
-                                        className={`w-20 md:w-24 shrink-0 border-l border-dashed border-gray-200 flex flex-col items-center justify-center p-3 cursor-pointer bg-gray-50/50 hover:bg-gray-100 transition-colors`}
-                                        onClick={() => router.push(`/events/${activity.id}`)}
-                                    >
-                                        <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-lg border border-gray-200 flex items-center justify-center shadow-sm">
-                                            <QrCode className="w-8 h-8 md:w-10 md:h-10 text-gray-700" />
+                                            {activity.engagement_frequency && (
+                                                <div className={`absolute bottom-3 left-3 px-2 py-1 rounded-full text-[10px] font-bold ${getEngagementBadgeColor(activity.engagement_frequency)}`}>
+                                                    <Clock size={10} className="inline mr-1" />
+                                                    {getEngagementLabel(activity.engagement_frequency)}
+                                                </div>
+                                            )}
+                                        </motion.div>
+
+                                        {/* Middle: Content */}
+                                        <div className="flex-1 p-5 md:p-6">
+                                            <motion.h3
+                                                layoutId={`${activity.id}-title`}
+                                                className="text-xl font-bold text-gray-900 mb-1"
+                                            >
+                                                <span className="text-green-600">{activity.title}</span>{' '}
+                                                {activity.type && <span className="text-gray-400 font-normal">{activity.type}</span>}
+                                            </motion.h3>
+
+                                            {activity.organizer && (
+                                                <p className="text-sm text-gray-500 mb-2">
+                                                    {activity.organizer_label || 'Programme'}: <span className="text-gray-700">{activity.organizer}</span>
+                                                </p>
+                                            )}
+
+                                            <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
+                                                <MapPin size={12} className="text-gray-400" />
+                                                <span className={activity.location === 'To Be Confirmed' ? 'italic text-gray-400' : ''}>
+                                                    {activity.location || 'Location TBC'}
+                                                </span>
+                                            </div>
+
+                                            {activity.schedule && (
+                                                <div className="text-sm text-gray-600 mb-3">
+                                                    <span className="font-medium">{activity.schedule}</span>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-end gap-6">
+                                                <div>
+                                                    <span className="text-4xl font-bold text-gray-900 leading-none">{activity.date}</span>
+                                                    <span className="block text-xs text-green-500 font-medium mt-1">{activity.month} {activity.year}</span>
+                                                </div>
+                                                {activity.volunteers_needed !== undefined && (
+                                                    <div className="flex items-center gap-1 text-sm">
+                                                        <Users size={14} className="text-green-500" />
+                                                        <span className="text-green-600 font-semibold">{activity.volunteers_needed} spots left</span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <span className="text-[10px] text-gray-400 mt-2 text-center">
-                                            View
-                                        </span>
+
+                                        {/* Right: Status / Action */}
+                                        <div
+                                            className={`w-20 md:w-24 shrink-0 border-l border-dashed border-gray-200 flex flex-col items-center justify-center p-3 cursor-pointer transition-colors ${(activity as any).isEnrolled
+                                                ? 'bg-green-50/50 hover:bg-green-100/50'
+                                                : isClashing
+                                                    ? 'bg-red-50/50 hover:bg-red-100/50'
+                                                    : 'bg-gray-50/50 hover:bg-gray-100'
+                                                }`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                router.push(`/events/${activity.id}`);
+                                            }}
+                                        >
+                                            <div className={`w-12 h-12 md:w-14 md:h-14 bg-white rounded-lg border flex items-center justify-center shadow-sm ${(activity as any).isEnrolled
+                                                ? 'border-green-200'
+                                                : isClashing
+                                                    ? 'border-red-200'
+                                                    : 'border-gray-200'
+                                                }`}>
+                                                {(activity as any).isEnrolled ? (
+                                                    <CheckCircle2 className="w-8 h-8 md:w-10 md:h-10 text-green-500" />
+                                                ) : isClashing ? (
+                                                    <AlertCircle className="w-8 h-8 md:w-10 md:h-10 text-red-500" />
+                                                ) : (
+                                                    <QrCode className="w-8 h-8 md:w-10 md:h-10 text-gray-700" />
+                                                )}
+                                            </div>
+                                            <span className={`text-[10px] mt-2 text-center font-bold ${(activity as any).isEnrolled
+                                                ? 'text-green-600'
+                                                : isClashing
+                                                    ? 'text-red-600'
+                                                    : 'text-gray-400'
+                                                }`}>
+                                                {(activity as any).isEnrolled ? 'Enrolled' : isClashing ? 'Clash' : 'View'}
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            );
+                        })}
                     </div>
 
                     {/* Pagination Controls */}
@@ -501,74 +542,36 @@ export default function EventsPage() {
                                         <span className="font-medium">{totalItems}</span> results
                                     </p>
                                 </div>
-                                <div>
-                                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                    <button
+                                        onClick={() => goToPage(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <ChevronLeft className="h-5 w-5" />
+                                    </button>
+
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                                         <button
-                                            onClick={() => goToPage(currentPage - 1)}
-                                            disabled={currentPage === 1}
-                                            className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            key={pageNum}
+                                            onClick={() => goToPage(pageNum)}
+                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === pageNum
+                                                ? 'z-10 bg-green-50 border-green-500 text-green-600'
+                                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                                }`}
                                         >
-                                            <span className="sr-only">Previous</span>
-                                            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                                            {pageNum}
                                         </button>
+                                    ))}
 
-                                        {/* Example Page Numbers - Simplified for now, can be expanded */}
-                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                            // Logic to show current page surroundings
-                                            let pageNum = i + 1;
-                                            if (totalPages > 5 && currentPage > 3) {
-                                                pageNum = currentPage - 2 + i;
-                                                if (pageNum > totalPages) pageNum -= (pageNum - totalPages);
-                                            }
-
-                                            // Simple clamp for this example to stick to valid range
-                                            if (pageNum > totalPages) return null;
-
-                                            return (
-                                                <button
-                                                    key={pageNum}
-                                                    onClick={() => goToPage(pageNum)}
-                                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === pageNum
-                                                        ? 'z-10 bg-green-50 border-green-500 text-green-600'
-                                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                        }`}
-                                                >
-                                                    {pageNum}
-                                                </button>
-                                            );
-                                        })}
-
-                                        <button
-                                            onClick={() => goToPage(currentPage + 1)}
-                                            disabled={currentPage === totalPages}
-                                            className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        >
-                                            <span className="sr-only">Next</span>
-                                            <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                                        </button>
-                                    </nav>
-                                </div>
-                            </div>
-
-                            {/* Mobile Pagination (Simplified) */}
-                            <div className="flex items-center justify-between sm:hidden w-full">
-                                <button
-                                    onClick={() => goToPage(currentPage - 1)}
-                                    disabled={currentPage === 1}
-                                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    Previous
-                                </button>
-                                <span className="text-sm text-gray-700">
-                                    Page {currentPage} / {totalPages}
-                                </span>
-                                <button
-                                    onClick={() => goToPage(currentPage + 1)}
-                                    disabled={currentPage === totalPages}
-                                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    Next
-                                </button>
+                                    <button
+                                        onClick={() => goToPage(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <ChevronRight className="h-5 w-5" />
+                                    </button>
+                                </nav>
                             </div>
                         </div>
                     )}
@@ -597,8 +600,6 @@ export default function EventsPage() {
                     )}
                 </motion.div>
             )}
-
-            {/* Activity Detail Modal - Only for QR now if needed, removing the quick view for simplicity as we navigate to detail page */}
         </div>
     );
 }

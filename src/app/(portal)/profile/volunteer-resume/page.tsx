@@ -7,8 +7,59 @@ import { motion } from 'framer-motion';
 import {
     Award, Calendar, Clock, MapPin, Mail, Phone,
     ArrowLeft, Download, CheckCircle2, Star,
-    ShieldCheck, GraduationCap, Building2, ExternalLink
+    ShieldCheck, GraduationCap, Building2, ExternalLink, Edit3
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+
+// Mock resume data for demonstration
+const MOCK_RESUME_DATA = {
+    name: 'John Doe',
+    hours: 156,
+    missions: 23,
+    rank: 'Top 5%',
+    bio: 'Passionate community volunteer with over 3 years of experience in social services, education outreach, and environmental conservation. Dedicated to creating meaningful impact through hands-on involvement and leadership in volunteer initiatives across Singapore.',
+    skills: [
+        'Community Outreach', 'Event Coordination', 'First Aid Certified',
+        'Public Speaking', 'Mandarin (Fluent)', 'Team Leadership',
+        'Youth Mentoring', 'Digital Literacy Training', 'Crisis Support'
+    ],
+    achievements: [
+        { name: 'Community Champion', description: 'Completed 100+ volunteer hours in community service' },
+        { name: 'Rising Star', description: 'Recognized for exceptional dedication in first year' },
+        { name: 'Team Leader', description: 'Successfully led 5+ volunteer missions' },
+        { name: 'Impact Maker', description: 'Touched 500+ lives through volunteer work' },
+        { name: 'First Aid Hero', description: 'Certified in CPR and emergency response' }
+    ],
+    experience: [
+        {
+            role: 'Volunteer Coordinator',
+            organization: 'Lions Befrienders',
+            period: '2024 - Present',
+            description: 'Lead a team of 15 volunteers for weekly senior home visits. Organized monthly community events reaching 200+ elderly residents.'
+        },
+        {
+            role: 'Digital Ambassador',
+            organization: 'IMDA Digital Readiness Programme',
+            period: '2023 - 2024',
+            description: 'Taught smartphone basics and digital skills to 150+ seniors across 30 workshop sessions.'
+        },
+        {
+            role: 'Beach Cleanup Leader',
+            organization: 'Beach Lovers Singapore',
+            period: '2022 - Present',
+            description: 'Organized and led monthly beach cleanup initiatives. Collected over 500kg of marine debris with 200+ volunteers.'
+        }
+    ],
+    volunteerHistory: [
+        { title: 'CNY Hamper Packing', location: 'Toa Payoh Hub', date: '2026-01-30', hours: 4 },
+        { title: 'Senior Home Visit', location: 'Ang Mo Kio', date: '2026-01-15', hours: 3 },
+        { title: 'Coding Workshop for Kids', location: 'Science Centre', date: '2026-01-12', hours: 3 },
+        { title: 'Beach Cleanup @ East Coast', location: 'East Coast Park', date: '2025-12-28', hours: 4 },
+        { title: 'Food Bank Distribution', location: 'Woodlands CC', date: '2025-12-15', hours: 3 },
+        { title: 'Digital Skills Workshop', location: 'Jurong Library', date: '2025-12-08', hours: 2 },
+        { title: 'Community Garden Day', location: 'Pasir Ris', date: '2025-11-20', hours: 3 }
+    ]
+};
 
 export default function VolunteerResumePage() {
     const { data: session } = useSession();
@@ -18,31 +69,180 @@ export default function VolunteerResumePage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!session?.user) return;
-            try {
-                const [statsRes, historyRes] = await Promise.all([
-                    fetch('/api/user/stats'),
-                    fetch('/api/user/activities?type=history')
-                ]);
-
-                if (statsRes.ok) {
-                    const data = await statsRes.json();
-                    setStats(data);
+            // Use mock data for demonstration
+            setStats({
+                name: session?.user?.name || MOCK_RESUME_DATA.name,
+                hours: MOCK_RESUME_DATA.hours,
+                missions: MOCK_RESUME_DATA.missions,
+                bio: MOCK_RESUME_DATA.bio,
+                skills: MOCK_RESUME_DATA.skills,
+                achievements: MOCK_RESUME_DATA.achievements,
+                resume_json: {
+                    summary: MOCK_RESUME_DATA.bio,
+                    skills: MOCK_RESUME_DATA.skills,
+                    experience: MOCK_RESUME_DATA.experience
                 }
-
-                if (historyRes.ok) {
-                    const data = await historyRes.json();
-                    setHistory(data.activities || []);
-                }
-            } catch (error) {
-                console.error("Error fetching resume data:", error);
-            } finally {
-                setLoading(false);
-            }
+            });
+            setHistory(MOCK_RESUME_DATA.volunteerHistory.map(h => ({
+                activity: {
+                    title: h.title,
+                    location: h.location,
+                    start_time: h.date
+                },
+                hours: h.hours
+            })));
+            setLoading(false);
         };
 
-        fetchData();
+        // Simulate loading delay
+        setTimeout(fetchData, 500);
     }, [session]);
+
+    // Generate professional PDF resume
+    const generatePDF = () => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 20;
+        let y = 20;
+
+        // Helper function to add section header
+        const addSectionHeader = (title: string) => {
+            y += 8;
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(16, 185, 129); // Emerald color
+            doc.text(title.toUpperCase(), margin, y);
+            y += 2;
+            doc.setDrawColor(229, 231, 235); // Gray line
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 8;
+        };
+
+        // Header - Name
+        doc.setFontSize(28);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(17, 24, 39); // Gray-900
+        const name = stats?.name || session?.user?.name || 'Volunteer';
+        doc.text(name, margin, y);
+        y += 10;
+
+        // Title
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(107, 114, 128); // Gray-500
+        doc.text('Senior Volunteer • Verified by HolySheet', margin, y);
+        y += 8;
+
+        // Contact info line
+        const email = session?.user?.email || 'volunteer@example.com';
+        const location = stats?.location || 'Singapore';
+        doc.setFontSize(9);
+        doc.text(`${email}  |  ${location}`, margin, y);
+        y += 6;
+
+        // Stats bar
+        y += 4;
+        doc.setFillColor(240, 253, 244); // Emerald-50
+        doc.roundedRect(margin, y, pageWidth - 2 * margin, 18, 3, 3, 'F');
+        y += 12;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(5, 150, 105); // Emerald-600
+        const statsText = `${stats?.hours || 0} Hours   |   ${stats?.missions || 0} Missions   |   ${stats?.achievements?.length || 0} Badges   |   Top 5% Rank`;
+        doc.text(statsText, pageWidth / 2, y, { align: 'center' });
+        y += 12;
+
+        // Professional Summary
+        addSectionHeader('Professional Summary');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(75, 85, 99); // Gray-600
+        const summary = stats?.bio || MOCK_RESUME_DATA.bio;
+        const summaryLines = doc.splitTextToSize(summary, pageWidth - 2 * margin);
+        doc.text(summaryLines, margin, y);
+        y += summaryLines.length * 5 + 4;
+
+        // Skills
+        addSectionHeader('Skills');
+        const skills = stats?.skills || MOCK_RESUME_DATA.skills;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(55, 65, 81); // Gray-700
+        const skillsText = skills.join('  •  ');
+        const skillLines = doc.splitTextToSize(skillsText, pageWidth - 2 * margin);
+        doc.text(skillLines, margin, y);
+        y += skillLines.length * 5 + 4;
+
+        // Experience
+        addSectionHeader('Volunteer Experience');
+        const experience = stats?.resume_json?.experience || MOCK_RESUME_DATA.experience;
+        experience.forEach((exp: any) => {
+            if (y > 250) {
+                doc.addPage();
+                y = 20;
+            }
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(17, 24, 39);
+            doc.text(exp.role, margin, y);
+
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(16, 185, 129);
+            doc.text(exp.period, pageWidth - margin, y, { align: 'right' });
+            y += 5;
+
+            doc.setTextColor(107, 114, 128);
+            doc.text(exp.organization, margin, y);
+            y += 5;
+
+            if (exp.description) {
+                doc.setTextColor(75, 85, 99);
+                const descLines = doc.splitTextToSize(exp.description, pageWidth - 2 * margin);
+                doc.text(descLines, margin, y);
+                y += descLines.length * 4 + 6;
+            }
+        });
+
+        // Volunteer History
+        addSectionHeader('Recent Volunteer Activities');
+        const historyData = history.length > 0 ? history : MOCK_RESUME_DATA.volunteerHistory.map(h => ({
+            activity: { title: h.title, location: h.location, start_time: h.date },
+            hours: h.hours
+        }));
+
+        historyData.slice(0, 5).forEach((item: any) => {
+            if (y > 270) {
+                doc.addPage();
+                y = 20;
+            }
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(17, 24, 39);
+            doc.text(`• ${item.activity?.title || 'Mission'}`, margin, y);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(107, 114, 128);
+            const date = item.activity?.start_time ? new Date(item.activity.start_time).toLocaleDateString() : '-';
+            doc.text(date, pageWidth - margin, y, { align: 'right' });
+            y += 4;
+
+            doc.setFontSize(9);
+            doc.text(`   ${item.activity?.location || 'Singapore'}`, margin, y);
+            y += 6;
+        });
+
+        // Footer
+        y = doc.internal.pageSize.getHeight() - 15;
+        doc.setFontSize(8);
+        doc.setTextColor(156, 163, 175);
+        doc.text('Verified Digital Resume by HolySheet', pageWidth / 2, y, { align: 'center' });
+        y += 4;
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, y, { align: 'center' });
+
+        // Save the PDF
+        doc.save(`${name.replace(/\s+/g, '_')}_Volunteer_Resume.pdf`);
+    };
 
     if (loading) {
         return (
@@ -64,13 +264,22 @@ export default function VolunteerResumePage() {
                         <ArrowLeft size={18} />
                         Back to Profile
                     </Link>
-                    <button
-                        onClick={() => window.print()}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-md active:scale-95"
-                    >
-                        <Download size={16} />
-                        Download PDF
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/profile/edit-resume"
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-all border border-gray-200 active:scale-95"
+                        >
+                            <Edit3 size={16} />
+                            Edit Resume
+                        </Link>
+                        <button
+                            onClick={generatePDF}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-md active:scale-95"
+                        >
+                            <Download size={16} />
+                            Download PDF
+                        </button>
+                    </div>
                 </div>
 
                 {/* Main Resume Card */}

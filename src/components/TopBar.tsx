@@ -25,7 +25,7 @@ export default function TopBar() {
                 {/* Left: Logo & Nav */}
                 <div className="flex items-center gap-12">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center gap-3 group">
+                    <Link href="/calendar" className="flex items-center gap-3 group">
                         <img src="/logo.png" alt="JomCare" className="w-10 h-10 group-hover:scale-105 transition-transform" />
                         <span className="font-bold text-xl tracking-tight text-gray-900 hidden sm:block">JomCare</span>
                     </Link>
@@ -48,7 +48,7 @@ export default function TopBar() {
                                 : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
                                 }`}
                         >
-                            Volunteer
+                            {(session?.user as any)?.role === 'volunteer' ? 'Volunteer' : 'Events'}
                         </Link>
                         <Link
                             href="/calendar"
@@ -100,7 +100,15 @@ export default function TopBar() {
                             </div>
                             <div className="hidden md:block text-left">
                                 <p className="text-sm font-bold text-gray-900 leading-none">{session?.user?.name || "Kim Ho"}</p>
-                                <p className="text-[10px] text-gray-500 font-medium mt-0.5">Participant</p>
+                                <p className="text-[10px] text-gray-500 font-medium mt-0.5">
+                                    {((session?.user as any)?.role === 'participant' || (session?.user as any)?.role === 'user' || !(session?.user as any)?.role)
+                                        ? '❤️ Caregiver: Mrs. Tan Mei Ling'
+                                        : (session?.user as any)?.role === 'caregiver'
+                                            ? 'Caregiver'
+                                            : (session?.user as any)?.role === 'admin'
+                                                ? 'Admin'
+                                                : (session?.user as any)?.role}
+                                </p>
                             </div>
                             <ChevronDown size={14} className="text-gray-400 hidden md:block" />
                         </Link>
@@ -137,7 +145,7 @@ export default function TopBar() {
                             : 'text-gray-600 hover:bg-gray-50'
                             }`}
                     >
-                        Volunteer
+                        {(session?.user as any)?.role === 'volunteer' ? 'Volunteer' : 'Events'}
                     </Link>
                     <Link
                         href="/calendar"

@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Calendar, MapPin, Users, Clock, Filter, Plus, Search, MoreVertical, Loader2, AlertCircle, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
+import CreateActivityModal from '@/components/CreateActivityModal';
+import { ADMIN_MOCK_ACTIVITIES } from '@/lib/adminMockData';
 
 interface Activity {
     id: string;
@@ -26,6 +28,7 @@ export default function EventsPage() {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [hasFetched, setHasFetched] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'asc' });
@@ -38,33 +41,53 @@ export default function EventsPage() {
     const [viewMode, setViewMode] = useState<'grid' | 'weekly'>('grid');
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedWeek, setSelectedWeek] = useState(0); // 0 to 4 (approx 4 weeks)
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     useEffect(() => {
-        if (session?.accessToken) {
+        // Only fetch once when we have a session and haven't fetched yet
+        if (session?.accessToken && !hasFetched) {
             fetchActivities();
         }
-    }, [session]);
+    }, [session?.accessToken, hasFetched]);
 
     const fetchActivities = async () => {
         try {
             setLoading(true);
-            if (!session?.accessToken) return;
-
-            const res = await fetch('/api/admin/activities', {
-                headers: {
-                    'Authorization': `Bearer ${session.accessToken}`
-                }
-            });
-
-            if (!res.ok) throw new Error('Failed to fetch activities');
-
-            const data = await res.json();
-            setActivities(data);
+            // Mock delay
+            setTimeout(() => {
+                // Map mock data to Activity interface if necessary, or cast as any if structure is close enough
+                // The mock data has all required fields plus some extras
+                setActivities(ADMIN_MOCK_ACTIVITIES as unknown as Activity[]);
+                setHasFetched(true);
+                setLoading(false);
+            }, 800);
         } catch (err) {
             console.error(err);
             setError('Failed to load events');
-        } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCreateActivity = async (activityData: any) => {
+        try {
+            const res = await fetch('/api/admin/activities', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.accessToken}`
+                },
+                body: JSON.stringify(activityData)
+            });
+
+            if (res.ok) {
+                const newActivity = await res.json();
+                setActivities(prev => [...prev, newActivity]);
+                setIsCreateModalOpen(false);
+            } else {
+                console.error('Failed to create activity');
+            }
+        } catch (err) {
+            console.error('Error creating activity:', err);
         }
     };
 
@@ -215,245 +238,256 @@ export default function EventsPage() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-white relative p-8">
-            {/* Header */}
-            <div className="flex flex-col gap-6 mb-8">
-                <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Events & Activities</h1>
-                        <p className="text-gray-500">Manage all volunteer activities and track participation.</p>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-                        {/* View Toggle */}
-                        <div className="flex bg-gray-100 p-1 rounded-lg">
-                            <button
-                                onClick={() => setViewMode('grid')}
-                                className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                <LayoutGrid size={18} />
-                            </button>
-                            <button
-                                onClick={() => setViewMode('weekly')}
-                                className={`p-2 rounded-md transition-all ${viewMode === 'weekly' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                <CalendarDays size={18} />
-                            </button>
+        <>
+            <div className="flex flex-col h-full bg-white relative p-8">
+                {/* Header */}
+                <div className="flex flex-col gap-6 mb-8">
+                    <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900 mb-2">Events & Activities</h1>
+                            <p className="text-gray-500">Manage all volunteer activities and track participation.</p>
                         </div>
 
-                        <div className="relative flex-1 sm:flex-none">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Search events..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64 shadow-sm"
-                            />
-                        </div>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                            {/* View Toggle */}
+                            <div className="flex bg-gray-100 p-1 rounded-lg">
+                                <button
+                                    onClick={() => setViewMode('grid')}
+                                    className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    <LayoutGrid size={18} />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('weekly')}
+                                    className={`p-2 rounded-md transition-all ${viewMode === 'weekly' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    <CalendarDays size={18} />
+                                </button>
+                            </div>
 
-                        {/* Sort Pills (Only in grid mode) */}
-                        {viewMode === 'grid' && (
-                            <div className="flex items-center gap-2">
-                                {/* Sort Category Pills */}
-                                <div className="flex bg-gray-100 p-1 rounded-lg">
-                                    {[
-                                        { key: 'date', label: 'Date' },
-                                        { key: 'volunteers', label: 'Volunteers' },
-                                        { key: 'responses', label: 'Responses' },
-                                        { key: 'attendance', label: 'Attendance' },
-                                    ].map((option) => (
-                                        <button
-                                            key={option.key}
-                                            onClick={() => setSortConfig(prev => ({
-                                                key: option.key,
-                                                direction: prev.key === option.key ? (prev.direction === 'asc' ? 'desc' : 'asc') : 'desc'
-                                            }))}
-                                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${sortConfig.key === option.key
+                            <div className="relative flex-1 sm:flex-none">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Search events..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64 shadow-sm"
+                                />
+                            </div>
+
+                            {/* Sort Pills (Only in grid mode) */}
+                            {viewMode === 'grid' && (
+                                <div className="flex items-center gap-2">
+                                    {/* Sort Category Pills */}
+                                    <div className="flex bg-gray-100 p-1 rounded-lg">
+                                        {[
+                                            { key: 'date', label: 'Date' },
+                                            { key: 'volunteers', label: 'Volunteers' },
+                                            { key: 'responses', label: 'Responses' },
+                                            { key: 'attendance', label: 'Attendance' },
+                                        ].map((option) => (
+                                            <button
+                                                key={option.key}
+                                                onClick={() => setSortConfig(prev => ({
+                                                    key: option.key,
+                                                    direction: prev.key === option.key ? (prev.direction === 'asc' ? 'desc' : 'asc') : 'desc'
+                                                }))}
+                                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${sortConfig.key === option.key
                                                     ? 'bg-white shadow-sm text-indigo-600'
                                                     : 'text-gray-500 hover:text-gray-700'
-                                                }`}
-                                        >
-                                            {option.label}
-                                            {sortConfig.key === option.key && (
-                                                <span className="ml-1">
-                                                    {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                                                </span>
-                                            )}
-                                        </button>
-                                    ))}
+                                                    }`}
+                                            >
+                                                {option.label}
+                                                {sortConfig.key === option.key && (
+                                                    <span className="ml-1">
+                                                        {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        <button className="flex items-center justify-center gap-2 px-4 py-2 bg-[#101828] text-white text-sm font-bold rounded-lg hover:bg-gray-800 shadow-lg shadow-gray-200 transition-all whitespace-nowrap">
-                            <Plus size={16} />
-                            Create Event
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Weekly View Controls */}
-            {viewMode === 'weekly' && (
-                <div className="mb-6 space-y-4">
-                    <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <div className="flex items-center gap-4">
-                            <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200 shadow-sm hover:shadow">
-                                <ChevronLeft size={20} className="text-gray-600" />
-                            </button>
-                            <h2 className="text-lg font-bold text-gray-900 min-w-[140px] text-center">
-                                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                            </h2>
-                            <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200 shadow-sm hover:shadow">
-                                <ChevronRight size={20} className="text-gray-600" />
+                            <button
+                                onClick={() => setIsCreateModalOpen(true)}
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-[#101828] text-white text-sm font-bold rounded-lg hover:bg-gray-800 shadow-lg shadow-gray-200 transition-all whitespace-nowrap"
+                            >
+                                <Plus size={16} />
+                                Create Event
                             </button>
                         </div>
+                    </div>
+                </div>
 
-                        <div className="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1">
-                            {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map((w, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => setSelectedWeek(idx)}
-                                    className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${selectedWeek === idx
-                                        ? 'bg-indigo-50 text-indigo-600 shadow-sm'
-                                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                                        }`}
-                                >
-                                    {w}
+                {/* Weekly View Controls */}
+                {viewMode === 'weekly' && (
+                    <div className="mb-6 space-y-4">
+                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-4">
+                                <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200 shadow-sm hover:shadow">
+                                    <ChevronLeft size={20} className="text-gray-600" />
                                 </button>
-                            ))}
+                                <h2 className="text-lg font-bold text-gray-900 min-w-[140px] text-center">
+                                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                </h2>
+                                <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200 shadow-sm hover:shadow">
+                                    <ChevronRight size={20} className="text-gray-600" />
+                                </button>
+                            </div>
+
+                            <div className="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1">
+                                {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map((w, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setSelectedWeek(idx)}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${selectedWeek === idx
+                                            ? 'bg-indigo-50 text-indigo-600 shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {w}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Error State */}
-            {error && (
-                <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center gap-3 mb-6">
-                    <AlertCircle size={20} />
-                    <p>{error}</p>
-                </div>
-            )}
-
-            {/* Events Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {displayedActivities.length === 0 && !loading && (
-                    <div className="col-span-full py-16 text-center text-gray-500 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                        <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                        <p className="font-medium text-lg text-gray-900">No events found</p>
-                        <p className="text-sm mt-1">
-                            {viewMode === 'weekly'
-                                ? `No events scheduled for Week ${selectedWeek + 1} of ${currentMonth.toLocaleDateString('en-US', { month: 'long' })}`
-                                : "Try adjusting your search or filters"
-                            }
-                        </p>
                     </div>
                 )}
 
-                {paginatedActivities.map((activity) => (
-                    <Link key={activity.id} href={`/admin/events/${activity.id}`}>
-                        <div className="group bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-indigo-100 transition-all cursor-pointer relative overflow-hidden h-full">
-                            {/* Status Badge */}
-                            <div className={`absolute top-5 right-5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(activity)}`}>
-                                {getStatusText(activity)}
-                            </div>
+                {/* Error State */}
+                {error && (
+                    <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center gap-3 mb-6">
+                        <AlertCircle size={20} />
+                        <p>{error}</p>
+                    </div>
+                )}
 
-                            <div className="mb-4">
-                                <h3 className="font-bold text-gray-900 text-lg mb-1 pr-24 truncate">{activity.title}</h3>
-                                <div className="flex items-center gap-2 text-gray-500 text-xs font-medium">
-                                    <Clock size={14} />
-                                    <span>
-                                        {new Date(activity.start_time).toLocaleDateString()} • {new Date(activity.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
+                {/* Events Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {displayedActivities.length === 0 && !loading && (
+                        <div className="col-span-full py-16 text-center text-gray-500 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                            <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                            <p className="font-medium text-lg text-gray-900">No events found</p>
+                            <p className="text-sm mt-1">
+                                {viewMode === 'weekly'
+                                    ? `No events scheduled for Week ${selectedWeek + 1} of ${currentMonth.toLocaleDateString('en-US', { month: 'long' })}`
+                                    : "Try adjusting your search or filters"
+                                }
+                            </p>
+                        </div>
+                    )}
+
+                    {paginatedActivities.map((activity) => (
+                        <Link key={activity.id} href={`/admin/events/${activity.id}`}>
+                            <div className="group bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-indigo-100 transition-all cursor-pointer relative overflow-hidden h-full">
+                                {/* Status Badge */}
+                                <div className={`absolute top-5 right-5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(activity)}`}>
+                                    {getStatusText(activity)}
                                 </div>
-                            </div>
 
-                            <div className="space-y-3 mb-5">
-                                <div className="flex items-start gap-2.5">
-                                    <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
-                                    <p className="text-sm text-gray-600 line-clamp-1">{activity.location}</p>
+                                <div className="mb-4">
+                                    <h3 className="font-bold text-gray-900 text-lg mb-1 pr-24 truncate">{activity.title}</h3>
+                                    <div className="flex items-center gap-2 text-gray-500 text-xs font-medium">
+                                        <Clock size={14} />
+                                        <span>
+                                            {new Date(activity.start_time).toLocaleDateString()} • {new Date(activity.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
                                 </div>
 
-                                <div className="flex items-start gap-2.5">
-                                    <Users size={16} className="text-gray-400 mt-0.5 shrink-0" />
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-center mb-1.5">
-                                            <span className="text-sm text-gray-600">Volunteers</span>
-                                            <span className="text-xs font-bold text-gray-900">{activity.volunteers_registered} / {activity.volunteers_needed}</span>
-                                        </div>
-                                        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full ${(activity.volunteers_registered / activity.volunteers_needed) >= 1 ? 'bg-emerald-500' : 'bg-indigo-500'
-                                                    }`}
-                                                style={{ width: `${Math.min(100, (activity.volunteers_registered / Math.max(1, activity.volunteers_needed)) * 100)}%` }}
-                                            ></div>
+                                <div className="space-y-3 mb-5">
+                                    <div className="flex items-start gap-2.5">
+                                        <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                                        <p className="text-sm text-gray-600 line-clamp-1">{activity.location}</p>
+                                    </div>
+
+                                    <div className="flex items-start gap-2.5">
+                                        <Users size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-center mb-1.5">
+                                                <span className="text-sm text-gray-600">Volunteers</span>
+                                                <span className="text-xs font-bold text-gray-900">{activity.volunteers_registered} / {activity.volunteers_needed}</span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full ${(activity.volunteers_registered / activity.volunteers_needed) >= 1 ? 'bg-emerald-500' : 'bg-indigo-500'
+                                                        }`}
+                                                    style={{ width: `${Math.min(100, (activity.volunteers_registered / Math.max(1, activity.volunteers_needed)) * 100)}%` }}
+                                                ></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
-                                <div className="flex -space-x-2">
-                                    {[...Array(Math.min(3, activity.volunteers_registered))].map((_, i) => (
-                                        <div key={i} className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-[8px] font-bold text-gray-500">
-                                        </div>
-                                    ))}
-                                    {activity.volunteers_registered > 3 && (
-                                        <div className="w-7 h-7 rounded-full bg-gray-50 border-2 border-white flex items-center justify-center text-[9px] font-bold text-gray-500">
-                                            +{activity.volunteers_registered - 3}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button className="text-xs font-bold text-indigo-600 hover:text-indigo-700">View Details</button>
+                                <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                                    <div className="flex -space-x-2">
+                                        {[...Array(Math.min(3, activity.volunteers_registered))].map((_, i) => (
+                                            <div key={i} className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-[8px] font-bold text-gray-500">
+                                            </div>
+                                        ))}
+                                        {activity.volunteers_registered > 3 && (
+                                            <div className="w-7 h-7 rounded-full bg-gray-50 border-2 border-white flex items-center justify-center text-[9px] font-bold text-gray-500">
+                                                +{activity.volunteers_registered - 3}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button className="text-xs font-bold text-indigo-600 hover:text-indigo-700">View Details</button>
+                                    </div>
                                 </div>
                             </div>
+                        </Link>
+                    ))}
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-gray-200 pt-6 mt-8">
+                        <p className="text-sm text-gray-500 hidden sm:block">
+                            Showing <span className="font-bold text-gray-900">{startIndex + 1}</span> to <span className="font-bold text-gray-900">{Math.min(startIndex + itemsPerPage, totalItems)}</span> of <span className="font-bold text-gray-900">{totalItems}</span> results
+                        </p>
+
+                        <div className="flex items-center gap-2 mx-auto sm:mx-0">
+                            <button
+                                onClick={() => goToPage(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronLeft size={20} className="text-gray-600" />
+                            </button>
+
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <button
+                                    key={page}
+                                    onClick={() => goToPage(page)}
+                                    className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${currentPage === page
+                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                                        : 'text-gray-600 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+
+                            <button
+                                onClick={() => goToPage(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronRight size={20} className="text-gray-600" />
+                            </button>
                         </div>
-                    </Link>
-                ))}
+                    </div>
+                )}
             </div>
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-gray-200 pt-6 mt-8">
-                    <p className="text-sm text-gray-500 hidden sm:block">
-                        Showing <span className="font-bold text-gray-900">{startIndex + 1}</span> to <span className="font-bold text-gray-900">{Math.min(startIndex + itemsPerPage, totalItems)}</span> of <span className="font-bold text-gray-900">{totalItems}</span> results
-                    </p>
-
-                    <div className="flex items-center gap-2 mx-auto sm:mx-0">
-                        <button
-                            onClick={() => goToPage(currentPage - 1)}
-                            disabled={currentPage === 1}
-                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <ChevronLeft size={20} className="text-gray-600" />
-                        </button>
-
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                            <button
-                                key={page}
-                                onClick={() => goToPage(page)}
-                                className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${currentPage === page
-                                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                                    : 'text-gray-600 hover:bg-gray-50'
-                                    }`}
-                            >
-                                {page}
-                            </button>
-                        ))}
-
-                        <button
-                            onClick={() => goToPage(currentPage + 1)}
-                            disabled={currentPage === totalPages}
-                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <ChevronRight size={20} className="text-gray-600" />
-                        </button>
-                    </div>
-                </div>
-            )}
-        </div>
-
+            {/* Create Activity Modal */}
+            <CreateActivityModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSubmit={handleCreateActivity}
+            />
+        </>
     );
 }

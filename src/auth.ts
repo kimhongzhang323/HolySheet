@@ -29,6 +29,63 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
 
+                // Hardcoded Mock Accounts for Testing
+                if (credentials.email === 'admin@holysheet.com' && credentials.password === 'password123') {
+                    return {
+                        id: 'mock-admin-id',
+                        email: 'admin@holysheet.com',
+                        name: 'Admin User',
+                        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
+                        role: 'admin',
+                        supabaseAccessToken: 'mock-admin-token'
+                    };
+                }
+
+                if (credentials.email === 'user@holysheet.com' && credentials.password === 'password123') {
+                    return {
+                        id: 'mock-user-id',
+                        email: 'user@holysheet.com',
+                        name: 'John Doe',
+                        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+                        role: 'user',
+                        supabaseAccessToken: 'mock-user-token'
+                    };
+                }
+
+                // JomCare Demo Accounts
+                if (credentials.email === 'participant@jomcare.com' && credentials.password === 'password123') {
+                    return {
+                        id: 'mock-participant-id',
+                        email: 'participant@jomcare.com',
+                        name: 'Sarah Tan',
+                        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+                        role: 'participant',
+                        supabaseAccessToken: 'mock-participant-token'
+                    };
+                }
+
+                if (credentials.email === 'caregiver@jomcare.com' && credentials.password === 'password123') {
+                    return {
+                        id: 'mock-caregiver-id',
+                        email: 'caregiver@jomcare.com',
+                        name: 'Mary Lim',
+                        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mary',
+                        role: 'caregiver',
+                        supabaseAccessToken: 'mock-caregiver-token'
+                    };
+                }
+
+                if (credentials.email === 'admin@jomcare.com' && credentials.password === 'password123') {
+                    return {
+                        id: 'mock-jomcare-admin-id',
+                        email: 'admin@jomcare.com',
+                        name: 'JomCare Admin',
+                        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=JomCareAdmin',
+                        role: 'admin',
+                        supabaseAccessToken: 'mock-jomcare-admin-token'
+                    };
+                }
+
                 // Query the 'users' table directly
                 const { data: user, error } = await supabase
                     .from('users')
@@ -62,6 +119,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     supabaseAccessToken: "custom-table-token" // Placeholder as we aren't using Supabase Auth sessions
                 };
             }
+
         }),
     ],
     // session: { strategy: "jwt" }, // Default

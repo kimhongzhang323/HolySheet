@@ -2,7 +2,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Megaphone, Send, X } from 'lucide-react';
+import { Loader2, Megaphone, Send, X, Instagram, Facebook, Twitter, Sparkles } from 'lucide-react';
+
+// Custom icons for platforms not in Lucide (using generic or SVG placeholders if needed, but for now specific ones)
+// Note: Lucide doesn't have TikTok or Xiaohongshu icons by default, we'll use generic placeholders or SVGs
+const TikTokIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
+        <path d="M19.589 6.686a4.793 4.793 0 0 1-3.77-4.245V2h-3.445v13.672a2.896 2.896 0 0 1-5.201 1.743l-.002-.001.002.001a2.895 2.895 0 0 1 3.183-4.51v-3.5a6.373 6.373 0 0 0-5.394 10.61 6.348 6.348 0 0 0 8.582-5.571V6.873c1.029.62 2.257.948 3.5.932v-3.45a5.05 5.05 0 0 1-2.455-1.67V6.686z" />
+    </svg>
+);
+// Simplified Xiaohongshu (Red Note) representation
+const XiaohongshuIcon = ({ className }: { className?: string }) => (
+    <span className={`font-black text-[10px] border border-current px-1 rounded ${className}`}>RED</span>
+);
 
 interface BroadcastDialogProps {
     isOpen: boolean;
@@ -16,10 +28,40 @@ export default function BroadcastDialog({ isOpen, onClose, activityTitle, onSend
     const [message, setMessage] = useState(`We need volunteers for ${activityTitle}! Are you available?`);
     const [filter, setFilter] = useState('all');
     const [isSending, setIsSending] = useState(false);
+    const [selectedChannels, setSelectedChannels] = useState<string[]>(['sms']); // Default to SMS
+    const [isGenerating, setIsGenerating] = useState(false);
 
     // Test Mode State
     const [isTestMode, setIsTestMode] = useState(false);
     const [testNumber, setTestNumber] = useState('+60125751521');
+
+    const toggleChannel = (channel: string) => {
+        if (selectedChannels.includes(channel)) {
+            setSelectedChannels(selectedChannels.filter(c => c !== channel));
+        } else {
+            setSelectedChannels([...selectedChannels, channel]);
+        }
+    };
+
+    const handleAIGenerate = async () => {
+        setIsGenerating(true);
+        // Simulate network delay
+        setTimeout(() => {
+            let generatedContent = "";
+            const platforms = selectedChannels.filter(c => c !== 'sms');
+
+            if (platforms.includes('instagram') || platforms.includes('tiktok')) {
+                generatedContent = `🔥 VOLUNTEERS NEEDED: ${activityTitle}! 🔥\n\nJoin us for an amazing experience and make a difference! We need energetic souls ready to help out. 💪✨\n\n📍 Sign up now before spots fill up!\n\n#Volunteer #Community #${activityTitle.replace(/\s+/g, '')} #MakeADifference #JoinUs`;
+            } else if (platforms.includes('xiaohongshu')) {
+                generatedContent = `✨ ${activityTitle} 需要志愿者啦! ✨\n\n小伙伴们，快来加入我们！一起参与这个有意义的活动吧！💪\n\n📍详情请看主页链接\n\n#志愿者 #义工 #社团活动 #${activityTitle.replace(/\s+/g, '')}`;
+            } else {
+                generatedContent = `We are looking for volunteers for ${activityTitle}! 🌟\n\nDon't miss this opportunity to contribute to the community. Slots are limited, sign up today!\n\n#Volunteer #${activityTitle.replace(/\s+/g, '')} #CommunityService`;
+            }
+
+            setMessage(generatedContent);
+            setIsGenerating(false);
+        }, 1500);
+    };
 
     if (!isOpen) return null;
 
@@ -90,6 +132,54 @@ export default function BroadcastDialog({ isOpen, onClose, activityTitle, onSend
                     </div>
 
                     <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Blast Channels</label>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                onClick={() => toggleChannel('sms')}
+                                className={`px-3 py-2 rounded-xl border flex items-center gap-2 transition-all ${selectedChannels.includes('sms') ? 'bg-rose-50 border-rose-200 text-rose-600 ring-2 ring-rose-100' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                            >
+                                <Megaphone size={14} />
+                                <span className="text-xs font-bold">SMS Blast</span>
+                            </button>
+                            <button
+                                onClick={() => toggleChannel('instagram')}
+                                className={`px-3 py-2 rounded-xl border flex items-center gap-2 transition-all ${selectedChannels.includes('instagram') ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                            >
+                                <Instagram size={14} />
+                                <span className="text-xs font-bold">Instagram</span>
+                            </button>
+                            <button
+                                onClick={() => toggleChannel('tiktok')}
+                                className={`px-3 py-2 rounded-xl border flex items-center gap-2 transition-all ${selectedChannels.includes('tiktok') ? 'bg-gray-100 border-gray-300 text-black ring-2 ring-gray-200' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                            >
+                                <TikTokIcon className="w-3.5 h-3.5" />
+                                <span className="text-xs font-bold">TikTok</span>
+                            </button>
+                            <button
+                                onClick={() => toggleChannel('facebook')}
+                                className={`px-3 py-2 rounded-xl border flex items-center gap-2 transition-all ${selectedChannels.includes('facebook') ? 'bg-blue-50 border-blue-200 text-blue-600 ring-2 ring-blue-100' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                            >
+                                <Facebook size={14} />
+                                <span className="text-xs font-bold">Facebook</span>
+                            </button>
+                            <button
+                                onClick={() => toggleChannel('x')}
+                                className={`px-3 py-2 rounded-xl border flex items-center gap-2 transition-all ${selectedChannels.includes('x') ? 'bg-gray-50 border-gray-200 text-gray-900 ring-2 ring-gray-100' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                            >
+                                <Twitter size={14} />
+                                <span className="text-xs font-bold">X</span>
+                            </button>
+                            <button
+                                onClick={() => toggleChannel('xiaohongshu')}
+                                className={`px-3 py-2 rounded-xl border flex items-center gap-2 transition-all ${selectedChannels.includes('xiaohongshu') ? 'bg-red-50 border-red-200 text-red-600 ring-2 ring-red-100' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                            >
+                                <XiaohongshuIcon />
+                                <span className="text-xs font-bold">Xiaohongshu</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Message Content</label>
                         <div className="relative">
                             <textarea
@@ -104,8 +194,18 @@ export default function BroadcastDialog({ isOpen, onClose, activityTitle, onSend
                             </div>
                         </div>
                         <p className="text-[10px] text-gray-400 mt-2 px-1">
-                            Note: Message will be prefixed with "Hi [Name]," automatically.
+                            Note: Message will be prefixed with "Hi [Name]," automatically for SMS.
                         </p>
+                        <div className="mt-2 flex justify-end">
+                            <button
+                                onClick={handleAIGenerate}
+                                disabled={isGenerating || selectedChannels.length === 0}
+                                className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                            >
+                                {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                Auto-Suggest Content
+                            </button>
+                        </div>
                     </div>
                 </div>
 

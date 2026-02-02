@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import { GOOGLE_MAPS_CONFIG } from '@/lib/googleMapsConfig';
 
 const containerStyle = {
     width: '100%',
@@ -43,10 +44,7 @@ const LOCATIONS = [
 ];
 
 export default function DashboardMap() {
-    const { isLoaded } = useJsApiLoader({
-        id: 'google-map-script',
-        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || ''
-    });
+    const { isLoaded } = useJsApiLoader(GOOGLE_MAPS_CONFIG);
 
     const [map, setMap] = useState<google.maps.Map | null>(null);
     const [selectedLocation, setSelectedLocation] = useState<typeof LOCATIONS[0] | null>(null);
